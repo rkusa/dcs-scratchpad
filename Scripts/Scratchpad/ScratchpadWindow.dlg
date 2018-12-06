@@ -1,0 +1,209 @@
+dialog = {
+    ["type"] = "Window",
+    ["params"] = {
+        ["bounds"] = {
+            [1] = {
+                ["h"] = 200,
+                ["w"] = 350,
+                ["x"] = 0,
+                ["y"] = 0,
+            },
+        },
+        ["draggable"] = true,
+        ["enabled"] = true,
+        ["hasCursor"] = true,
+        ["lockFlow"] = false,
+        ["modal"] = false,
+        ["offscreen"] = false,
+        ["resizable"] = true,
+        ["zOrder"] = 111,
+        ["text"] =  "Scratchpad",
+    },
+    ["skin"] = {
+        ["params"] = {
+            ["name"] = "windowSkin",
+        },
+        ["skins"] = {
+            ["header"] = {
+                ["skinData"] = {
+                    ["params"] = {
+                        ["hasCloseButton"] = false,
+                        ["insets"] = {
+                            ["bottom"] = 2,
+                            ["left"] = 2,
+                            ["right"] = 2,
+                            ["top"] = 2,
+                        },
+                    },
+                    ["states"] = {
+                        ["released"] = {
+                            [1] = {
+                                ["bkg"] = {
+                                    ["center_center"] = "0x00000066",
+                                },
+                                ["text"] = {
+                                    ["color"] = "0xffffffaa",
+                                },
+                            },
+                            [2] = {
+                                ["bkg"] = {
+                                    ["center_center"] = "0x00000066",
+                                },
+                                ["text"] = {
+                                    ["color"] = "0xffffffaa",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        ["states"] = {
+            ["released"] = {
+                [1] = {
+                    ["bkg"] = {
+                        ["center_center"] = "0x00000000",
+                    },
+                },
+            },
+        },
+    },
+    ["children"] = {
+        ["Box"] = {
+            ["children"] = {
+                ["ScratchpadEditBox"] = {
+                    ["params"] = {
+                        ["acceptDecimalPoint"] = false,
+                        ["bounds"] = {
+                            ["h"] = 100,
+                            ["w"] = 250,
+                            ["x"] = 0,
+                            ["y"] = 0,
+                        },
+                        ["enabled"] = true,
+                        ["multiline"] = true,
+                        ["numeric"] = false,
+                        ["password"] = false,
+                        ["readOnly"] = false,
+                        ["tabOrder"] = 80,
+                        ["text"] = "...",
+                        ["textWrapping"] = true,
+                        ["tooltip"] = "",
+                        ["visible"] = true,
+                        ["zindex"] = 0,
+                    },
+                    ["skin"] = {
+                        ["params"] = {
+                            ["name"] = "editBoxNew",
+                        },
+                        ["states"] = {
+                            ["released"] = {
+                                [1] = {
+                                    ["bkg"] = {
+                                        ["center_center"] = "0x00000080",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    ["type"] = "EditBox",
+                },
+            },
+            ["params"] = {
+                ["bounds"] = {
+                    [1] = {
+                        ["h"] = 467,
+                        ["w"] = 360,
+                        ["x"] = 0,
+                        ["y"] = 55,
+                    },
+                },
+                ["enabled"] = true,
+                ["text"] = "",
+                ["tooltip"] = "",
+                ["visible"] = true,
+                ["zindex"] = 0,
+            },
+            ["skin"] = {
+                ["params"] = {
+                    ["name"] = "panelSkin",
+                },
+            },
+            ["type"] = "Panel",
+        },
+        ["pNoVisible"] = {
+            ["children"] = {
+                ["windowModeMin"] = {
+                    ["params"] = {
+                        ["bounds"] = {
+                            ["h"] = 36,
+                            ["w"] = 40,
+                            ["x"] = 13,
+                            ["y"] = 203,
+                        },
+                        ["enabled"] = true,
+                        ["text"] = "Panel1",
+                        ["tooltip"] = "",
+                        ["visible"] = true,
+                        ["zindex"] = 0,
+                    },
+                    ["skin"] = {
+                        ["params"] = {
+                            ["name"] = "panelSkin",
+                        },
+                    },
+                    ["type"] = "Panel",
+                },
+                ["windowModeFull"] = {
+                    ["params"] = {
+                        ["bounds"] = {
+                            ["h"] = 36,
+                            ["w"] = 40,
+                            ["x"] = 13,
+                            ["y"] = 203,
+                        },
+                        ["enabled"] = true,
+                        ["text"] = "panel0",
+                        ["tooltip"] = "",
+                        ["visible"] = true,
+                        ["zindex"] = 0,
+                    },
+                    ["skin"] = {
+                        ["params"] = {
+                            ["name"] = "panelSkin",
+                        },
+                        ["states"] = {
+                            ["released"] = {
+                                [1] = {
+                                    ["bkg"] = {
+                                        ["center_center"] = "0x00000064",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    ["type"] = "Panel",
+                },
+            },
+            ["params"] = {
+                ["bounds"] = {
+                    ["h"] = 435,
+                    ["w"] = 228,
+                    ["x"] = 442,
+                    ["y"] = 31,
+                },
+                ["enabled"] = true,
+                ["text"] = "panel0",
+                ["tooltip"] = "",
+                ["visible"] = false,
+                ["zindex"] = 0,
+            },
+            ["skin"] = {
+                ["params"] = {
+                    ["name"] = "panelSkin",
+                },
+            },
+            ["type"] = "Panel",
+        },
+    },
+}
