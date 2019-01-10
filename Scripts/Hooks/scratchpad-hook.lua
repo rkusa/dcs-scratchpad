@@ -29,12 +29,19 @@ function scratchpad_load()
         if (tbl and tbl.config) then
             scratchpad.log("Configuration exists...")
             scratchpad.config = tbl.config
+
+            -- config migration
+            if scratchpad.config.fontSize == nil then
+                scratchpad.config.fontSize = 14
+                scratchpad.saveConfiguration()
+            end
         else
             scratchpad.log("Configuration not found, creating defaults...")
             scratchpad.config = { 
                 hotkey = "Ctrl+Shift+x",
                 windowPosition = { x = 200, y = 200 },
                 windowSize = { w = 350, h = 150 },
+                fontSize = 14,
                 content = "Start writing here ...",
             }
             scratchpad.saveConfiguration()
@@ -78,8 +85,14 @@ function scratchpad_load()
         windowDefaultSkin = window:getSkin()
         panel = window.Box
         textarea = panel.ScratchpadEditBox
+
+
         
         -- setup textarea
+        local skin = textarea:getSkin()
+        skin.skinData.states.released[1].text.fontSize = scratchpad.config.fontSize
+        textarea:setSkin(skin)
+
         textarea:setText(scratchpad.config.content)
         textarea:addChangeCallback(function(self)
             scratchpad.config.content = self:getText()
