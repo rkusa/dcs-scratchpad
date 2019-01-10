@@ -1,23 +1,21 @@
 function scratchpad_load()
 
-    package.path  = package.path..";.\\LuaSocket\\?.lua;"..'.\\Scripts\\?.lua;'.. '.\\Scripts\\UI\\?.lua;'
-    package.cpath = package.cpath..";.\\LuaSocket\\?.dll;"
+    package.path  = package.path..";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
-    local JSON = loadfile("Scripts\\JSON.lua")()
-    local lfs               = require('lfs')
-    local U                 = require('me_utilities')
-    local Skin              = require('Skin')
-    local DialogLoader      = require('DialogLoader')
-    local Tools             = require('tools')
-    local Input             = require('Input')
+    local lfs          = require("lfs")
+    local U            = require("me_utilities")
+    local Skin         = require("Skin")
+    local DialogLoader = require("DialogLoader")
+    local Tools        = require("tools")
+    local Input        = require("Input")
 
-    local isHidden = true
-    local keyboardLocked = false
-    local window = nil
+    local isHidden          = true
+    local keyboardLocked    = false
+    local window            = nil
     local windowDefaultSkin = nil
-    local windowSkinHidden = Skin.windowSkinChatMin()
-    local panel = nil
-    local textarea = nil
+    local windowSkinHidden  = Skin.windowSkinChatMin()
+    local panel             = nil
+    local textarea          = nil
 
     local scratchpad = {
         logFile = io.open(lfs.writedir()..[[Logs\Scratchpad.log]], "w")
@@ -25,7 +23,7 @@ function scratchpad_load()
 
     function scratchpad.loadConfiguration()
         scratchpad.log("Loading config file...")
-        local tbl = Tools.safeDoFile(lfs.writedir() .. 'Config/ScratchpadConfig.lua', false)
+        local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
         if (tbl and tbl.config) then
             scratchpad.log("Configuration exists...")
             scratchpad.config = tbl.config
@@ -49,7 +47,7 @@ function scratchpad_load()
     end
 
     function scratchpad.saveConfiguration()
-        U.saveInFile(scratchpad.config, 'config', lfs.writedir() .. 'Config/ScratchpadConfig.lua')
+        U.saveInFile(scratchpad.config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
     end
 
     function scratchpad.log(str)
@@ -81,12 +79,10 @@ function scratchpad_load()
     end
 
     function scratchpad.createWindow()
-        window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. 'Scripts\\Scratchpad\\ScratchpadWindow.dlg', cdata)
+        window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg", cdata)
         windowDefaultSkin = window:getSkin()
         panel = window.Box
         textarea = panel.ScratchpadEditBox
-
-
         
         -- setup textarea
         local skin = textarea:getSkin()
@@ -106,7 +102,7 @@ function scratchpad_load()
             end
         end)
         textarea:addKeyDownCallback(function(self, keyName, unicode)
-            if keyName == 'escape' then
+            if keyName == "escape" then
                 self:setFocused(false)
                 unlockKeyboardInput(true)
             end
