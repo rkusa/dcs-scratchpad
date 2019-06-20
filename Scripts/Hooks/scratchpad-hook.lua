@@ -1,202 +1,202 @@
 function scratchpad_load()
 
-    package.path  = package.path..";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
+	package.path = package.path..";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
-    local lfs          = require("lfs")
-    local U            = require("me_utilities")
-    local Skin         = require("Skin")
-    local DialogLoader = require("DialogLoader")
-    local Tools        = require("tools")
-    local Input        = require("Input")
+	local lfs = require("lfs")
+	local U = require("me_utilities")
+	local Skin = require("Skin")
+	local DialogLoader = require("DialogLoader")
+	local Tools = require("tools")
+	local Input = require("Input")
 
-    local isHidden          = true
-    local keyboardLocked    = false
-    local window            = nil
-    local windowDefaultSkin = nil
-    local windowSkinHidden  = Skin.windowSkinChatMin()
-    local panel             = nil
-    local textarea          = nil
+	local isHidden = true
+	local keyboardLocked = false
+	local window = nil
+	local windowDefaultSkin = nil
+	local windowSkinHidden = Skin.windowSkinChatMin()
+	local panel = nil
+	local textarea = nil
 
-    local scratchpad = {
-        logFile = io.open(lfs.writedir()..[[Logs\Scratchpad.log]], "w")
-    }
+	local scratchpad = {
+		logFile = io.open(lfs.writedir()..[[Logs\Scratchpad.log]], "w")
+	}
 
-    function scratchpad.loadConfiguration()
-        scratchpad.log("Loading config file...")
-        local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
-        if (tbl and tbl.config) then
-            scratchpad.log("Configuration exists...")
-            scratchpad.config = tbl.config
+	function scratchpad.loadConfiguration()
+		scratchpad.log("Loading config file...")
+		local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
+		if (tbl and tbl.config) then
+			scratchpad.log("Configuration exists...")
+			scratchpad.config = tbl.config
 
-            -- config migration
-            if scratchpad.config.fontSize == nil then
-                scratchpad.config.fontSize = 14
-                scratchpad.saveConfiguration()
-            end
-        else
-            scratchpad.log("Configuration not found, creating defaults...")
-            scratchpad.config = { 
-                hotkey = "Ctrl+Shift+x",
-                windowPosition = { x = 200, y = 200 },
-                windowSize = { w = 350, h = 150 },
-                fontSize = 14,
-                content = "Start writing here ...",
-            }
-            scratchpad.saveConfiguration()
-        end  
-    end
+			-- config migration
+			if scratchpad.config.fontSize == nil then
+				scratchpad.config.fontSize = 14
+				scratchpad.saveConfiguration()
+			end
+		else
+			scratchpad.log("Configuration not found, creating defaults...")
+			scratchpad.config = {
+				hotkey = "Ctrl+Shift+x",
+				windowPosition = { x = 200, y = 200 },
+				windowSize = { w = 350, h = 150 },
+				fontSize = 14,
+				content = "Start writing here ...",
+			}
+			scratchpad.saveConfiguration()
+		end
+	end
 
-    function scratchpad.saveConfiguration()
-        U.saveInFile(scratchpad.config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
-    end
+	function scratchpad.saveConfiguration()
+		U.saveInFile(scratchpad.config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
+	end
 
-    function scratchpad.log(str)
-        if not str then 
-            return
-        end
+	function scratchpad.log(str)
+		if not str then
+			return
+		end
 
-        if scratchpad.logFile then
-            scratchpad.logFile:write("["..os.date("%H:%M:%S").."] "..str.."\r\n")
-            scratchpad.logFile:flush()
-        end
-    end
+		if scratchpad.logFile then
+			scratchpad.logFile:write("["..os.date("%H:%M:%S").."] "..str.."\r\n")
+			scratchpad.logFile:flush()
+		end
+	end
 
-    local function unlockKeyboardInput(releaseKeyboardKeys)
-        if keyboardLocked then
-            DCS.unlockKeyboardInput(releaseKeyboardKeys)
-            keyboardLocked = false
-        end
-    end
+	local function unlockKeyboardInput(releaseKeyboardKeys)
+		if keyboardLocked then
+			DCS.unlockKeyboardInput(releaseKeyboardKeys)
+			keyboardLocked = false
+		end
+	end
 
-    local function lockKeyboardInput()
-        if keyboardLocked then
-            return
-        end
+	local function lockKeyboardInput()
+		if keyboardLocked then
+			return
+		end
 
-        local keyboardEvents = Input.getDeviceKeys(Input.getKeyboardDeviceName())
-        DCS.lockKeyboardInput(keyboardEvents)
-        keyboardLocked = true
-    end
+		local keyboardEvents = Input.getDeviceKeys(Input.getKeyboardDeviceName())
+		DCS.lockKeyboardInput(keyboardEvents)
+		keyboardLocked = true
+	end
 
-    function scratchpad.createWindow()
-        window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg", cdata)
-        windowDefaultSkin = window:getSkin()
-        panel = window.Box
-        textarea = panel.ScratchpadEditBox
-        
-        -- setup textarea
-        local skin = textarea:getSkin()
-        skin.skinData.states.released[1].text.fontSize = scratchpad.config.fontSize
-        textarea:setSkin(skin)
+	function scratchpad.createWindow()
+		window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg", cdata)
+		windowDefaultSkin = window:getSkin()
+		panel = window.Box
+		textarea = panel.ScratchpadEditBox
 
-        textarea:setText(scratchpad.config.content)
-        textarea:addChangeCallback(function(self)
-            scratchpad.config.content = self:getText()
-            scratchpad.saveConfiguration()
-        end)
-        textarea:addFocusCallback(function(self)
-            if self:getFocused() then
-                lockKeyboardInput()
-            else
-                unlockKeyboardInput(true)
-            end
-        end)
-        textarea:addKeyDownCallback(function(self, keyName, unicode)
-            if keyName == "escape" then
-                self:setFocused(false)
-                unlockKeyboardInput(true)
-            end
-        end)
-        
-        -- setup window
-        window:setBounds(
-            scratchpad.config.windowPosition.x,
-            scratchpad.config.windowPosition.y,
-            scratchpad.config.windowSize.w,
-            scratchpad.config.windowSize.h
-        )
-        scratchpad.handleResize(window)
+		-- setup textarea
+		local skin = textarea:getSkin()
+		skin.skinData.states.released[1].text.fontSize = scratchpad.config.fontSize
+		textarea:setSkin(skin)
 
-        window:addHotKeyCallback(scratchpad.config.hotkey, function()
-            if isHidden == true then
-                scratchpad.show()
-            else
-                scratchpad.hide()
-            end
-        end)
-        window:addSizeCallback(scratchpad.handleResize)
-        window:addPositionCallback(scratchpad.handleMove)
+		textarea:setText(scratchpad.config.content)
+		textarea:addChangeCallback(function(self)
+			scratchpad.config.content = self:getText()
+			scratchpad.saveConfiguration()
+		end)
+		textarea:addFocusCallback(function(self)
+			if self:getFocused() then
+				lockKeyboardInput()
+			else
+				unlockKeyboardInput(true)
+			end
+		end)
+		textarea:addKeyDownCallback(function(self, keyName, unicode)
+			if keyName == "escape" then
+				self:setFocused(false)
+				unlockKeyboardInput(true)
+			end
+		end)
 
-        window:setVisible(true)
-        scratchpad.hide()  
-        scratchpad.log("Scratchpad Window created")
-    end
+		-- setup window
+		window:setBounds(
+			scratchpad.config.windowPosition.x,
+			scratchpad.config.windowPosition.y,
+			scratchpad.config.windowSize.w,
+			scratchpad.config.windowSize.h
+		)
+		scratchpad.handleResize(window)
 
-    function scratchpad.setVisible(b)
-        window:setVisible(b)
-    end
+		window:addHotKeyCallback(scratchpad.config.hotkey, function()
+			if isHidden == true then
+				scratchpad.show()
+			else
+				scratchpad.hide()
+			end
+		end)
+		window:addSizeCallback(scratchpad.handleResize)
+		window:addPositionCallback(scratchpad.handleMove)
 
-    function scratchpad.handleResize(self)
-        local w, h = self:getSize()
+		window:setVisible(true)
+		scratchpad.hide()
+		scratchpad.log("Scratchpad Window created")
+	end
 
-        panel:setBounds(0, 0, w, h - 20)
-        textarea:setBounds(0, 0, w, h - 20)
+	function scratchpad.setVisible(b)
+		window:setVisible(b)
+	end
 
-        scratchpad.config.windowSize = { w = w, h = h }
-        scratchpad.saveConfiguration()
-    end
+	function scratchpad.handleResize(self)
+		local w, h = self:getSize()
 
-    function scratchpad.handleMove(self)
-        local x, y = self:getPosition()
-        scratchpad.config.windowPosition = { x = x, y = y }
-        scratchpad.saveConfiguration()
-    end
+		panel:setBounds(0, 0, w, h - 20)
+		textarea:setBounds(0, 0, w, h - 20)
 
-    function scratchpad.show()
-        if window == nil then
-            local status, err = pcall(scratchpad.createWindow)
-            if not status then
-                net.log("[Scratchpad] Error creating window: " .. tostring(err))
-            end
-        end
+		scratchpad.config.windowSize = { w = w, h = h }
+		scratchpad.saveConfiguration()
+	end
 
-        window:setVisible(true)
-        window:setSkin(windowDefaultSkin)
-        panel:setVisible(true)
-        window:setHasCursor(true)    
+	function scratchpad.handleMove(self)
+		local x, y = self:getPosition()
+		scratchpad.config.windowPosition = { x = x, y = y }
+		scratchpad.saveConfiguration()
+	end
 
-        isHidden = false
-    end
+	function scratchpad.show()
+		if window == nil then
+			local status, err = pcall(scratchpad.createWindow)
+			if not status then
+				net.log("[Scratchpad] Error creating window: " .. tostring(err))
+			end
+		end
 
-    function scratchpad.hide()
-        window:setSkin(windowSkinHidden)
-        panel:setVisible(false)
-        textarea:setFocused(false)
-        window:setHasCursor(false)
-        -- window.setVisible(false) -- if you make the window invisible, its destroyed
-        unlockKeyboardInput(true)
+		window:setVisible(true)
+		window:setSkin(windowDefaultSkin)
+		panel:setVisible(true)
+		window:setHasCursor(true)
 
-        isHidden = true
-    end
+		isHidden = false
+	end
 
-    function scratchpad.onSimulationFrame()
-        if scratchpad.config == nil then
-            scratchpad.loadConfiguration()
-        end
+	function scratchpad.hide()
+		window:setSkin(windowSkinHidden)
+		panel:setVisible(false)
+		textarea:setFocused(false)
+		window:setHasCursor(false)
+		-- window.setVisible(false) -- if you make the window invisible, it's destroyed
+		unlockKeyboardInput(true)
 
-        if not window then 
-            scratchpad.log("Creating Scratchpad window hidden...")
-            scratchpad.createWindow()
+		isHidden = true
+	end
 
-        end
-    end 
+	function scratchpad.onSimulationFrame()
+		if scratchpad.config == nil then
+			scratchpad.loadConfiguration()
+		end
 
-    DCS.setUserCallbacks(scratchpad)
+		if not window then 
+			scratchpad.log("Creating Scratchpad window hidden...")
+			scratchpad.createWindow()
 
-    net.log("[Scratchpad] Loaded ...")
+		end
+	end
+
+	DCS.setUserCallbacks(scratchpad)
+
+	net.log("[Scratchpad] Loaded ...")
 end
 
 local status, err = pcall(scratchpad_load)
 if not status then
-    net.log("[Scratchpad] Load Error: " .. tostring(err))
+	net.log("[Scratchpad] Load Error: " .. tostring(err))
 end
