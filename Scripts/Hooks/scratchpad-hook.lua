@@ -29,8 +29,17 @@ function scratchpad_load()
             scratchpad.config = tbl.config
 
             -- config migration
+
+            -- add default fontSize config
             if scratchpad.config.fontSize == nil then
                 scratchpad.config.fontSize = 14
+                scratchpad.saveConfiguration()
+            end
+
+            -- move content into text file
+            if scratchpad.config.content ~= nil then
+                scratchpad.saveContent("0000", scratchpad.config.content, false)
+                scratchpad.config.content = nil
                 scratchpad.saveConfiguration()
             end
         else
@@ -40,10 +49,39 @@ function scratchpad_load()
                 windowPosition = { x = 200, y = 200 },
                 windowSize = { w = 350, h = 150 },
                 fontSize = 14,
-                content = "Start writing here ...",
             }
             scratchpad.saveConfiguration()
         end  
+    end
+
+    function scratchpad.getContent(name)
+        local path = lfs.writedir()..[[Scratchpad\]]..name..[[.txt]]
+        file, err = io.open(path, "r")
+        if err then
+            scratchpad.log("Error reading file: "..path)
+            return ""
+        else
+            local content = file:read("*all")
+            file:close()
+            return content
+        end
+    end
+
+    function scratchpad.saveContent(name, content, override)
+        lfs.mkdir(lfs.writedir()..[[Scratchpad\]])
+        local path = lfs.writedir()..[[Scratchpad\]]..name..[[.txt]]
+        local mode = "a"
+        if override then 
+            mode = "w"
+        end
+        file, err = io.open(path, mode)
+        if err then
+            scratchpad.log("Error writing file: "..path)
+        else
+            file:write(content)
+            file:flush()
+            file:close()
+        end
     end
 
     function scratchpad.saveConfiguration()
@@ -89,10 +127,9 @@ function scratchpad_load()
         skin.skinData.states.released[1].text.fontSize = scratchpad.config.fontSize
         textarea:setSkin(skin)
 
-        textarea:setText(scratchpad.config.content)
+        textarea:setText(scratchpad.getContent("0000"))
         textarea:addChangeCallback(function(self)
-            scratchpad.config.content = self:getText()
-            scratchpad.saveConfiguration()
+            scratchpad.saveContent("0000", self:getText(), true)
         end)
         textarea:addFocusCallback(function(self)
             if self:getFocused() then
