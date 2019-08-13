@@ -1,24 +1,23 @@
 function scratchpad_load()
+    package.path = package.path .. ";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
-    package.path  = package.path..";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
-
-    local lfs          = require("lfs")
-    local U            = require("me_utilities")
-    local Skin         = require("Skin")
+    local lfs = require("lfs")
+    local U = require("me_utilities")
+    local Skin = require("Skin")
     local DialogLoader = require("DialogLoader")
-    local Tools        = require("tools")
-    local Input        = require("Input")
+    local Tools = require("tools")
+    local Input = require("Input")
 
-    local isHidden          = true
-    local keyboardLocked    = false
-    local window            = nil
+    local isHidden = true
+    local keyboardLocked = false
+    local window = nil
     local windowDefaultSkin = nil
-    local windowSkinHidden  = Skin.windowSkinChatMin()
-    local panel             = nil
-    local textarea          = nil
+    local windowSkinHidden = Skin.windowSkinChatMin()
+    local panel = nil
+    local textarea = nil
 
     local scratchpad = {
-        logFile = io.open(lfs.writedir()..[[Logs\Scratchpad.log]], "w")
+        logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
     }
 
     function scratchpad.loadConfiguration()
@@ -44,21 +43,21 @@ function scratchpad_load()
             end
         else
             scratchpad.log("Configuration not found, creating defaults...")
-            scratchpad.config = { 
+            scratchpad.config = {
                 hotkey = "Ctrl+Shift+x",
-                windowPosition = { x = 200, y = 200 },
-                windowSize = { w = 350, h = 150 },
-                fontSize = 14,
+                windowPosition = {x = 200, y = 200},
+                windowSize = {w = 350, h = 150},
+                fontSize = 14
             }
             scratchpad.saveConfiguration()
-        end  
+        end
     end
 
     function scratchpad.getContent(name)
-        local path = lfs.writedir()..[[Scratchpad\]]..name..[[.txt]]
+        local path = lfs.writedir() .. [[Scratchpad\]] .. name .. [[.txt]]
         file, err = io.open(path, "r")
         if err then
-            scratchpad.log("Error reading file: "..path)
+            scratchpad.log("Error reading file: " .. path)
             return ""
         else
             local content = file:read("*all")
@@ -68,15 +67,15 @@ function scratchpad_load()
     end
 
     function scratchpad.saveContent(name, content, override)
-        lfs.mkdir(lfs.writedir()..[[Scratchpad\]])
-        local path = lfs.writedir()..[[Scratchpad\]]..name..[[.txt]]
+        lfs.mkdir(lfs.writedir() .. [[Scratchpad\]])
+        local path = lfs.writedir() .. [[Scratchpad\]] .. name .. [[.txt]]
         local mode = "a"
-        if override then 
+        if override then
             mode = "w"
         end
         file, err = io.open(path, mode)
         if err then
-            scratchpad.log("Error writing file: "..path)
+            scratchpad.log("Error writing file: " .. path)
         else
             file:write(content)
             file:flush()
@@ -89,12 +88,12 @@ function scratchpad_load()
     end
 
     function scratchpad.log(str)
-        if not str then 
+        if not str then
             return
         end
 
         if scratchpad.logFile then
-            scratchpad.logFile:write("["..os.date("%H:%M:%S").."] "..str.."\r\n")
+            scratchpad.logFile:write("[" .. os.date("%H:%M:%S") .. "] " .. str .. "\r\n")
             scratchpad.logFile:flush()
         end
     end
@@ -121,30 +120,36 @@ function scratchpad_load()
         windowDefaultSkin = window:getSkin()
         panel = window.Box
         textarea = panel.ScratchpadEditBox
-        
+
         -- setup textarea
         local skin = textarea:getSkin()
         skin.skinData.states.released[1].text.fontSize = scratchpad.config.fontSize
         textarea:setSkin(skin)
 
         textarea:setText(scratchpad.getContent("0000"))
-        textarea:addChangeCallback(function(self)
-            scratchpad.saveContent("0000", self:getText(), true)
-        end)
-        textarea:addFocusCallback(function(self)
-            if self:getFocused() then
-                lockKeyboardInput()
-            else
-                unlockKeyboardInput(true)
+        textarea:addChangeCallback(
+            function(self)
+                scratchpad.saveContent("0000", self:getText(), true)
             end
-        end)
-        textarea:addKeyDownCallback(function(self, keyName, unicode)
-            if keyName == "escape" then
-                self:setFocused(false)
-                unlockKeyboardInput(true)
+        )
+        textarea:addFocusCallback(
+            function(self)
+                if self:getFocused() then
+                    lockKeyboardInput()
+                else
+                    unlockKeyboardInput(true)
+                end
             end
-        end)
-        
+        )
+        textarea:addKeyDownCallback(
+            function(self, keyName, unicode)
+                if keyName == "escape" then
+                    self:setFocused(false)
+                    unlockKeyboardInput(true)
+                end
+            end
+        )
+
         -- setup window
         window:setBounds(
             scratchpad.config.windowPosition.x,
@@ -154,18 +159,21 @@ function scratchpad_load()
         )
         scratchpad.handleResize(window)
 
-        window:addHotKeyCallback(scratchpad.config.hotkey, function()
-            if isHidden == true then
-                scratchpad.show()
-            else
-                scratchpad.hide()
+        window:addHotKeyCallback(
+            scratchpad.config.hotkey,
+            function()
+                if isHidden == true then
+                    scratchpad.show()
+                else
+                    scratchpad.hide()
+                end
             end
-        end)
+        )
         window:addSizeCallback(scratchpad.handleResize)
         window:addPositionCallback(scratchpad.handleMove)
 
         window:setVisible(true)
-        scratchpad.hide()  
+        scratchpad.hide()
         scratchpad.log("Scratchpad Window created")
     end
 
@@ -179,13 +187,13 @@ function scratchpad_load()
         panel:setBounds(0, 0, w, h - 20)
         textarea:setBounds(0, 0, w, h - 20)
 
-        scratchpad.config.windowSize = { w = w, h = h }
+        scratchpad.config.windowSize = {w = w, h = h}
         scratchpad.saveConfiguration()
     end
 
     function scratchpad.handleMove(self)
         local x, y = self:getPosition()
-        scratchpad.config.windowPosition = { x = x, y = y }
+        scratchpad.config.windowPosition = {x = x, y = y}
         scratchpad.saveConfiguration()
     end
 
@@ -200,7 +208,7 @@ function scratchpad_load()
         window:setVisible(true)
         window:setSkin(windowDefaultSkin)
         panel:setVisible(true)
-        window:setHasCursor(true)    
+        window:setHasCursor(true)
 
         isHidden = false
     end
@@ -221,12 +229,11 @@ function scratchpad_load()
             scratchpad.loadConfiguration()
         end
 
-        if not window then 
+        if not window then
             scratchpad.log("Creating Scratchpad window hidden...")
             scratchpad.createWindow()
-
         end
-    end 
+    end
 
     DCS.setUserCallbacks(scratchpad)
 
