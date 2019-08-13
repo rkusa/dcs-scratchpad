@@ -6,8 +6,8 @@ dialog = {
                 ["h"] = 200,
                 ["w"] = 350,
                 ["x"] = 0,
-                ["y"] = 0,
-            },
+                ["y"] = 0
+            }
         },
         ["draggable"] = true,
         ["enabled"] = true,
@@ -17,11 +17,11 @@ dialog = {
         ["offscreen"] = false,
         ["resizable"] = true,
         ["zOrder"] = 111,
-        ["text"] =  "Scratchpad",
+        ["text"] = "Scratchpad"
     },
     ["skin"] = {
         ["params"] = {
-            ["name"] = "windowSkin",
+            ["name"] = "windowSkin"
         },
         ["skins"] = {
             ["header"] = {
@@ -32,53 +32,75 @@ dialog = {
                             ["bottom"] = 2,
                             ["left"] = 2,
                             ["right"] = 2,
-                            ["top"] = 2,
-                        },
+                            ["top"] = 2
+                        }
                     },
                     ["states"] = {
                         ["released"] = {
                             [1] = {
                                 ["bkg"] = {
-                                    ["center_center"] = "0x00000066",
+                                    ["center_center"] = "0x00000066"
                                 },
                                 ["text"] = {
-                                    ["color"] = "0xffffffaa",
-                                },
+                                    ["color"] = "0xffffffaa"
+                                }
                             },
                             [2] = {
                                 ["bkg"] = {
-                                    ["center_center"] = "0x00000066",
+                                    ["center_center"] = "0x00000066"
                                 },
                                 ["text"] = {
-                                    ["color"] = "0xffffffaa",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
+                                    ["color"] = "0xffffffaa"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
         ["states"] = {
             ["released"] = {
                 [1] = {
                     ["bkg"] = {
-                        ["center_center"] = "0x00000000",
-                    },
-                },
-            },
-        },
+                        ["center_center"] = "0x00000000"
+                    }
+                }
+            }
+        }
     },
     ["children"] = {
         ["Box"] = {
             ["children"] = {
+                ["ScratchpadInsertCoordsButton"] = {
+                    ["params"] = {
+                        ["bounds"] = {
+                            ["h"] = 20,
+                            ["w"] = 30,
+                            ["x"] = 0,
+                            ["y"] = 180
+                        },
+                        ["enabled"] = true,
+                        ["tabOrder"] = 0,
+                        ["text"] = "+L/L",
+                        ["tooltip"] = "Insert Coords",
+                        ["visible"] = true,
+                        ["zindex"] = 1
+                    },
+                    ["skin"] = {
+                        ["params"] = {
+                            ["name"] = "buttonSkinAwacs"
+                        }
+                    },
+                    ["type"] = "Button"
+                },
                 ["ScratchpadEditBox"] = {
                     ["params"] = {
                         ["acceptDecimalPoint"] = false,
                         ["bounds"] = {
-                            ["h"] = 100,
-                            ["w"] = 250,
+                            ["h"] = 180,
+                            ["w"] = 350,
                             ["x"] = 0,
-                            ["y"] = 0,
+                            ["y"] = 20
                         },
                         ["enabled"] = true,
                         ["multiline"] = true,
@@ -90,46 +112,46 @@ dialog = {
                         ["textWrapping"] = true,
                         ["tooltip"] = "",
                         ["visible"] = true,
-                        ["zindex"] = 0,
+                        ["zindex"] = 0
                     },
                     ["skin"] = {
                         ["params"] = {
-                            ["name"] = "editBoxNew",
+                            ["name"] = "editBoxNew"
                         },
                         ["states"] = {
                             ["released"] = {
                                 [1] = {
                                     ["bkg"] = {
-                                        ["center_center"] = "0x00000080",
-                                    },
-                                },
-                            },
-                        },
+                                        ["center_center"] = "0x00000080"
+                                    }
+                                }
+                            }
+                        }
                     },
-                    ["type"] = "EditBox",
-                },
+                    ["type"] = "EditBox"
+                }
             },
             ["params"] = {
                 ["bounds"] = {
                     [1] = {
-                        ["h"] = 467,
-                        ["w"] = 360,
+                        ["h"] = 200,
+                        ["w"] = 350,
                         ["x"] = 0,
-                        ["y"] = 55,
-                    },
+                        ["y"] = 0
+                    }
                 },
                 ["enabled"] = true,
                 ["text"] = "",
                 ["tooltip"] = "",
                 ["visible"] = true,
-                ["zindex"] = 0,
+                ["zindex"] = 0
             },
             ["skin"] = {
                 ["params"] = {
-                    ["name"] = "panelSkin",
-                },
+                    ["name"] = "panelSkin"
+                }
             },
-            ["type"] = "Panel",
+            ["type"] = "Panel"
         },
         ["pNoVisible"] = {
             ["children"] = {
@@ -139,20 +161,20 @@ dialog = {
                             ["h"] = 36,
                             ["w"] = 40,
                             ["x"] = 13,
-                            ["y"] = 203,
+                            ["y"] = 203
                         },
                         ["enabled"] = true,
                         ["text"] = "Panel1",
                         ["tooltip"] = "",
                         ["visible"] = true,
-                        ["zindex"] = 0,
+                        ["zindex"] = 0
                     },
                     ["skin"] = {
                         ["params"] = {
-                            ["name"] = "panelSkin",
-                        },
+                            ["name"] = "panelSkin"
+                        }
                     },
-                    ["type"] = "Panel",
+                    ["type"] = "Panel"
                 },
                 ["windowModeFull"] = {
                     ["params"] = {
@@ -160,50 +182,50 @@ dialog = {
                             ["h"] = 36,
                             ["w"] = 40,
                             ["x"] = 13,
-                            ["y"] = 203,
+                            ["y"] = 203
                         },
                         ["enabled"] = true,
                         ["text"] = "panel0",
                         ["tooltip"] = "",
                         ["visible"] = true,
-                        ["zindex"] = 0,
+                        ["zindex"] = 0
                     },
                     ["skin"] = {
                         ["params"] = {
-                            ["name"] = "panelSkin",
+                            ["name"] = "panelSkin"
                         },
                         ["states"] = {
                             ["released"] = {
                                 [1] = {
                                     ["bkg"] = {
-                                        ["center_center"] = "0x00000064",
-                                    },
-                                },
-                            },
-                        },
+                                        ["center_center"] = "0x00000064"
+                                    }
+                                }
+                            }
+                        }
                     },
-                    ["type"] = "Panel",
-                },
+                    ["type"] = "Panel"
+                }
             },
             ["params"] = {
                 ["bounds"] = {
                     ["h"] = 435,
                     ["w"] = 228,
                     ["x"] = 442,
-                    ["y"] = 31,
+                    ["y"] = 31
                 },
                 ["enabled"] = true,
                 ["text"] = "panel0",
                 ["tooltip"] = "",
                 ["visible"] = false,
-                ["zindex"] = 0,
+                ["zindex"] = 0
             },
             ["skin"] = {
                 ["params"] = {
-                    ["name"] = "panelSkin",
-                },
+                    ["name"] = "panelSkin"
+                }
             },
-            ["type"] = "Panel",
-        },
-    },
+            ["type"] = "Panel"
+        }
+    }
 }
