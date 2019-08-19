@@ -343,6 +343,13 @@ function scratchpad_load()
         panel:setVisible(true)
         window:setHasCursor(true)
 
+        -- insert coords only works if the client is the server, so hide the button otherwise
+        if DCS.isServer() then
+            insertCoordsBtn:setVisible(true)
+        else
+            insertCoordsBtn:setVisible(false)
+        end
+
         isHidden = false
     end
 
