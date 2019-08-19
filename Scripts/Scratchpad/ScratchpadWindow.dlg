@@ -71,12 +71,56 @@ dialog = {
     ["children"] = {
         ["Box"] = {
             ["children"] = {
+                ["ScratchpadPrevButton"] = {
+                    ["params"] = {
+                        ["bounds"] = {
+                            ["h"] = 20,
+                            ["w"] = 50,
+                            ["x"] = 0,
+                            ["y"] = 180
+                        },
+                        ["enabled"] = true,
+                        ["tabOrder"] = 0,
+                        ["text"] = "←",
+                        ["tooltip"] = "Previous Page",
+                        ["visible"] = true,
+                        ["zindex"] = 1
+                    },
+                    ["skin"] = {
+                        ["params"] = {
+                            ["name"] = "buttonSkinAwacs"
+                        }
+                    },
+                    ["type"] = "Button"
+                },
+                ["ScratchpadNextButton"] = {
+                    ["params"] = {
+                        ["bounds"] = {
+                            ["h"] = 20,
+                            ["w"] = 50,
+                            ["x"] = 55,
+                            ["y"] = 180
+                        },
+                        ["enabled"] = true,
+                        ["tabOrder"] = 0,
+                        ["text"] = "→",
+                        ["tooltip"] = "Next Page",
+                        ["visible"] = true,
+                        ["zindex"] = 1
+                    },
+                    ["skin"] = {
+                        ["params"] = {
+                            ["name"] = "buttonSkinAwacs"
+                        }
+                    },
+                    ["type"] = "Button"
+                },
                 ["ScratchpadInsertCoordsButton"] = {
                     ["params"] = {
                         ["bounds"] = {
                             ["h"] = 20,
-                            ["w"] = 30,
-                            ["x"] = 0,
+                            ["w"] = 120,
+                            ["x"] = 80,
                             ["y"] = 180
                         },
                         ["enabled"] = true,

@@ -127,6 +127,11 @@ function scratchpad_load()
         logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
     }
 
+    local dirPath = lfs.writedir() .. [[Scratchpad\]]
+    local currentPage = nil
+    local pagesCount = 0
+    local pages = {}
+
     function scratchpad.loadConfiguration()
         scratchpad.log("Loading config file...")
         local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
@@ -144,7 +149,7 @@ function scratchpad_load()
 
             -- move content into text file
             if scratchpad.config.content ~= nil then
-                scratchpad.saveContent("0000", scratchpad.config.content, false)
+                savePage(dirPath .. [[0000.txt]], scratchpad.config.content, false)
                 scratchpad.config.content = nil
                 scratchpad.saveConfiguration()
             end
@@ -158,24 +163,50 @@ function scratchpad_load()
             }
             scratchpad.saveConfiguration()
         end
+
+        -- scan scratchpad dir for pages
+        for name in lfs.dir(dirPath) do
+            local path = dirPath .. name
+            scratchpad.log(path)
+            if lfs.attributes(path, "mode") == "file" then
+                if name:sub(-4) ~= ".txt" then
+                    scratchpad.log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
+                elseif lfs.attributes(path, "size") > 1024 * 1024 then
+                    scratchpad.log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
+                else
+                    scratchpad.log("found page " .. path)
+                    table.insert(
+                        pages,
+                        {
+                            name = name:sub(1, -5),
+                            path = path
+                        }
+                    )
+                    pagesCount = pagesCount + 1
+                end
+            end
+        end
     end
 
-    function scratchpad.getContent(name)
-        local path = lfs.writedir() .. [[Scratchpad\]] .. name .. [[.txt]]
-        file, err = io.open(path, "r")
+    local function loadPage(page)
+        scratchpad.log("loading page " .. page.path)
+        file, err = io.open(page.path, "r")
         if err then
-            scratchpad.log("Error reading file: " .. path)
+            scratchpad.log("Error reading file: " .. page.path)
             return ""
         else
             local content = file:read("*all")
             file:close()
-            return content
+            textarea:setText(content)
+
+            -- update title
+            window:setText(page.name)
         end
     end
 
-    function scratchpad.saveContent(name, content, override)
+    local function savePage(path, content, override)
+        scratchpad.log("saving page " .. path)
         lfs.mkdir(lfs.writedir() .. [[Scratchpad\]])
-        local path = lfs.writedir() .. [[Scratchpad\]] .. name .. [[.txt]]
         local mode = "a"
         if override then
             mode = "w"
@@ -188,6 +219,42 @@ function scratchpad_load()
             file:flush()
             file:close()
         end
+    end
+
+    local function nextPage()
+        if pagesCount == 0 then
+            return
+        end
+
+        local lastPage = nil
+        for _, page in pairs(pages) do
+            if currentPage == nil or (lastPage ~= nil and lastPage.path == currentPage) then
+                loadPage(page)
+                currentPage = page.path
+                return
+            end
+            lastPage = page
+        end
+
+        -- restart at the beginning
+        loadPage(pages[1])
+        currentPage = pages[1].path
+    end
+
+    local function prevPage()
+        local lastPage = nil
+        for i, page in pairs(pages) do
+            if currentPage == nil or (page.path == currentPage and i ~= 1) then
+                loadPage(lastPage)
+                currentPage = lastPage.path
+                return
+            end
+            lastPage = page
+        end
+
+        -- restart at the end
+        loadPage(pages[pagesCount])
+        currentPage = pages[pagesCount].path
     end
 
     function scratchpad.saveConfiguration()
@@ -236,7 +303,7 @@ function scratchpad_load()
         local lastLine = textarea:getLineCount() - 1
         local lastLineChar = textarea:getLineTextLength(lastLine)
         textarea:setSelectionNew(lastLine, 0, lastLine, lastLineLen)
-        scratchpad.saveContent("0000", textarea:getText(), true)
+        savePage(currentPage, textarea:getText(), true)
     end
 
     function scratchpad.createWindow()
@@ -245,16 +312,17 @@ function scratchpad_load()
         panel = window.Box
         textarea = panel.ScratchpadEditBox
         insertCoordsBtn = panel.ScratchpadInsertCoordsButton
+        prevButton = panel.ScratchpadPrevButton
+        nextButton = panel.ScratchpadNextButton
 
         -- setup textarea
         local skin = textarea:getSkin()
         skin.skinData.states.released[1].text.fontSize = scratchpad.config.fontSize
         textarea:setSkin(skin)
 
-        textarea:setText(scratchpad.getContent("0000"))
         textarea:addChangeCallback(
             function(self)
-                scratchpad.saveContent("0000", self:getText(), true)
+                savePage(currentPage, self:getText(), true)
             end
         )
         textarea:addFocusCallback(
@@ -275,7 +343,17 @@ function scratchpad_load()
             end
         )
 
-        -- setup insert coords button
+        -- setup button callbacks
+        prevButton:addMouseDownCallback(
+            function(self)
+                prevPage()
+            end
+        )
+        nextButton:addMouseDownCallback(
+            function(self)
+                nextPage()
+            end
+        )
         insertCoordsBtn:addMouseDownCallback(
             function(self)
                 insertCoordinates()
@@ -305,6 +383,8 @@ function scratchpad_load()
         window:addPositionCallback(scratchpad.handleMove)
 
         window:setVisible(true)
+        nextPage()
+
         scratchpad.hide()
         scratchpad.log("Scratchpad Window created")
     end
@@ -318,7 +398,14 @@ function scratchpad_load()
 
         panel:setBounds(0, 0, w, h - 20)
         textarea:setBounds(0, 0, w, h - 20 - 20)
-        insertCoordsBtn:setBounds(0, h - 40, 50, 20)
+        prevButton:setBounds(0, h - 40, 50, 20)
+        nextButton:setBounds(55, h - 40, 50, 20)
+
+        if pagesCount > 1 then
+            insertCoordsBtn:setBounds(120, h - 40, 50, 20)
+        else
+            insertCoordsBtn:setBounds(0, h - 40, 50, 20)
+        end
 
         scratchpad.config.windowSize = {w = w, h = h}
         scratchpad.saveConfiguration()
@@ -348,6 +435,15 @@ function scratchpad_load()
             insertCoordsBtn:setVisible(true)
         else
             insertCoordsBtn:setVisible(false)
+        end
+
+        -- show prev/next buttons only if we have more than one page
+        if pagesCount > 1 then
+            prevButton:setVisible(true)
+            nextButton:setVisible(true)
+        else
+            prevButton:setVisible(false)
+            nextButton:setVisible(false)
         end
 
         isHidden = false
