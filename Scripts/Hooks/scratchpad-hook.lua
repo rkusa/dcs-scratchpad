@@ -132,62 +132,6 @@ function scratchpad_load()
     local pagesCount = 0
     local pages = {}
 
-    function scratchpad.loadConfiguration()
-        scratchpad.log("Loading config file...")
-        local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
-        if (tbl and tbl.config) then
-            scratchpad.log("Configuration exists...")
-            scratchpad.config = tbl.config
-
-            -- config migration
-
-            -- add default fontSize config
-            if scratchpad.config.fontSize == nil then
-                scratchpad.config.fontSize = 14
-                scratchpad.saveConfiguration()
-            end
-
-            -- move content into text file
-            if scratchpad.config.content ~= nil then
-                savePage(dirPath .. [[0000.txt]], scratchpad.config.content, false)
-                scratchpad.config.content = nil
-                scratchpad.saveConfiguration()
-            end
-        else
-            scratchpad.log("Configuration not found, creating defaults...")
-            scratchpad.config = {
-                hotkey = "Ctrl+Shift+x",
-                windowPosition = {x = 200, y = 200},
-                windowSize = {w = 350, h = 150},
-                fontSize = 14
-            }
-            scratchpad.saveConfiguration()
-        end
-
-        -- scan scratchpad dir for pages
-        for name in lfs.dir(dirPath) do
-            local path = dirPath .. name
-            scratchpad.log(path)
-            if lfs.attributes(path, "mode") == "file" then
-                if name:sub(-4) ~= ".txt" then
-                    scratchpad.log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
-                elseif lfs.attributes(path, "size") > 1024 * 1024 then
-                    scratchpad.log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
-                else
-                    scratchpad.log("found page " .. path)
-                    table.insert(
-                        pages,
-                        {
-                            name = name:sub(1, -5),
-                            path = path
-                        }
-                    )
-                    pagesCount = pagesCount + 1
-                end
-            end
-        end
-    end
-
     local function loadPage(page)
         scratchpad.log("loading page " .. page.path)
         file, err = io.open(page.path, "r")
@@ -255,6 +199,62 @@ function scratchpad_load()
         -- restart at the end
         loadPage(pages[pagesCount])
         currentPage = pages[pagesCount].path
+    end
+
+    function scratchpad.loadConfiguration()
+        scratchpad.log("Loading config file...")
+        local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
+        if (tbl and tbl.config) then
+            scratchpad.log("Configuration exists...")
+            scratchpad.config = tbl.config
+
+            -- config migration
+
+            -- add default fontSize config
+            if scratchpad.config.fontSize == nil then
+                scratchpad.config.fontSize = 14
+                scratchpad.saveConfiguration()
+            end
+
+            -- move content into text file
+            if scratchpad.config.content ~= nil then
+                savePage(dirPath .. [[0000.txt]], scratchpad.config.content, false)
+                scratchpad.config.content = nil
+                scratchpad.saveConfiguration()
+            end
+        else
+            scratchpad.log("Configuration not found, creating defaults...")
+            scratchpad.config = {
+                hotkey = "Ctrl+Shift+x",
+                windowPosition = {x = 200, y = 200},
+                windowSize = {w = 350, h = 150},
+                fontSize = 14
+            }
+            scratchpad.saveConfiguration()
+        end
+
+        -- scan scratchpad dir for pages
+        for name in lfs.dir(dirPath) do
+            local path = dirPath .. name
+            scratchpad.log(path)
+            if lfs.attributes(path, "mode") == "file" then
+                if name:sub(-4) ~= ".txt" then
+                    scratchpad.log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
+                elseif lfs.attributes(path, "size") > 1024 * 1024 then
+                    scratchpad.log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
+                else
+                    scratchpad.log("found page " .. path)
+                    table.insert(
+                        pages,
+                        {
+                            name = name:sub(1, -5),
+                            path = path
+                        }
+                    )
+                    pagesCount = pagesCount + 1
+                end
+            end
+        end
     end
 
     function scratchpad.saveConfiguration()
