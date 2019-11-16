@@ -255,6 +255,20 @@ function scratchpad_load()
                 end
             end
         end
+
+        -- there are no pages yet, create one
+        if pagesCount == 0 then
+            path = dirPath .. [[0000.txt]]
+            scratchpad.log("creating page " .. path)
+            table.insert(
+                pages,
+                {
+                    name = "0000",
+                    path = path
+                }
+            )
+            pagesCount = pagesCount + 1
+        end
     end
 
     function scratchpad.saveConfiguration()
