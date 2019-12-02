@@ -167,6 +167,10 @@ dialog = {
                                 [1] = {
                                     ["bkg"] = {
                                         ["center_center"] = "0x00000080"
+                                    },
+                                    ["text"] = {
+                                        ["font"] = "CONSOLA.TTF",
+                                        ["lineHeight"] = 10
                                     }
                                 }
                             }
