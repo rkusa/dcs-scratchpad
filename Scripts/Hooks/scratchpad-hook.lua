@@ -110,13 +110,13 @@ function scratchpad_load()
         local result = ""
         for _, mark in pairs(marks) do
             local lat, lon = coord.LOtoLL({
-                x = mark.pos.z,
+                x = mark.pos.x,
                 y = 0,
-                z = mark.pos.x
+                z = mark.pos.z
             })
             local alt = round(land.getHeight({
-                x = mark.pos.z,
-                y = mark.pos.x
+                x = mark.pos.x,
+                y = mark.pos.z
             }), 0)
             result = result .. "\n" .. tostringLL(lat, lon, 2, true) .. "\n" .. tostring(alt) .. "m, " .. mark.text .. "\n"
         end
