@@ -18,110 +18,58 @@ function scratchpad_load()
 
     local getCoordsLua =
         [[
-        -- thanks MIST! https://github.com/mrSkortch/MissionScriptingTools/blob/master/mist.lua
-
-        local round = function (num, idp)
-            local mult = 10^(idp or 0)
-            return math.floor(num * mult + 0.5) / mult
-        end
-
-        local tostringLL = function (lat, lon, acc, DMS)
-            local latHemi, lonHemi
-            if lat > 0 then
-                latHemi = 'N'
-            else
-                latHemi = 'S'
-            end
-
-            if lon > 0 then
-                lonHemi = 'E'
-            else
-                lonHemi = 'W'
-            end
-
-            lat = math.abs(lat)
-            lon = math.abs(lon)
-
-            local latDeg = math.floor(lat)
-            local latMin = (lat - latDeg)*60
-
-            local lonDeg = math.floor(lon)
-            local lonMin = (lon - lonDeg)*60
-
-            if DMS then	-- degrees, minutes, and seconds.
-                local oldLatMin = latMin
-                latMin = math.floor(latMin)
-                local latSec = round((oldLatMin - latMin)*60, acc)
-
-                local oldLonMin = lonMin
-                lonMin = math.floor(lonMin)
-                local lonSec = round((oldLonMin - lonMin)*60, acc)
-
-                if latSec == 60 then
-                    latSec = 0
-                    latMin = latMin + 1
-                end
-
-                if lonSec == 60 then
-                    lonSec = 0
-                    lonMin = lonMin + 1
-                end
-
-                local secFrmtStr -- create the formatting string for the seconds place
-                if acc <= 0 then	-- no decimal place.
-                    secFrmtStr = '%02d'
+            function formatCoord(type, isLat, d)
+                local h
+                if isLat then
+                    if d < 0 then
+                        h = 'S'
+                        d = -d
+                    else
+                        h = 'N'
+                    end
                 else
-                    local width = 3 + acc	-- 01.310 - that's a width of 6, for example.
-                    secFrmtStr = '%0' .. width .. '.' .. acc .. 'f'
+                    if d < 0 then
+                        h = 'W'
+                        d = -d
+                    else
+                        h = 'E'
+                    end
                 end
 
-                return string.format('%02d', latDeg) .. ' ' .. string.format('%02d', latMin) .. '\' ' .. string.format(secFrmtStr, latSec) .. '"' .. latHemi .. '	 '
-                .. string.format('%02d', lonDeg) .. ' ' .. string.format('%02d', lonMin) .. '\' ' .. string.format(secFrmtStr, lonSec) .. '"' .. lonHemi
+                local g = math.floor(d)
+                local m = math.floor(d * 60 - g * 60)
+                local s = d * 3600 - g * 3600 - m * 60
 
-            else	-- degrees, decimal minutes.
-                latMin = round(latMin, acc)
-                lonMin = round(lonMin, acc)
-
-                if latMin == 60 then
-                    latMin = 0
-                    latDeg = latDeg + 1
+                if type == "DMS" then -- Degree Minutes Seconds
+                    s = math.floor(s * 100) / 100
+                    return string.format('%s %2d°%.2d\'%2.2f"', h, g, m, s)
+                elseif type == "DDM" then -- Degree Decimal Minutes
+                    s = math.floor(s / 60 * 1000)
+                    return string.format('%s %2d°%2d.%3.3d\'', h, g, m, s)
+                else -- Decimal Degrees
+                    return string.format('%f',d)
                 end
-
-                if lonMin == 60 then
-                    lonMin = 0
-                    lonDeg = lonDeg + 1
-                end
-
-                local minFrmtStr -- create the formatting string for the minutes place
-                if acc <= 0 then	-- no decimal place.
-                    minFrmtStr = '%02d'
-                else
-                    local width = 3 + acc	-- 01.310 - that's a width of 6, for example.
-                    minFrmtStr = '%0' .. width .. '.' .. acc .. 'f'
-                end
-
-                return string.format('%02d', latDeg) .. ' ' .. string.format(minFrmtStr, latMin) .. '\'' .. latHemi .. '	 '
-                .. string.format('%02d', lonDeg) .. ' ' .. string.format(minFrmtStr, lonMin) .. '\'' .. lonHemi
-
             end
-        end
 
-        local marks = world.getMarkPanels()
-        local result = ""
-        for _, mark in pairs(marks) do
-            local lat, lon = coord.LOtoLL({
-                x = mark.pos.x,
-                y = 0,
-                z = mark.pos.z
-            })
-            local alt = round(land.getHeight({
-                x = mark.pos.x,
-                y = mark.pos.z
-            }), 0)
-            result = result .. "\n" .. tostringLL(lat, lon, 2, true) .. "\n" .. tostring(alt) .. "m, " .. mark.text .. "\n"
-        end
-        return result
-    ]]
+            local marks = world.getMarkPanels()
+            local result = ""
+            for _, mark in pairs(marks) do
+                local lat, lon = coord.LOtoLL({
+                    x = mark.pos.x,
+                    y = 0,
+                    z = mark.pos.z
+                })
+                local alt = land.getHeight({
+                    x = mark.pos.x,
+                    y = mark.pos.z
+                })
+                result = result .. "\n"
+                result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
+                result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
+                result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft, " .. mark.text .. "\n"
+            end
+            return result
+        ]]
 
     local scratchpad = {
         logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
