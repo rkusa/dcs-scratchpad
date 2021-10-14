@@ -16,7 +16,7 @@ dialog = {
         ["modal"] = false,
         ["offscreen"] = false,
         ["resizable"] = true,
-        ["zOrder"] = 111,
+        ["zOrder"] = 112,
         ["text"] = "Scratchpad"
     },
     ["skin"] = {
@@ -115,19 +115,42 @@ dialog = {
                     },
                     ["type"] = "Button"
                 },
+                ["ScratchpadCrosshairCheckBox"] = {
+					["params"] = {
+						["bounds"] = {
+							["h"] = 20,
+							["w"] = 20,
+							["x"] = 110,
+							["y"] = 181,
+						},
+						["enabled"] = true,
+						["state"] = false,
+						["tabOrder"] = 140,
+						["text"] = "",
+						["tooltip"] = "",
+						["visible"] = true,
+						["zindex"] = 0,
+					},
+					["skin"] = {
+						["params"] = {
+							["name"] = "checkBoxSkin_MENew",
+						},
+					},
+					["type"] = "CheckBox",
+				},
                 ["ScratchpadInsertCoordsButton"] = {
                     ["params"] = {
                         ["bounds"] = {
                             ["h"] = 20,
                             ["w"] = 120,
-                            ["x"] = 80,
+                            ["x"] = 105,
                             ["y"] = 180
                         },
                         ["enabled"] = true,
                         ["tabOrder"] = 0,
                         ["text"] = "+L/L",
                         ["tooltip"] = "Insert Coords",
-                        ["visible"] = true,
+                        ["visible"] = false,
                         ["zindex"] = 1
                     },
                     ["skin"] = {

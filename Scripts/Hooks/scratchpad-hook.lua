@@ -7,77 +7,37 @@ local function loadScratchpad()
     local DialogLoader = require("DialogLoader")
     local Tools = require("tools")
     local Input = require("Input")
+    local dxgui = require('dxgui')
 
-    local isHidden = true
-    local keyboardLocked = false
+    -- Scratchpad resources
     local window = nil
     local windowDefaultSkin = nil
     local windowSkinHidden = Skin.windowSkinChatMin()
     local panel = nil
     local textarea = nil
-
-    local getCoordsLua =
-        [[
-            function formatCoord(type, isLat, d)
-                local h
-                if isLat then
-                    if d < 0 then
-                        h = 'S'
-                        d = -d
-                    else
-                        h = 'N'
-                    end
-                else
-                    if d < 0 then
-                        h = 'W'
-                        d = -d
-                    else
-                        h = 'E'
-                    end
-                end
-
-                local g = math.floor(d)
-                local m = math.floor(d * 60 - g * 60)
-                local s = d * 3600 - g * 3600 - m * 60
-
-                if type == "DMS" then -- Degree Minutes Seconds
-                    s = math.floor(s * 100) / 100
-                    return string.format('%s %2d°%.2d\'%2.2f"', h, g, m, s)
-                elseif type == "DDM" then -- Degree Decimal Minutes
-                    s = math.floor(s / 60 * 1000)
-                    return string.format('%s %2d°%2d.%3.3d\'', h, g, m, s)
-                else -- Decimal Degrees
-                    return string.format('%f',d)
-                end
-            end
-
-            local marks = world.getMarkPanels()
-            local result = ""
-            for _, mark in pairs(marks) do
-                local lat, lon = coord.LOtoLL({
-                    x = mark.pos.x,
-                    y = 0,
-                    z = mark.pos.z
-                })
-                local alt = land.getHeight({
-                    x = mark.pos.x,
-                    y = mark.pos.z
-                })
-                result = result .. "\n"
-                result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
-                result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
-                result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft, " .. mark.text .. "\n"
-            end
-            return result
-        ]]
-
     local logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
     local config = nil
 
+    local panel = nil
+    local textarea = nil
+    local crosshairCheckbox = nil
+    local insertCoordsBtn = nil
+    local prevButton = nil
+    local nextButton = nil
+
+    -- State
+    local isHidden = true
+    local keyboardLocked = false
+    local inMission = false
+
+    -- Pages State
     local dirPath = lfs.writedir() .. [[Scratchpad\]]
     local currentPage = nil
     local pagesCount = 0
     local pages = {}
+
+    -- Crosshair resources
+    local crosshairWindow = nil
 
     local function log(str)
         if not str then
@@ -250,15 +210,53 @@ local function loadScratchpad()
         keyboardLocked = true
     end
 
-    local function insertCoordinates()
-        local coords = net.dostring_in("server", getCoordsLua)
-        local lineCountBefore = textarea:getLineCount()
-
-        if coords == "" then
-            textarea:setText(textarea:getText() .. "\nNo marks found\n")
+    function formatCoord(type, isLat, d)
+        local h
+        if isLat then
+            if d < 0 then
+                h = 'S'
+                d = -d
+            else
+                h = 'N'
+            end
         else
-            textarea:setText(textarea:getText() .. coords .. "\n")
+            if d < 0 then
+                h = 'W'
+                d = -d
+            else
+                h = 'E'
+            end
         end
+
+        local g = math.floor(d)
+        local m = math.floor(d * 60 - g * 60)
+        local s = d * 3600 - g * 3600 - m * 60
+
+        if type == "DMS" then -- Degree Minutes Seconds
+            s = math.floor(s * 100) / 100
+            return string.format('%s %2d°%.2d\'%2.2f"', h, g, m, s)
+        elseif type == "DDM" then -- Degree Decimal Minutes
+            s = math.floor(s / 60 * 1000)
+            return string.format('%s %2d°%2d.%3.3d\'', h, g, m, s)
+        else -- Decimal Degrees
+            return string.format('%f',d)
+        end
+    end
+
+    local function insertCoordinates()
+        local pos = Export.LoGetCameraPosition().p
+        local alt = Export.LoGetAltitude(pos.x, pos.z)
+        local coords = Export.LoLoCoordinatesToGeoCoordinates(pos.x, pos.z)
+        local lat = coords.latitude
+        local lon = coords.longitude
+
+        local result = ""
+        result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
+        result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
+        result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n"
+
+        local lineCountBefore = textarea:getLineCount()
+        textarea:setText(textarea:getText() .. result .. "\n")
 
         -- scroll to the bottom of the textarea
         local lastLine = textarea:getLineCount() - 1
@@ -278,9 +276,10 @@ local function loadScratchpad()
         textarea:setBounds(0, 0, w, h - 20 - 20)
         prevButton:setBounds(0, h - 40, 50, 20)
         nextButton:setBounds(55, h - 40, 50, 20)
+        crosshairCheckbox:setBounds(120, h - 39, 20, 20)
 
         if pagesCount > 1 then
-            insertCoordsBtn:setBounds(120, h - 40, 50, 20)
+            insertCoordsBtn:setBounds(145, h - 40, 50, 20)
         else
             insertCoordsBtn:setBounds(0, h - 40, 50, 20)
         end
@@ -295,9 +294,16 @@ local function loadScratchpad()
         saveConfiguration()
     end
 
+    local function updateCoordsMode()
+        -- insert coords only works if the client is the server, so hide the button otherwise
+        crosshairCheckbox:setVisible(inMission and Export.LoIsOwnshipExportAllowed())
+        crosshairWindow:setVisible(inMission and crosshairCheckbox:getState())
+        insertCoordsBtn:setVisible(inMission and crosshairCheckbox:getState())
+    end
+
     local function show()
         if window == nil then
-            local status, err = pcall(createWindow)
+            local status, err = pcall(createScratchpadWindow)
             if not status then
                 net.log("[Scratchpad] Error creating window: " .. tostring(err))
             end
@@ -308,13 +314,6 @@ local function loadScratchpad()
         panel:setVisible(true)
         window:setHasCursor(true)
 
-        -- insert coords only works if the client is the server, so hide the button otherwise
-        if DCS.isServer() then
-            insertCoordsBtn:setVisible(true)
-        else
-            insertCoordsBtn:setVisible(false)
-        end
-
         -- show prev/next buttons only if we have more than one page
         if pagesCount > 1 then
             prevButton:setVisible(true)
@@ -323,6 +322,8 @@ local function loadScratchpad()
             prevButton:setVisible(false)
             nextButton:setVisible(false)
         end
+
+        updateCoordsMode()
 
         isHidden = false
     end
@@ -335,14 +336,45 @@ local function loadScratchpad()
         -- window.setVisible(false) -- if you make the window invisible, its destroyed
         unlockKeyboardInput(true)
 
+        crosshairWindow:setVisible(false)
+
         isHidden = true
     end
 
-    local function createWindow()
-        window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg", cdata)
+    local function createCrosshairWindow()
+        if crosshairWindow ~= nil then
+            return
+        end
+
+        crosshairWindow = DialogLoader.spawnDialogFromFile(
+            lfs.writedir() .. "Scripts\\Scratchpad\\CrosshairWindow.dlg",
+            cdata
+        )
+
+        local screenWidth, screenHeigt = dxgui.GetScreenSize()
+        local x = screenWidth/2 - 4
+        local y = screenHeigt/2 - 4
+        crosshairWindow:setBounds(math.floor(x), math.floor(y), 8, 8)
+
+        log("Crosshair window created")
+    end
+
+    local function createScratchpadWindow()
+        if window ~= nil then
+            return
+        end
+
+        createCrosshairWindow()
+
+        window = DialogLoader.spawnDialogFromFile(
+            lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg",
+            cdata
+        )
+
         windowDefaultSkin = window:getSkin()
         panel = window.Box
         textarea = panel.ScratchpadEditBox
+        crosshairCheckbox = panel.ScratchpadCrosshairCheckBox
         insertCoordsBtn = panel.ScratchpadInsertCoordsButton
         prevButton = panel.ScratchpadPrevButton
         nextButton = panel.ScratchpadNextButton
@@ -375,7 +407,7 @@ local function loadScratchpad()
             end
         )
 
-        -- setup button callbacks
+        -- setup button and checkbox callbacks
         prevButton:addMouseDownCallback(
             function(self)
                 prevPage()
@@ -384,6 +416,13 @@ local function loadScratchpad()
         nextButton:addMouseDownCallback(
             function(self)
                 nextPage()
+            end
+        )
+        crosshairCheckbox:addChangeCallback(
+            function(self)
+                local checked = self:getState()
+                insertCoordsBtn:setVisible(checked)
+                crosshairWindow:setVisible(checked)
             end
         )
         insertCoordsBtn:addMouseDownCallback(
@@ -418,7 +457,7 @@ local function loadScratchpad()
         nextPage()
 
         hide()
-        log("Scratchpad Window created")
+        log("Scratchpad window created")
     end
 
     local handler = {}
@@ -429,8 +468,17 @@ local function loadScratchpad()
 
         if not window then
             log("Creating Scratchpad window hidden...")
-            createWindow()
+            createScratchpadWindow()
         end
+    end
+    function handler.onMissionLoadEnd()
+        inMission = true
+        updateCoordsMode()
+    end
+    function handler.onSimulationStop()
+        inMission = false
+        crosshairCheckbox:setState(false)
+        hide()
     end
     DCS.setUserCallbacks(handler)
 
