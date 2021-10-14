@@ -1,4 +1,4 @@
-function scratchpad_load()
+local function loadScratchpad()
     package.path = package.path .. ";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
     local lfs = require("lfs")
@@ -71,20 +71,30 @@ function scratchpad_load()
             return result
         ]]
 
-    local scratchpad = {
-        logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
-    }
+    local logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
+    local config = nil
 
     local dirPath = lfs.writedir() .. [[Scratchpad\]]
     local currentPage = nil
     local pagesCount = 0
     local pages = {}
 
+    local function log(str)
+        if not str then
+            return
+        end
+
+        if logFile then
+            logFile:write("[" .. os.date("%H:%M:%S") .. "] " .. str .. "\r\n")
+            logFile:flush()
+        end
+    end
+
     local function loadPage(page)
-        scratchpad.log("loading page " .. page.path)
+        log("loading page " .. page.path)
         file, err = io.open(page.path, "r")
         if err then
-            scratchpad.log("Error reading file: " .. page.path)
+            log("Error reading file: " .. page.path)
             return ""
         else
             local content = file:read("*all")
@@ -97,7 +107,7 @@ function scratchpad_load()
     end
 
     local function savePage(path, content, override)
-        scratchpad.log("saving page " .. path)
+        log("saving page " .. path)
         lfs.mkdir(lfs.writedir() .. [[Scratchpad\]])
         local mode = "a"
         if override then
@@ -105,7 +115,7 @@ function scratchpad_load()
         end
         file, err = io.open(path, mode)
         if err then
-            scratchpad.log("Error writing file: " .. path)
+            log("Error writing file: " .. path)
         else
             file:write(content)
             file:flush()
@@ -149,49 +159,49 @@ function scratchpad_load()
         currentPage = pages[pagesCount].path
     end
 
-    function scratchpad.loadConfiguration()
-        scratchpad.log("Loading config file...")
+    local function loadConfiguration()
+        log("Loading config file...")
         local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
         if (tbl and tbl.config) then
-            scratchpad.log("Configuration exists...")
-            scratchpad.config = tbl.config
+            log("Configuration exists...")
+            config = tbl.config
 
             -- config migration
 
             -- add default fontSize config
-            if scratchpad.config.fontSize == nil then
-                scratchpad.config.fontSize = 14
-                scratchpad.saveConfiguration()
+            if config.fontSize == nil then
+                config.fontSize = 14
+                saveConfiguration()
             end
 
             -- move content into text file
-            if scratchpad.config.content ~= nil then
-                savePage(dirPath .. [[0000.txt]], scratchpad.config.content, false)
-                scratchpad.config.content = nil
-                scratchpad.saveConfiguration()
+            if config.content ~= nil then
+                savePage(dirPath .. [[0000.txt]], config.content, false)
+                config.content = nil
+                saveConfiguration()
             end
         else
-            scratchpad.log("Configuration not found, creating defaults...")
-            scratchpad.config = {
+            log("Configuration not found, creating defaults...")
+            config = {
                 hotkey = "Ctrl+Shift+x",
                 windowPosition = {x = 200, y = 200},
                 windowSize = {w = 350, h = 150},
                 fontSize = 14
             }
-            scratchpad.saveConfiguration()
+            saveConfiguration()
         end
 
         -- scan scratchpad dir for pages
         for name in lfs.dir(dirPath) do
             local path = dirPath .. name
-            scratchpad.log(path)
+            log(path)
             if lfs.attributes(path, "mode") == "file" then
                 if name:sub(-4) ~= ".txt" then
-                    scratchpad.log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
+                    log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
                 elseif lfs.attributes(path, "size") > 1024 * 1024 then
-                    scratchpad.log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
+                    log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
                 else
-                    scratchpad.log("found page " .. path)
+                    log("found page " .. path)
                     table.insert(
                         pages,
                         {
@@ -207,7 +217,7 @@ function scratchpad_load()
         -- there are no pages yet, create one
         if pagesCount == 0 then
             path = dirPath .. [[0000.txt]]
-            scratchpad.log("creating page " .. path)
+            log("creating page " .. path)
             table.insert(
                 pages,
                 {
@@ -219,19 +229,8 @@ function scratchpad_load()
         end
     end
 
-    function scratchpad.saveConfiguration()
-        U.saveInFile(scratchpad.config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
-    end
-
-    function scratchpad.log(str)
-        if not str then
-            return
-        end
-
-        if scratchpad.logFile then
-            scratchpad.logFile:write("[" .. os.date("%H:%M:%S") .. "] " .. str .. "\r\n")
-            scratchpad.logFile:flush()
-        end
+    local function saveConfiguration()
+        U.saveInFile(config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
     end
 
     local function unlockKeyboardInput(releaseKeyboardKeys)
@@ -268,7 +267,78 @@ function scratchpad_load()
         savePage(currentPage, textarea:getText(), true)
     end
 
-    function scratchpad.createWindow()
+    local function setVisible(b)
+        window:setVisible(b)
+    end
+
+    local function handleResize(self)
+        local w, h = self:getSize()
+
+        panel:setBounds(0, 0, w, h - 20)
+        textarea:setBounds(0, 0, w, h - 20 - 20)
+        prevButton:setBounds(0, h - 40, 50, 20)
+        nextButton:setBounds(55, h - 40, 50, 20)
+
+        if pagesCount > 1 then
+            insertCoordsBtn:setBounds(120, h - 40, 50, 20)
+        else
+            insertCoordsBtn:setBounds(0, h - 40, 50, 20)
+        end
+
+        config.windowSize = {w = w, h = h}
+        saveConfiguration()
+    end
+
+    local function handleMove(self)
+        local x, y = self:getPosition()
+        config.windowPosition = {x = x, y = y}
+        saveConfiguration()
+    end
+
+    local function show()
+        if window == nil then
+            local status, err = pcall(createWindow)
+            if not status then
+                net.log("[Scratchpad] Error creating window: " .. tostring(err))
+            end
+        end
+
+        window:setVisible(true)
+        window:setSkin(windowDefaultSkin)
+        panel:setVisible(true)
+        window:setHasCursor(true)
+
+        -- insert coords only works if the client is the server, so hide the button otherwise
+        if DCS.isServer() then
+            insertCoordsBtn:setVisible(true)
+        else
+            insertCoordsBtn:setVisible(false)
+        end
+
+        -- show prev/next buttons only if we have more than one page
+        if pagesCount > 1 then
+            prevButton:setVisible(true)
+            nextButton:setVisible(true)
+        else
+            prevButton:setVisible(false)
+            nextButton:setVisible(false)
+        end
+
+        isHidden = false
+    end
+
+    local function hide()
+        window:setSkin(windowSkinHidden)
+        panel:setVisible(false)
+        textarea:setFocused(false)
+        window:setHasCursor(false)
+        -- window.setVisible(false) -- if you make the window invisible, its destroyed
+        unlockKeyboardInput(true)
+
+        isHidden = true
+    end
+
+    local function createWindow()
         window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg", cdata)
         windowDefaultSkin = window:getSkin()
         panel = window.Box
@@ -279,7 +349,7 @@ function scratchpad_load()
 
         -- setup textarea
         local skin = textarea:getSkin()
-        skin.skinData.states.released[1].text.fontSize = scratchpad.config.fontSize
+        skin.skinData.states.released[1].text.fontSize = config.fontSize
         textarea:setSkin(skin)
 
         textarea:addChangeCallback(
@@ -324,121 +394,50 @@ function scratchpad_load()
 
         -- setup window
         window:setBounds(
-            scratchpad.config.windowPosition.x,
-            scratchpad.config.windowPosition.y,
-            scratchpad.config.windowSize.w,
-            scratchpad.config.windowSize.h
+            config.windowPosition.x,
+            config.windowPosition.y,
+            config.windowSize.w,
+            config.windowSize.h
         )
-        scratchpad.handleResize(window)
+        handleResize(window)
 
         window:addHotKeyCallback(
-            scratchpad.config.hotkey,
+            config.hotkey,
             function()
                 if isHidden == true then
-                    scratchpad.show()
+                    show()
                 else
-                    scratchpad.hide()
+                    hide()
                 end
             end
         )
-        window:addSizeCallback(scratchpad.handleResize)
-        window:addPositionCallback(scratchpad.handleMove)
+        window:addSizeCallback(handleResize)
+        window:addPositionCallback(handleMove)
 
         window:setVisible(true)
         nextPage()
 
-        scratchpad.hide()
-        scratchpad.log("Scratchpad Window created")
+        hide()
+        log("Scratchpad Window created")
     end
 
-    function scratchpad.setVisible(b)
-        window:setVisible(b)
-    end
-
-    function scratchpad.handleResize(self)
-        local w, h = self:getSize()
-
-        panel:setBounds(0, 0, w, h - 20)
-        textarea:setBounds(0, 0, w, h - 20 - 20)
-        prevButton:setBounds(0, h - 40, 50, 20)
-        nextButton:setBounds(55, h - 40, 50, 20)
-
-        if pagesCount > 1 then
-            insertCoordsBtn:setBounds(120, h - 40, 50, 20)
-        else
-            insertCoordsBtn:setBounds(0, h - 40, 50, 20)
-        end
-
-        scratchpad.config.windowSize = {w = w, h = h}
-        scratchpad.saveConfiguration()
-    end
-
-    function scratchpad.handleMove(self)
-        local x, y = self:getPosition()
-        scratchpad.config.windowPosition = {x = x, y = y}
-        scratchpad.saveConfiguration()
-    end
-
-    function scratchpad.show()
-        if window == nil then
-            local status, err = pcall(scratchpad.createWindow)
-            if not status then
-                net.log("[Scratchpad] Error creating window: " .. tostring(err))
-            end
-        end
-
-        window:setVisible(true)
-        window:setSkin(windowDefaultSkin)
-        panel:setVisible(true)
-        window:setHasCursor(true)
-
-        -- insert coords only works if the client is the server, so hide the button otherwise
-        if DCS.isServer() then
-            insertCoordsBtn:setVisible(true)
-        else
-            insertCoordsBtn:setVisible(false)
-        end
-
-        -- show prev/next buttons only if we have more than one page
-        if pagesCount > 1 then
-            prevButton:setVisible(true)
-            nextButton:setVisible(true)
-        else
-            prevButton:setVisible(false)
-            nextButton:setVisible(false)
-        end
-
-        isHidden = false
-    end
-
-    function scratchpad.hide()
-        window:setSkin(windowSkinHidden)
-        panel:setVisible(false)
-        textarea:setFocused(false)
-        window:setHasCursor(false)
-        -- window.setVisible(false) -- if you make the window invisible, its destroyed
-        unlockKeyboardInput(true)
-
-        isHidden = true
-    end
-
-    function scratchpad.onSimulationFrame()
-        if scratchpad.config == nil then
-            scratchpad.loadConfiguration()
+    local handler = {}
+    function handler.onSimulationFrame()
+        if config == nil then
+            loadConfiguration()
         end
 
         if not window then
-            scratchpad.log("Creating Scratchpad window hidden...")
-            scratchpad.createWindow()
+            log("Creating Scratchpad window hidden...")
+            createWindow()
         end
     end
-
-    DCS.setUserCallbacks(scratchpad)
+    DCS.setUserCallbacks(handler)
 
     net.log("[Scratchpad] Loaded ...")
 end
 
-local status, err = pcall(scratchpad_load)
+local status, err = pcall(loadScratchpad)
 if not status then
     net.log("[Scratchpad] Load Error: " .. tostring(err))
 end
