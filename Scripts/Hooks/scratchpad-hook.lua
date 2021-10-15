@@ -67,6 +67,10 @@ local function loadScratchpad()
     end
 
     local function savePage(path, content, override)
+        if path == nil then
+            return
+        end
+
         log("saving page " .. path)
         lfs.mkdir(lfs.writedir() .. [[Scratchpad\]])
         local mode = "a"
@@ -88,6 +92,9 @@ local function loadScratchpad()
             return
         end
 
+        -- make sure current changes are persisted
+        savePage(currentPage, textarea:getText(), true)
+
         local lastPage = nil
         for _, page in pairs(pages) do
             if currentPage == nil or (lastPage ~= nil and lastPage.path == currentPage) then
@@ -104,6 +111,13 @@ local function loadScratchpad()
     end
 
     local function prevPage()
+        if pagesCount == 0 then
+            return
+        end
+
+        -- make sure current changes are persisted
+        savePage(currentPage, textarea:getText(), true)
+
         local lastPage = nil
         for i, page in pairs(pages) do
             if currentPage == nil or (page.path == currentPage and i ~= 1) then
@@ -294,9 +308,6 @@ local function loadScratchpad()
         local lineCountAdded = textarea:getLineCount() - lineCountBefore
         local line = lineEnd + lineCountAdded - 1
         textarea:setSelectionNew(line, 0, line, 0)
-
-        -- persist text changes to disk
-        savePage(currentPage, textarea:getText(), true)
     end
 
     local function setVisible(b)
@@ -418,17 +429,13 @@ local function loadScratchpad()
         skin.skinData.states.released[1].text.fontSize = config.fontSize
         textarea:setSkin(skin)
 
-        textarea:addChangeCallback(
-            function(self)
-                savePage(currentPage, self:getText(), true)
-            end
-        )
         textarea:addFocusCallback(
             function(self)
                 if self:getFocused() then
                     lockKeyboardInput()
                 else
                     unlockKeyboardInput(true)
+                    savePage(currentPage, self:getText(), true)
                 end
             end
         )
@@ -437,6 +444,7 @@ local function loadScratchpad()
                 if keyName == "escape" then
                     self:setFocused(false)
                     unlockKeyboardInput(true)
+                    savePage(currentPage, self:getText(), true)
                 end
             end
         )
