@@ -234,10 +234,10 @@ local function loadScratchpad()
 
         if type == "DMS" then -- Degree Minutes Seconds
             s = math.floor(s * 100) / 100
-            return string.format('%s %2d°%.2d\'%2.2f"', h, g, m, s)
+            return string.format('%s %2d°%.2d\'%05.2f"', h, g, m, s)
         elseif type == "DDM" then -- Degree Decimal Minutes
             s = math.floor(s / 60 * 1000)
-            return string.format('%s %2d°%2d.%3.3d\'', h, g, m, s)
+            return string.format('%s %2d°%02d.%3.3d\'', h, g, m, s)
         else -- Decimal Degrees
             return string.format('%f',d)
         end
