@@ -246,22 +246,20 @@ local function loadScratchpad()
     local function coordsType()
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" or ac == "A-10C_2" then
-            return "DMS"
+            return "DMS", true
         elseif ac == "F-16C_50" or ac == "M-2000C" then
-            return "DDM"
+            return "DDM", false
         else
-            return nil
+            return nil, false
         end
     end
 
     local function insertCoordinates()
         local pos = Export.LoGetCameraPosition().p
-        local alt = Export.LoGetAltitude(pos.x, pos.z)
-        local coords = Export.LoLoCoordinatesToGeoCoordinates(pos.x, pos.z)
-        local lat = coords.latitude
-        local lon = coords.longitude
-
-        local type = coordsType()
+        local alt = Terrain.GetSurfaceHeightWithSeabed(pos.x, pos.z)
+        local lat, lon = Terrain.convertMetersToLatLon(pos.x, pos.z)
+        local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
+        local type, includeMgrs = coordsType()
 
         local result = ""
         if type == nil or type == "DMS" then
@@ -269,6 +267,9 @@ local function loadScratchpad()
         end
         if type == nil or type == "DDM" then
             result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
+        end
+        if type == nil or includeMgrs then
+            result = result .. mgrs .. "\n"
         end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n"
 
