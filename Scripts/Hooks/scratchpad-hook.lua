@@ -261,7 +261,7 @@ local function loadScratchpad()
         local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
         local type, includeMgrs = coordsType()
 
-        local result = ""
+        local result = "\n\n"
         if type == nil or type == "DMS" then
             result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
         end
@@ -271,15 +271,31 @@ local function loadScratchpad()
         if type == nil or includeMgrs then
             result = result .. mgrs .. "\n"
         end
-        result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n"
+        result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
 
+        local text = textarea:getText()
         local lineCountBefore = textarea:getLineCount()
-        textarea:setText(textarea:getText() .. result .. "\n")
+        local _lineBegin, _indexBegin, lineEnd, _indexEnd = textarea:getSelectionNew()
 
-        -- scroll to the bottom of the textarea
-        local lastLine = textarea:getLineCount() - 1
-        local lastLineChar = textarea:getLineTextLength(lastLine)
-        textarea:setSelectionNew(lastLine, 0, lastLine, lastLineLen)
+        -- find offset into string after the line the cursor is in
+        local offset = 0
+        for i = 0, lineEnd do
+            offset = string.find(text, "\n", offset + 1, true)
+            if offset == nil then
+                offset = string.len(text)
+                break
+            end
+        end
+
+        -- insert the coordinates after the line the cursor is in
+        textarea:setText(string.sub(text, 1, offset - 1) .. result .. string.sub(text, offset + 1, string.len(text)))
+
+        -- place cursor after inserted text
+        local lineCountAdded = textarea:getLineCount() - lineCountBefore
+        local line = lineEnd + lineCountAdded - 1
+        textarea:setSelectionNew(line, 0, line, 0)
+
+        -- persist text changes to disk
         savePage(currentPage, textarea:getText(), true)
     end
 
