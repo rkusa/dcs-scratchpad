@@ -243,6 +243,17 @@ local function loadScratchpad()
         end
     end
 
+    local function coordsType()
+        local ac = DCS.getPlayerUnitType()
+        if ac == "FA-18C_hornet" or ac == "A-10C_2" then
+            return "DMS"
+        elseif ac == "F-16C_50" or ac == "M-2000C" then
+            return "DDM"
+        else
+            return nil
+        end
+    end
+
     local function insertCoordinates()
         local pos = Export.LoGetCameraPosition().p
         local alt = Export.LoGetAltitude(pos.x, pos.z)
@@ -250,9 +261,15 @@ local function loadScratchpad()
         local lat = coords.latitude
         local lon = coords.longitude
 
+        local type = coordsType()
+
         local result = ""
-        result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
-        result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
+        if type == nil or type == "DMS" then
+            result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
+        end
+        if type == nil or type == "DDM" then
+            result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
+        end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n"
 
         local lineCountBefore = textarea:getLineCount()
