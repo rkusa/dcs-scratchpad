@@ -39,6 +39,12 @@ local function loadScratchpad()
     -- Crosshair resources
     local crosshairWindow = nil
 
+    -- Plugin event handlers
+    local pluginListeners = {
+        onOpen = {},
+        onClose = {},
+    }
+
     local function log(str)
         if not str then
             return
@@ -310,8 +316,23 @@ local function loadScratchpad()
         textarea:setSelectionNew(line, 0, line, 0)
     end
 
-    local function setVisible(b)
-        window:setVisible(b)
+    local function fireOnOpen()
+        local x, y, w, h = window:getBounds()
+        for i, listener in ipairs(pluginListeners.onOpen) do
+            local status, err = pcall(listener, x, y, w, h)
+            if not status then
+                net.log("[Scratchpad] Error calling onOpen listener: " .. tostring(err))
+            end
+        end
+    end
+
+    local function fireOnClose()
+        for i, listener in ipairs(pluginListeners.onClose) do
+            local status, err = pcall(listener)
+            if not status then
+                net.log("[Scratchpad] Error calling onClose listener: " .. tostring(err))
+            end
+        end
     end
 
     local function handleResize(self)
@@ -331,12 +352,16 @@ local function loadScratchpad()
 
         config.windowSize = {w = w, h = h}
         saveConfiguration()
+
+        fireOnOpen()
     end
 
     local function handleMove(self)
         local x, y = self:getPosition()
         config.windowPosition = {x = x, y = y}
         saveConfiguration()
+
+        fireOnOpen()
     end
 
     local function updateCoordsMode()
@@ -371,6 +396,8 @@ local function loadScratchpad()
         updateCoordsMode()
 
         isHidden = false
+
+        fireOnOpen()
     end
 
     local function hide()
@@ -384,6 +411,8 @@ local function loadScratchpad()
         crosshairWindow:setVisible(false)
 
         isHidden = true
+
+        fireOnClose()
     end
 
     local function createCrosshairWindow()
@@ -523,6 +552,19 @@ local function loadScratchpad()
         hide()
     end
     DCS.setUserCallbacks(handler)
+
+    -- expose plugin interface
+    _G.scratchpad = {
+        onOpen = function(listener)
+            table.insert(pluginListeners.onOpen, listener)
+        end,
+        onClose = function(listener)
+            table.insert(pluginListeners.onClose, listener)
+        end,
+        getTextarea = function()
+            return textarea
+        end,
+    }
 
     net.log("[Scratchpad] Loaded ...")
 end
