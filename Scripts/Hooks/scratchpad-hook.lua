@@ -259,8 +259,10 @@ local function loadScratchpad()
 
     local function coordsType()
         local ac = DCS.getPlayerUnitType()
-        if ac == "FA-18C_hornet" or ac == "A-10C_2" then
+        if ac == "FA-18C_hornet" then
             return "DMS", true
+        elseif ac == "A-10C_2" then
+            return "DDM", true
         elseif ac == "F-16C_50" or ac == "M-2000C" then
             return "DDM", false
         else
