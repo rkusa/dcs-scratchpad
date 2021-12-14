@@ -15,7 +15,7 @@ Copy the `Scripts` folder into your DCS Saved games folder.
 
 Some settings can be changed in your DCS saved games folder under `Config/ScratchpadConfig.lua` (if the file does not exist, start DCS once after mod installation):
 
-- `hotkey` change the hotkey used to toggle the scratchpad
+- `hotkey` change the hotkey used to toggle the scratchpad (check `DCS World\dxgui\bind\KeyNames.txt` to find how to reference a key; only the keys can be used, that work without having to press `Shift` - so `(` cannot be used, but `Shift+9` can)
 - `fontSize` increase or decrease the font size of the Scratchpads textarea
 
 ## Scratchpad Content
