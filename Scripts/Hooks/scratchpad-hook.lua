@@ -265,6 +265,8 @@ local function loadScratchpad()
             return "DDM", true
         elseif ac == "F-16C_50" or ac == "M-2000C" then
             return "DDM", false
+        elseif ac == "AH-64D_BLK_II" then
+            return "DDM", true
         else
             return nil, false
         end
