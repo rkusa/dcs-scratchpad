@@ -260,9 +260,11 @@ local function loadScratchpad()
     local function coordsType()
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
-            return "DMS", true
-        elseif ac == "A-10C_2" then
+            return "DMS/DDM", true
+        elseif ac == "A-10C_2" or "A-10C" or ac == "AV-8B" then
             return "DDM", true
+        elseif ac == "F-14B" or ac == "F-14A-135-GR" then
+            return "DMS" , false
         elseif ac == "F-16C_50" or ac == "M-2000C" then
             return "DDM", false
         elseif ac == "AH-64D_BLK_II" then
@@ -284,6 +286,10 @@ local function loadScratchpad()
             result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
         end
         if type == nil or type == "DDM" then
+            result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
+        end
+        if type == "DMS/DDM" then 
+            result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
             result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
         end
         if type == nil or includeMgrs then
