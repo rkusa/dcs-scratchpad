@@ -247,14 +247,14 @@ local function loadScratchpad()
         end
 
         local g = math.floor(d)
-        local m = math.floor(d * 60 - g * 60)
-        local s = d * 3600 - g * 3600 - m * 60
+        local m = d * 60 - g * 60
 
         if format == "DMS" then -- Degree Minutes Seconds
+            m = math.floor(m)
+            local s = d * 3600 - g * 3600 - m * 60
             s = math.floor(s * 100) / 100
             return string.format('%s %2d°%.2d\'%05.2f"', h, g, m, s)
         elseif format == "DDM" then -- Degree Decimal Minutes
-            s = math.floor(s / 60 * 1000)
             local precision = 3
             if opts.precision ~= nil then
                 precision = opts.precision
@@ -263,7 +263,7 @@ local function loadScratchpad()
             if opts.lonDegreesWidth ~= nil and not isLat then
                 degreesWidth = opts.lonDegreesWidth
             end
-            return string.format('%s %0'..degreesWidth..'d°%02d.%3.'..precision..'d\'', h, g, m, s)
+            return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
         else -- Decimal Degrees
             return string.format('%f',d)
         end
@@ -277,7 +277,7 @@ local function loadScratchpad()
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
             return {DMS = true, DDM = {precision = 4}, MGRS = true}
-        elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" or ac == "AH-64D_BLK_II" then
+        elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" then
             return {DDM = true, MGRS = true}
         elseif ac == "F-14B" or ac == "F-14A-135-GR" then
             return {DMS = true}
@@ -285,6 +285,8 @@ local function loadScratchpad()
             return {DDM = true}
         elseif ac == "F-16C_50" then
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
+        elseif ac == "AH-64D_BLK_II" then
+            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
         else
             return nil
         end
