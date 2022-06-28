@@ -259,7 +259,11 @@ local function loadScratchpad()
             if opts.precision ~= nil then
                 precision = opts.precision
             end
-            return string.format('%s %2d°%02d.%3.'..precision..'d\'', h, g, m, s)
+            local degreesWidth = 2
+            if opts.lonDegreesWidth ~= nil and not isLat then
+                degreesWidth = opts.lonDegreesWidth
+            end
+            return string.format('%s %0'..degreesWidth..'d°%02d.%3.'..precision..'d\'', h, g, m, s)
         else -- Decimal Degrees
             return string.format('%f',d)
         end
@@ -268,18 +272,19 @@ local function loadScratchpad()
     local function coordsType()
         -- DDM options and their defaults:
         --   precision = 3: the count of minute decimal places
+        --   lonDegreesWidth = 2: the min. width of the longitude degrees padded with zeroes
 
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
             return {DMS = true, DDM = {precision = 4}, MGRS = true}
-        elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" then
+        elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" or ac == "AH-64D_BLK_II" then
             return {DDM = true, MGRS = true}
         elseif ac == "F-14B" or ac == "F-14A-135-GR" then
             return {DMS = true}
-        elseif ac == "F-16C_50" or ac == "M-2000C" then
+        elseif ac == "M-2000C" then
             return {DDM = true}
-        elseif ac == "AH-64D_BLK_II" then
-            return {DDM = true, MGRS = true}
+        elseif ac == "F-16C_50" then
+            return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         else
             return nil
         end
