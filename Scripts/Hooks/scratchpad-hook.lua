@@ -267,7 +267,10 @@ local function loadScratchpad()
             return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
 
         else -- Decimal Degrees
-            return  string.format('%f',d)
+            if h == "S" or h == "W" then
+                d = -d
+            end
+            return  string.format('%f',d, h)
         end
     end
 
@@ -289,6 +292,8 @@ local function loadScratchpad()
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
             return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
+        elseif ac == "UH-1H" then
+            return {DDM = true, DMS = true}
         else
             return nil
         end
@@ -305,7 +310,7 @@ local function loadScratchpad()
 
 
         local result = "\n\n"
-        if n ~= 0 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %NavAidName%
+        if chk ~= 0 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %NavAidName%
             result = result .. "FIX;" .. formatCoord("DD", true, lon) .. ";" .. formatCoord("DD", false, lat) .. ";%NavAidName%\n"
         end
         if type == nil or type.DMS and chk == 0 then
