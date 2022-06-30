@@ -28,7 +28,9 @@ When DCS starts, the Scratchpad looks for all text files inside the `Scratchpad\
 
 ## Insert Coordinates from F10 map
 
-This is only available in single player or for servers that have _Allow Player Export_ enabled. If available, you'll have a checkbox at the bottom for the Scratchpad. The mode to insert coordinates is active while the checkbox is checked. While active, you'll have a white dot in the center of your screen and an additional `+ L/L` button below the text area of the Scratchpad. Open the F10 map and align the white dot with your location of interest and hit the `+ L/L` button. This will add the coordinates of the location below the white cursor to your Scratchpad.
+This is only available in single player or for servers that have _Allow Player Export_ enabled. If available, you'll have a checkbox at the bottom for the Scratchpad. The mode to insert coordinates is active while the checkbox is checked. While active, you'll have a white dot in the center of your screen and an additional `+ L/L` and `+NS430` buttons below the text area of the Scratchpad. Open the F10 map and align the white dot with your location of interest and hit the `+ L/L` button. This will add the coordinates of the location below the white cursor to your Scratchpad.
+
+Hitting the `+NS430` button will insert a NS430 fix compatiable with the navaids.dat in `.\DCS\Mods\aircraft\NS430\Cockpit\Scripts\avionics\terrain\navaids.dat`, just change the %NavAidName% placeholder to a 5 letter alpha-numeric string and save it. Now you can enter that navaid string into the NS430 and navigate to it.
 
 ## Kudos
 
