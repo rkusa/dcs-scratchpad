@@ -22,7 +22,6 @@ local function loadScratchpad()
     local textarea = nil
     local crosshairCheckbox = nil
     local insertCoordsBtn = nil
-    local insertNs430FixBtn = nil
     local prevButton = nil
     local nextButton = nil
 
@@ -265,7 +264,6 @@ local function loadScratchpad()
                 degreesWidth = opts.lonDegreesWidth
             end
             return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
-
         else -- Decimal Degrees
             if h == "S" or h == "W" then
                 d = -d
@@ -292,39 +290,32 @@ local function loadScratchpad()
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
             return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
-        elseif ac == "UH-1H" then
-            return {DDM = true, DMS = true}
         else
-            return nil
+            return {NS430 = true,DMS = true, DDM = true, MGRS = true}
         end
     end
 
-    local function insertCoordinates(chk)
-
+    local function insertCoordinates()
         local pos = Export.LoGetCameraPosition().p
         local alt = Terrain.GetSurfaceHeightWithSeabed(pos.x, pos.z)
         local lat, lon = Terrain.convertMetersToLatLon(pos.x, pos.z)
         local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
-        local type, includeMgrs = coordsType()
-
-
+        local type = coordsType()
 
         local result = "\n\n"
-        if chk ~= 0 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %NavAidName%
-            result = result .. "FIX;" .. formatCoord("DD", true, lon) .. ";" .. formatCoord("DD", false, lat) .. ";%NavAidName%\n"
+        if  type.NS430 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %NavAidName%
+            result = result .. "FIX;" .. formatCoord("DD", true, lon, type.NS430) .. ";" .. formatCoord("DD", false, lat, type.NS430)  .. ";%NavAidName%\n"
         end
-        if type == nil or type.DMS and chk == 0 then
+        if type.DMS then
             result = result .. formatCoord("DMS", true, lat, type.DMS) .. ", " .. formatCoord("DMS", false, lon, type.DMS) .. "\n"
         end
-        if type == nil or type.DDM and chk == 0 then
+        if type.DDM then
             result = result .. formatCoord("DDM", true, lat, type.DDM) .. ", " .. formatCoord("DDM", false, lon, type.DDM) .. "\n"
         end
-        if type == nil or type.MGRS and chk == 0 then
+        if type.MGRS then
             result = result .. mgrs .. "\n"
         end
-        if chk == 0 then
-            result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
-        end
+        result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
 
         local text = textarea:getText()
         local lineCountBefore = textarea:getLineCount()
@@ -364,10 +355,8 @@ local function loadScratchpad()
 
         if pagesCount > 1 then
             insertCoordsBtn:setBounds(145, h - 40, 50, 20)
-            insertNs430FixBtn:setBounds(200, h - 40, 70, 20)
         else
             insertCoordsBtn:setBounds(0, h - 40, 50, 20)
-            insertNs430FixBtn:setBounds(0, h - 40, 50, 20)
         end
 
         config.windowSize = {w = w, h = h}
@@ -385,7 +374,6 @@ local function loadScratchpad()
         crosshairCheckbox:setVisible(inMission and Export.LoIsOwnshipExportAllowed())
         crosshairWindow:setVisible(inMission and crosshairCheckbox:getState())
         insertCoordsBtn:setVisible(inMission and crosshairCheckbox:getState())
-        insertNs430FixBtn:setVisible(inMission and crosshairCheckbox:getState())
     end
 
     local function show()
@@ -463,7 +451,6 @@ local function loadScratchpad()
         textarea = panel.ScratchpadEditBox
         crosshairCheckbox = panel.ScratchpadCrosshairCheckBox
         insertCoordsBtn = panel.ScratchpadInsertCoordsButton
-        insertNs430FixBtn = panel.NS430InsertCoordsButton
         prevButton = panel.ScratchpadPrevButton
         nextButton = panel.ScratchpadNextButton
 
@@ -507,18 +494,12 @@ local function loadScratchpad()
             function(self)
                 local checked = self:getState()
                 insertCoordsBtn:setVisible(checked)
-                insertNs430FixBtn:setVisible(checked)
                 crosshairWindow:setVisible(checked)
             end
         )
         insertCoordsBtn:addMouseDownCallback(
             function(self)
-                insertCoordinates(0)
-            end
-        )
-        insertNs430FixBtn:addMouseDownCallback(
-            function(self)
-                insertCoordinates(1)
+                insertCoordinates()
             end
         )
 
