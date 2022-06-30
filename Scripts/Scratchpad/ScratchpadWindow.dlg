@@ -160,6 +160,28 @@ dialog = {
                     },
                     ["type"] = "Button"
                 },
+                ["NS430InsertCoordsButton"] = {
+                    ["params"] = {
+                        ["bounds"] = {
+                            ["h"] = 20,
+                            ["w"] = 120,
+                            ["x"] = 105,
+                            ["y"] = 215
+                        },
+                        ["enabled"] = true,
+                        ["tabOrder"] = 0,
+                        ["text"] = "+NS430",
+                        ["tooltip"] = "Insert navaid.dat fix template",
+                        ["visible"] = false,
+                        ["zindex"] = 1
+                    },
+                    ["skin"] = {
+                        ["params"] = {
+                            ["name"] = "buttonSkinAwacs"
+                        }
+                    },
+                    ["type"] = "Button"
+                },
                 ["ScratchpadEditBox"] = {
                     ["params"] = {
                         ["acceptDecimalPoint"] = false,
