@@ -270,7 +270,7 @@ local function loadScratchpad()
             if h == "S" or h == "W" then
                 d = -d
             end
-            return  string.format('%f',d, h)
+            return  string.format('%f',d)
         end
     end
 
