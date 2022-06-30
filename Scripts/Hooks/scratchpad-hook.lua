@@ -288,7 +288,7 @@ local function loadScratchpad()
         elseif ac == "AH-64D_BLK_II" then
             return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
         else
-            return nil
+            return {DMS = true, DDM = true, MGRS = true}
         end
     end
 
@@ -297,16 +297,16 @@ local function loadScratchpad()
         local alt = Terrain.GetSurfaceHeightWithSeabed(pos.x, pos.z)
         local lat, lon = Terrain.convertMetersToLatLon(pos.x, pos.z)
         local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
-        local type, includeMgrs = coordsType()
+        local type = coordsType()
 
         local result = "\n\n"
-        if type == nil or type.DMS then
+        if type.DMS then
             result = result .. formatCoord("DMS", true, lat, type.DMS) .. ", " .. formatCoord("DMS", false, lon, type.DMS) .. "\n"
         end
-        if type == nil or type.DDM then
+        if type.DDM then
             result = result .. formatCoord("DDM", true, lat, type.DDM) .. ", " .. formatCoord("DDM", false, lon, type.DDM) .. "\n"
         end
-        if type == nil or type.MGRS then
+        if type.MGRS then
             result = result .. mgrs .. "\n"
         end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
