@@ -32,7 +32,7 @@ This is only available in single player or for servers that have _Allow Player E
 
 ### How to insert a waypoint into the NS430
 
-When you hit the `+L/L` button in spectator or an aircraft that can use the NS430 you'll get a line insert that looks like `FIX;-88.245167;36.117167;%PlaceholderName` the `%PlaceholderName` must be changed to a 1-5 character alpha-numeric string ex. `1A` `1B` `2` `3` `WILLO` this can then in the navaids.dat in the main DCS folder `.\DCS World OpenBeta\Mods\aircraft\NS430\Cockpit\Scripts\avionics\terrain\navaids.dat`. After you add the waypoint you just need to respawn your aircraft and it can be loaded into the NS430 via the Flight Plan Page or Direct-To page.
+When you hit the `+L/L` button in spectator or an aircraft that can use the NS430 you'll get a line insert that looks like `FIX;-88.245167;36.117167;%PlaceholderName` the `%PlaceholderName` must be changed to a 1-5 character alpha-numeric string ex. `1A` `1B` `2` `3` `WILLO` this can then added into the navaids.dat in the main DCS folder `.\DCS World OpenBeta\Mods\aircraft\NS430\Cockpit\Scripts\avionics\terrain\navaids.dat`. After you add the waypoint you just need to respawn your aircraft and it can be loaded into the NS430 via the Flight Plan Page or Direct-To page.
 
 
 ## Kudos
