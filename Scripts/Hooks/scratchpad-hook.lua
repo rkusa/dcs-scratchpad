@@ -304,7 +304,7 @@ local function loadScratchpad()
 
         local result = "\n\n"
         if  type.NS430 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %NavAidName%
-            result = result .. "FIX;" .. formatCoord("DD", true, lon, type.NS430) .. ";" .. formatCoord("DD", false, lat, type.NS430)  .. ";%NavAidName%\n"
+            result = result .. "FIX;" .. formatCoord("DD", true, lon, type.NS430) .. ";" .. formatCoord("DD", false, lat, type.NS430)  .. ";%PlaceHolderName\n"
         end
         if type.DMS then
             result = result .. formatCoord("DMS", true, lat, type.DMS) .. ", " .. formatCoord("DMS", false, lon, type.DMS) .. "\n"
