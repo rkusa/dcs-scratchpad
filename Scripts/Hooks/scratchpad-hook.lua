@@ -376,6 +376,12 @@ local function loadScratchpad()
         insertCoordsBtn:setVisible(inMission and crosshairCheckbox:getState())
     end
 
+    local function blur()
+        textarea:setFocused(false)
+        unlockKeyboardInput(true)
+        savePage(currentPage, textarea:getText(), true)
+    end
+
     local function show()
         if window == nil then
             local status, err = pcall(createScratchpadWindow)
@@ -406,10 +412,9 @@ local function loadScratchpad()
     local function hide()
         window:setSkin(windowSkinHidden)
         panel:setVisible(false)
-        textarea:setFocused(false)
         window:setHasCursor(false)
         -- window.setVisible(false) -- if you make the window invisible, its destroyed
-        unlockKeyboardInput(true)
+        blur()
 
         crosshairWindow:setVisible(false)
 
@@ -464,17 +469,14 @@ local function loadScratchpad()
                 if self:getFocused() then
                     lockKeyboardInput()
                 else
-                    unlockKeyboardInput(true)
-                    savePage(currentPage, self:getText(), true)
+                    blur()
                 end
             end
         )
         textarea:addKeyDownCallback(
             function(self, keyName, unicode)
                 if keyName == "escape" then
-                    self:setFocused(false)
-                    unlockKeyboardInput(true)
-                    savePage(currentPage, self:getText(), true)
+                    blur()
                 end
             end
         )
@@ -524,6 +526,16 @@ local function loadScratchpad()
         )
         window:addSizeCallback(handleResize)
         window:addPositionCallback(handleMove)
+
+        -- remove the focus from the textare when clicking outside of the Scratchpad
+        dxgui.AddMouseCallback("down", function(x, y)
+            if not isHidden then
+                local winX, winY, winW, winH = window:getBounds()
+                if x < winX or x > (winX + winW) or y < winY or y > (winY + winH) then
+                    blur()
+                end
+            end
+        end)
 
         window:setVisible(true)
         nextPage()
