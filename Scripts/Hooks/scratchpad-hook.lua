@@ -347,6 +347,14 @@ local function loadScratchpad()
     local function handleResize(self)
         local w, h = self:getSize()
 
+        -- prevent too small size that cannot be properly interacted with anymore
+        if w < 10 then
+            w = 50
+        end
+        if h < 10 then
+            h = 30
+        end
+
         panel:setBounds(0, 0, w, h - 20)
         textarea:setBounds(0, 0, w, h - 20 - 20)
         prevButton:setBounds(0, h - 40, 50, 20)
@@ -359,12 +367,31 @@ local function loadScratchpad()
             insertCoordsBtn:setBounds(0, h - 40, 50, 20)
         end
 
+        self:setSize(w, h)
         config.windowSize = {w = w, h = h}
         saveConfiguration()
     end
 
     local function handleMove(self)
         local x, y = self:getPosition()
+        local w, h = self:getSize()
+        local screenWidth, screenHeigt = dxgui.GetScreenSize()
+
+        -- prevent moving the Scratchpad out of the viewport
+        if x < 0 then
+            x = 0
+        end
+        if y < 0 then
+            y = 0
+        end
+        if x + w > screenWidth then
+            x = screenWidth - w
+        end
+        if y + h > screenHeigt then
+            y = screenHeigt - h
+        end
+
+        self:setPosition(x, y)
         config.windowPosition = {x = x, y = y}
         saveConfiguration()
     end
@@ -513,6 +540,7 @@ local function loadScratchpad()
             config.windowSize.h
         )
         handleResize(window)
+        handleMove(window)
 
         window:addHotKeyCallback(
             config.hotkey,
