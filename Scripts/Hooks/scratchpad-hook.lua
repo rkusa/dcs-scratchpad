@@ -225,11 +225,11 @@ local function loadScratchpad()
     end
 
     function formatCoord(format, isLat, d, opts)
-        local function showNegative(h, d)
+        local function showNegative(d, h)
             if h == "S" or h == "W" then
-                return -d
+                d = -d
             end
-            return d
+            return d, ""
         end
 
         if type(opts) ~= "table" then
@@ -266,16 +266,19 @@ local function loadScratchpad()
             if opts.precision ~= nil then
                 precision = opts.precision
             end
+            if opts.showNegative ~= nil then
+                g, h = showNegative(g, h)
+            end
             local degreesWidth = 2
             if opts.lonDegreesWidth ~= nil and not isLat then
                 degreesWidth = opts.lonDegreesWidth
-            end
-            if opts.showNegative ~= nil then
-                g = showNegative(h, g)
+                if opts.showNegative ~= nil and g < 0 then
+                    degreesWidth = degreesWidth + 1
+                end
             end
             return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
         else -- Decimal Degrees
-            return  string.format('%f', showNegative(h, d))
+            return  string.format('%f', showNegative(d, h))
         end
     end
 
