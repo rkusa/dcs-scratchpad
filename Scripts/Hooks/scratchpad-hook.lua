@@ -227,7 +227,11 @@ local function loadScratchpad()
         keyboardLocked = true
     end
 
-    function formatCoord(type, isLat, d)
+    function formatCoord(format, isLat, d, opts)
+        if type(opts) ~= "table" then
+            opts = {}
+        end
+
         local h
         if isLat then
             if d < 0 then
@@ -246,32 +250,51 @@ local function loadScratchpad()
         end
 
         local g = math.floor(d)
-        local m = math.floor(d * 60 - g * 60)
-        local s = d * 3600 - g * 3600 - m * 60
+        local m = d * 60 - g * 60
 
-        if type == "DMS" then -- Degree Minutes Seconds
+        if format == "DMS" then -- Degree Minutes Seconds
+            m = math.floor(m)
+            local s = d * 3600 - g * 3600 - m * 60
             s = math.floor(s * 100) / 100
             return string.format('%s %2d°%.2d\'%05.2f"', h, g, m, s)
-        elseif type == "DDM" then -- Degree Decimal Minutes
-            s = math.floor(s / 60 * 1000)
-            return string.format('%s %2d°%02d.%3.3d\'', h, g, m, s)
+        elseif format == "DDM" then -- Degree Decimal Minutes
+            local precision = 3
+            if opts.precision ~= nil then
+                precision = opts.precision
+            end
+            local degreesWidth = 2
+            if opts.lonDegreesWidth ~= nil and not isLat then
+                degreesWidth = opts.lonDegreesWidth
+            end
+            return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
         else -- Decimal Degrees
-            return string.format('%f',d)
+            if h == "S" or h == "W" then
+                d = -d
+            end
+            return  string.format('%f',d)
         end
     end
 
     local function coordsType()
+        -- DDM options and their defaults:
+        --   precision = 3: the count of minute decimal places
+        --   lonDegreesWidth = 2: the min. width of the longitude degrees padded with zeroes
+
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
-            return "DMS", true
-        elseif ac == "A-10C_2" then
-            return "DDM", true
-        elseif ac == "F-16C_50" or ac == "M-2000C" then
-            return "DDM", false
+            return {DMS = true, DDM = {precision = 4}, MGRS = true}
+        elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" then
+            return {DDM = true, MGRS = true}
+        elseif ac == "F-14B" or ac == "F-14A-135-GR" then
+            return {DMS = true}
+        elseif ac == "M-2000C" then
+            return {DDM = true}
+        elseif ac == "F-16C_50" then
+            return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
-            return "DDM", true
+            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
         else
-            return nil, false
+            return {NS430 = true, DMS = true, DDM = true, MGRS = true}
         end
     end
 
@@ -280,17 +303,20 @@ local function loadScratchpad()
         local alt = Terrain.GetSurfaceHeightWithSeabed(pos.x, pos.z)
         local lat, lon = Terrain.convertMetersToLatLon(pos.x, pos.z)
         local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
-        local type, includeMgrs = coordsType()
+        local type = coordsType()
 
         local result = "\n\n"
-        if type == nil or type == "DMS" then
-            result = result .. formatCoord("DMS", true, lat) .. ", " .. formatCoord("DMS", false, lon) .. "\n"
+        if type.DMS then
+            result = result .. formatCoord("DMS", true, lat, type.DMS) .. ", " .. formatCoord("DMS", false, lon, type.DMS) .. "\n"
         end
-        if type == nil or type == "DDM" then
-            result = result .. formatCoord("DDM", true, lat) .. ", " .. formatCoord("DDM", false, lon) .. "\n"
+        if type.DDM then
+            result = result .. formatCoord("DDM", true, lat, type.DDM) .. ", " .. formatCoord("DDM", false, lon, type.DDM) .. "\n"
         end
-        if type == nil or includeMgrs then
+        if type.MGRS then
             result = result .. mgrs .. "\n"
+        end
+        if  type.NS430 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %PlaceHolderName
+            result = result .. "FIX;" .. formatCoord("DD", true, lon, type.NS430) .. ";" .. formatCoord("DD", false, lat, type.NS430)  .. ";%PlaceHolderName\n"
         end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
 
@@ -324,6 +350,14 @@ local function loadScratchpad()
     local function handleResize(self)
         local w, h = self:getSize()
 
+        -- prevent too small size that cannot be properly interacted with anymore
+        if w < 10 then
+            w = 50
+        end
+        if h < 10 then
+            h = 30
+        end
+
         panel:setBounds(0, 0, w, h - 20)
         textarea:setBounds(0, 0, w, h - 20 - 20)
         prevButton:setBounds(0, h - 40, 50, 20)
@@ -336,12 +370,31 @@ local function loadScratchpad()
             insertCoordsBtn:setBounds(0, h - 40, 50, 20)
         end
 
+        self:setSize(w, h)
         config.windowSize = {w = w, h = h}
         saveConfiguration()
     end
 
     local function handleMove(self)
         local x, y = self:getPosition()
+        local w, h = self:getSize()
+        local screenWidth, screenHeigt = dxgui.GetScreenSize()
+
+        -- prevent moving the Scratchpad out of the viewport
+        if x < 0 then
+            x = 0
+        end
+        if y < 0 then
+            y = 0
+        end
+        if x + w > screenWidth then
+            x = screenWidth - w
+        end
+        if y + h > screenHeigt then
+            y = screenHeigt - h
+        end
+
+        self:setPosition(x, y)
         config.windowPosition = {x = x, y = y}
         saveConfiguration()
     end
@@ -351,6 +404,12 @@ local function loadScratchpad()
         crosshairCheckbox:setVisible(inMission and Export.LoIsOwnshipExportAllowed())
         crosshairWindow:setVisible(inMission and crosshairCheckbox:getState())
         insertCoordsBtn:setVisible(inMission and crosshairCheckbox:getState())
+    end
+
+    local function blur()
+        textarea:setFocused(false)
+        unlockKeyboardInput(true)
+        savePage(currentPage, textarea:getText(), true)
     end
 
     local function show()
@@ -383,10 +442,9 @@ local function loadScratchpad()
     local function hide()
         window:setSkin(windowSkinHidden)
         panel:setVisible(false)
-        textarea:setFocused(false)
         window:setHasCursor(false)
         -- window.setVisible(false) -- if you make the window invisible, its destroyed
-        unlockKeyboardInput(true)
+        blur()
 
         crosshairWindow:setVisible(false)
 
@@ -441,17 +499,14 @@ local function loadScratchpad()
                 if self:getFocused() then
                     lockKeyboardInput()
                 else
-                    unlockKeyboardInput(true)
-                    savePage(currentPage, self:getText(), true)
+                    blur()
                 end
             end
         )
         textarea:addKeyDownCallback(
             function(self, keyName, unicode)
                 if keyName == "escape" then
-                    self:setFocused(false)
-                    unlockKeyboardInput(true)
-                    savePage(currentPage, self:getText(), true)
+                    blur()
                 end
             end
         )
@@ -488,6 +543,7 @@ local function loadScratchpad()
             config.windowSize.h
         )
         handleResize(window)
+        handleMove(window)
 
         window:addHotKeyCallback(
             config.hotkey,
@@ -532,6 +588,16 @@ local function loadScratchpad()
    
         window:addSizeCallback(handleResize)
         window:addPositionCallback(handleMove)
+
+        -- remove the focus from the textare when clicking outside of the Scratchpad
+        dxgui.AddMouseCallback("down", function(x, y)
+            if not isHidden then
+                local winX, winY, winW, winH = window:getBounds()
+                if x < winX or x > (winX + winW) or y < winY or y > (winY + winH) then
+                    blur()
+                end
+            end
+        end)
 
         window:setVisible(true)
         nextPage()
