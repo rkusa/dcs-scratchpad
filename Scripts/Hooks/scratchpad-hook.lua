@@ -225,6 +225,13 @@ local function loadScratchpad()
     end
 
     function formatCoord(format, isLat, d, opts)
+        local function showNegative(d, h)
+            if h == "S" or h == "W" then
+                d = -d
+            end
+            return d, ""
+        end
+
         if type(opts) ~= "table" then
             opts = {}
         end
@@ -259,16 +266,19 @@ local function loadScratchpad()
             if opts.precision ~= nil then
                 precision = opts.precision
             end
+            if opts.showNegative ~= nil then
+                g, h = showNegative(g, h)
+            end
             local degreesWidth = 2
             if opts.lonDegreesWidth ~= nil and not isLat then
                 degreesWidth = opts.lonDegreesWidth
+                if opts.showNegative ~= nil and g < 0 then
+                    degreesWidth = degreesWidth + 1
+                end
             end
             return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
         else -- Decimal Degrees
-            if h == "S" or h == "W" then
-                d = -d
-            end
-            return  string.format('%f',d)
+            return  string.format('%f', showNegative(d, h))
         end
     end
 
@@ -290,6 +300,10 @@ local function loadScratchpad()
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
             return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
+        elseif ac == "Ka-50" then
+            return {DDM = {precision = 1, lonDegreesWidth = 3, showNegative = true}}
+        elseif ac == "SA342M" or ac == "SA342L" or ac == "SA342Mistral" or ac == "SA342Minigun" then
+            return {DDM = {precision = 1}}
         else
             return {NS430 = true, DMS = true, DDM = true, MGRS = true}
         end
