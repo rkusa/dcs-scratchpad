@@ -9,6 +9,9 @@ Copy the `Scripts` folder into your DCS Saved games folder.
 ## Usage
 
 - Toggle the scratchpad with `CTRL+Shift+X`
+- Switch to the prev Page with `CTRL+Shift+Y`
+- Switch to the next Page with `CTRL+Shift+Z`
+- Inser coordinates from the F10 map with `CTRL+Shift+A`
 - Use `Esc` to remove the text field focus, but keep the scratchpad open
 
 ## Settings

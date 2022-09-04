@@ -158,6 +158,9 @@ local function loadScratchpad()
             log("Configuration not found, creating defaults...")
             config = {
                 hotkey = "Ctrl+Shift+x",
+                prevPage = "Ctrl+Shift+y",
+				nextPage = "Ctrl+Shift+z",
+				insertCoordinates = "Ctrl+Shift+a",
                 windowPosition = {x = 200, y = 200},
                 windowSize = {w = 350, h = 150},
                 fontSize = 14
@@ -552,6 +555,37 @@ local function loadScratchpad()
                 end
             end
         )
+        
+		-- define hotkey for prevPage
+		window:addHotKeyCallback(
+            config.prevPage,
+            function()
+                if isHidden == false then
+                    prevPage()
+                end
+            end
+        )
+		
+		-- define hotkey for nextPage
+		window:addHotKeyCallback(
+            config.nextPage, 
+            function()
+                if isHidden == false then
+                    nextPage()
+                end
+            end
+        )
+
+		-- define hotkey for insert coordinates
+		window:addHotKeyCallback(
+            config.insertCoordinates,
+            function()
+                if isHidden == false then
+                    insertCoordinates()
+                end
+            end
+        )
+   
         window:addSizeCallback(handleResize)
         window:addPositionCallback(handleMove)
 
