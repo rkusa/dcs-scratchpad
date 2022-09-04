@@ -9,17 +9,19 @@ Copy the `Scripts` folder into your DCS Saved games folder.
 ## Usage
 
 - Toggle the scratchpad with `CTRL+Shift+X`
-- Switch to the prev Page with `CTRL+Shift+Y`
-- Switch to the next Page with `CTRL+Shift+Z`
-- Inser coordinates from the F10 map with `CTRL+Shift+A`
 - Use `Esc` to remove the text field focus, but keep the scratchpad open
 
 ## Settings
 
 Some settings can be changed in your DCS saved games folder under `Config/ScratchpadConfig.lua` (if the file does not exist, start DCS once after mod installation):
 
-- `hotkey` change the hotkey used to toggle the scratchpad (check `DCS World\dxgui\bind\KeyNames.txt` to find how to reference a key; only the keys can be used, that work without having to press `Shift` - so `(` cannot be used, but `Shift+9` can)
-- `fontSize` increase or decrease the font size of the Scratchpads textarea
+- `hotkey` hotkey to toggle the Scratchpad (`CTRL+Shift+X` by default) ¹
+- `hotkeyNextPage` hotkey to switch to the next page (not set by default) ¹
+- `hotkeyPrevPage` hotkey to switch to the next page (not set by default) ¹
+- `hotkeyInsertCoordinates ` hotkey to add coordinates from the F10 map (not set by default) ¹
+- `fontSize` increase or decrease the font size of the Scratchpads textarea (`14` by default)
+
+_¹ check `DCS World\dxgui\bind\KeyNames.txt` to find how to reference a key; only the keys can be used, that work without having to press `Shift` - so `(` cannot be used, but `Shift+9` can_
 
 ## Scratchpad Content
 
