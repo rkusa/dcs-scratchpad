@@ -69,6 +69,47 @@ dialog = {
         }
     },
     ["children"] = {
+        ["ScratchpadEditBox"] = {
+            ["params"] = {
+                ["acceptDecimalPoint"] = false,
+                ["bounds"] = {
+                    ["h"] = 180,
+                    ["w"] = 350,
+                    ["x"] = 0,
+                    ["y"] = 20
+                },
+                ["enabled"] = true,
+                ["multiline"] = true,
+                ["numeric"] = false,
+                ["password"] = false,
+                ["readOnly"] = false,
+                ["tabOrder"] = 80,
+                ["text"] = "...",
+                ["textWrapping"] = true,
+                ["tooltip"] = "",
+                ["visible"] = true,
+                ["zindex"] = 0
+            },
+            ["skin"] = {
+                ["params"] = {
+                    ["name"] = "editBoxNew"
+                },
+                ["states"] = {
+                    ["released"] = {
+                        [1] = {
+                            ["bkg"] = {
+                                ["center_center"] = "0x00000080"
+                            },
+                            ["text"] = {
+                                ["font"] = "CONSOLA.TTF",
+                                ["lineHeight"] = 10
+                            }
+                        }
+                    }
+                }
+            },
+            ["type"] = "EditBox"
+        },
         ["Box"] = {
             ["children"] = {
                 ["ScratchpadPrevButton"] = {
@@ -77,7 +118,7 @@ dialog = {
                             ["h"] = 20,
                             ["w"] = 50,
                             ["x"] = 0,
-                            ["y"] = 180
+                            ["y"] = 0
                         },
                         ["enabled"] = true,
                         ["tabOrder"] = 0,
@@ -99,7 +140,7 @@ dialog = {
                             ["h"] = 20,
                             ["w"] = 50,
                             ["x"] = 55,
-                            ["y"] = 180
+                            ["y"] = 0
                         },
                         ["enabled"] = true,
                         ["tabOrder"] = 0,
@@ -121,7 +162,7 @@ dialog = {
 							["h"] = 20,
 							["w"] = 20,
 							["x"] = 110,
-							["y"] = 181,
+							["y"] = 1,
 						},
 						["enabled"] = true,
 						["state"] = false,
@@ -144,7 +185,7 @@ dialog = {
                             ["h"] = 20,
                             ["w"] = 120,
                             ["x"] = 105,
-                            ["y"] = 180
+                            ["y"] = 0
                         },
                         ["enabled"] = true,
                         ["tabOrder"] = 0,
@@ -159,56 +200,15 @@ dialog = {
                         }
                     },
                     ["type"] = "Button"
-                },
-                ["ScratchpadEditBox"] = {
-                    ["params"] = {
-                        ["acceptDecimalPoint"] = false,
-                        ["bounds"] = {
-                            ["h"] = 180,
-                            ["w"] = 350,
-                            ["x"] = 0,
-                            ["y"] = 20
-                        },
-                        ["enabled"] = true,
-                        ["multiline"] = true,
-                        ["numeric"] = false,
-                        ["password"] = false,
-                        ["readOnly"] = false,
-                        ["tabOrder"] = 80,
-                        ["text"] = "...",
-                        ["textWrapping"] = true,
-                        ["tooltip"] = "",
-                        ["visible"] = true,
-                        ["zindex"] = 0
-                    },
-                    ["skin"] = {
-                        ["params"] = {
-                            ["name"] = "editBoxNew"
-                        },
-                        ["states"] = {
-                            ["released"] = {
-                                [1] = {
-                                    ["bkg"] = {
-                                        ["center_center"] = "0x00000080"
-                                    },
-                                    ["text"] = {
-                                        ["font"] = "CONSOLA.TTF",
-                                        ["lineHeight"] = 10
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    ["type"] = "EditBox"
                 }
             },
             ["params"] = {
                 ["bounds"] = {
                     [1] = {
-                        ["h"] = 200,
+                        ["h"] = 20,
                         ["w"] = 350,
                         ["x"] = 0,
-                        ["y"] = 0
+                        ["y"] = 180
                     }
                 },
                 ["enabled"] = true,

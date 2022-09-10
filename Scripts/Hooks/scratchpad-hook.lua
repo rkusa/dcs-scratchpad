@@ -13,8 +13,6 @@ local function loadScratchpad()
     local window = nil
     local windowDefaultSkin = nil
     local windowSkinHidden = Skin.windowSkinChatMin()
-    local panel = nil
-    local textarea = nil
     local logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
     local config = nil
 
@@ -369,11 +367,10 @@ local function loadScratchpad()
             h = 30
         end
 
-        panel:setBounds(0, 0, w, h - 20)
-        textarea:setBounds(0, 0, w, h - 20 - 20)
-        prevButton:setBounds(0, h - 40, 50, 20)
-        nextButton:setBounds(55, h - 40, 50, 20)
-        crosshairCheckbox:setBounds(120, h - 39, 20, 20)
+        local panelY = 20 + 20 -- panel height + window title bar height
+        local windowTitleBarHeight = 20
+        textarea:setBounds(0, 0, w, h - panelY)
+        panel:setBounds(0, h - panelY, w, 20)
 
         if pagesCount > 1 then
             insertCoordsBtn:setBounds(145, h - 40, 50, 20)
@@ -433,6 +430,7 @@ local function loadScratchpad()
 
         window:setVisible(true)
         window:setSkin(windowDefaultSkin)
+        textarea:setVisible(true)
         panel:setVisible(true)
         window:setHasCursor(true)
 
@@ -451,10 +449,13 @@ local function loadScratchpad()
     end
 
     local function hide()
+        -- Cannot simply hide the window, as this would destroy it
+        -- window.setVisible(false)
+
         window:setSkin(windowSkinHidden)
+        textarea:setVisible(false)
         panel:setVisible(false)
         window:setHasCursor(false)
-        -- window.setVisible(false) -- if you make the window invisible, its destroyed
         blur()
 
         crosshairWindow:setVisible(false)
@@ -493,8 +494,8 @@ local function loadScratchpad()
         )
 
         windowDefaultSkin = window:getSkin()
+        textarea = window.ScratchpadEditBox
         panel = window.Box
-        textarea = panel.ScratchpadEditBox
         crosshairCheckbox = panel.ScratchpadCrosshairCheckBox
         insertCoordsBtn = panel.ScratchpadInsertCoordsButton
         prevButton = panel.ScratchpadPrevButton
