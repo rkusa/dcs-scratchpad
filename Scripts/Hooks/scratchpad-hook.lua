@@ -20,8 +20,6 @@ local function loadScratchpad()
     local textarea = nil
     local crosshairCheckbox = nil
     local insertCoordsBtn = nil
-    local prevButton = nil
-    local nextButton = nil
 
     -- State
     local isHidden = true
@@ -372,12 +370,6 @@ local function loadScratchpad()
         textarea:setBounds(0, 0, w, h - panelY)
         panel:setBounds(0, h - panelY, w, 20)
 
-        if pagesCount > 1 then
-            insertCoordsBtn:setBounds(145, h - 40, 50, 20)
-        else
-            insertCoordsBtn:setBounds(0, h - 40, 50, 20)
-        end
-
         self:setSize(w, h)
         config.windowSize = {w = w, h = h}
         saveConfiguration()
@@ -434,15 +426,6 @@ local function loadScratchpad()
         panel:setVisible(true)
         window:setHasCursor(true)
 
-        -- show prev/next buttons only if we have more than one page
-        if pagesCount > 1 then
-            prevButton:setVisible(true)
-            nextButton:setVisible(true)
-        else
-            prevButton:setVisible(false)
-            nextButton:setVisible(false)
-        end
-
         updateCoordsMode()
 
         isHidden = false
@@ -498,8 +481,8 @@ local function loadScratchpad()
         panel = window.Box
         crosshairCheckbox = panel.ScratchpadCrosshairCheckBox
         insertCoordsBtn = panel.ScratchpadInsertCoordsButton
-        prevButton = panel.ScratchpadPrevButton
-        nextButton = panel.ScratchpadNextButton
+        local prevButton = panel.ScratchpadPrevButton
+        local nextButton = panel.ScratchpadNextButton
 
         -- setup textarea
         local skin = textarea:getSkin()
@@ -524,16 +507,6 @@ local function loadScratchpad()
         )
 
         -- setup button and checkbox callbacks
-        prevButton:addMouseDownCallback(
-            function(self)
-                prevPage()
-            end
-        )
-        nextButton:addMouseDownCallback(
-            function(self)
-                nextPage()
-            end
-        )
         crosshairCheckbox:addChangeCallback(
             function(self)
                 local checked = self:getState()
@@ -569,31 +542,7 @@ local function loadScratchpad()
             end
         )
 
-        -- add previous page hotkey
-        if config.hotkeyPrevPage then
-            window:addHotKeyCallback(
-                config.hotkeyPrevPage,
-                function()
-                    if isHidden == false then
-                        prevPage()
-                    end
-                end
-            )
-        end
-
-        -- add next page hotkey
-        if config.hotkeyPrevPage then
-            window:addHotKeyCallback(
-                config.hotkeyNextPage,
-                function()
-                    if isHidden == false then
-                        nextPage()
-                    end
-                end
-            )
-        end
-
-        -- add  insert coordinates hotkey
+        -- add insert coordinates hotkey
         if config.hotkeyPrevPage then
             window:addHotKeyCallback(
                 config.hotkeyInsertCoordinates,
@@ -617,6 +566,51 @@ local function loadScratchpad()
                 end
             end
         end)
+
+        -- setup prev/next buttons
+        if pagesCount > 1 then
+            prevButton:addMouseDownCallback(
+                function(self)
+                    prevPage()
+                end
+            )
+            nextButton:addMouseDownCallback(
+                function(self)
+                    nextPage()
+                end
+            )
+
+            -- add previous page hotkey
+            if config.hotkeyPrevPage then
+                window:addHotKeyCallback(
+                    config.hotkeyPrevPage,
+                    function()
+                        if isHidden == false then
+                            prevPage()
+                        end
+                    end
+                )
+            end
+
+            -- add next page hotkey
+            if config.hotkeyPrevPage then
+                window:addHotKeyCallback(
+                    config.hotkeyNextPage,
+                    function()
+                        if isHidden == false then
+                            nextPage()
+                        end
+                    end
+                )
+            end
+        else
+            -- move inserts coord checkbox and button to the left
+            crosshairCheckbox:setPosition(0, 1)
+            insertCoordsBtn:setPosition(25, 0)
+            -- hide prev/next buttons
+            prevButton:setVisible(false)
+            nextButton:setVisible(false)
+        end
 
         window:setVisible(true)
         nextPage()
