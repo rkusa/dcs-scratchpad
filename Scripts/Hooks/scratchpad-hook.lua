@@ -175,6 +175,74 @@ local function loadScratchpad()
         textarea:setFocused(true)
     end
 
+    function Text:deleteBackward()
+        -- TODO: reduce code duplication with insertAtCursor
+
+        local text = textarea:getText()
+        local lineCountBefore = textarea:getLineCount()
+        local lineStart, indexStart, lineEnd, indexEnd = textarea:getSelectionNew()
+
+        -- just delete selection if there is any
+        local len = 0
+        if lineStart == lineEnd and indexStart == indexEnd then
+            len = 1
+        end
+
+        -- DCS has no API to get the cursor offset relative to the text start, so there is quite
+        -- some extra work necessary to calculate that based on what DCS provides.
+        local start = 0
+        local lenPreviousLine = 0
+        for i = 1, lineStart do
+            local from = start + 1;
+            start = string.find(text, "\n", from, true)
+            lenPreviousLine = start - from
+            log("lenPreviousLine="..lenPreviousLine)
+            if start == nil then
+                start = string.len(text)
+                break
+            end
+        end
+        start = start + indexStart
+
+        local end_ = start
+        if lineEnd > lineStart then
+            for i = lineStart, indexEnd do
+                end_ = string.find(text, "\n", end_ + 1, true)
+                if end_ == nil then
+                    end_ = string.len(text)
+                    break
+                end
+            end
+            end_ = end_ + indexEnd
+        else
+            end_ = end_ + (indexEnd - indexStart)
+        end
+
+        -- remove from text
+        local deletedText = string.sub(text, start - len, end_)
+        log("len="..len)
+        log("deletedText="..deletedText)
+        log("a="..string.sub(text, 1, start - len))
+        log("b="..string.sub(text, end_ + 1, string.len(text)))
+        textarea:setText(
+            string.sub(text, 1, start - len)..string.sub(text, end_ + 1, string.len(text))
+        )
+
+        -- update cursor
+        local lineNew = lineStart
+        local indexNew = indexStart
+        if len > 0 then
+            if indexNew > 0 then
+                indexNew = indexNew - 1
+            elseif lineNew > 0 then
+                lineNew = lineNew - 1
+                indexNew = lenPreviousLine
+            end
+        end
+        textarea:setSelectionNew(lineNew, indexNew, lineNew, indexNew)
+        textarea:setFocused(true)
+    end
+
     local function loadPage(page)
         log("loading page " .. page.path)
         file, err = io.open(page.path, "r")
