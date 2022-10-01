@@ -156,7 +156,8 @@ local function loadScratchpad()
                 hotkey = "Ctrl+Shift+x",
                 windowPosition = {x = 200, y = 200},
                 windowSize = {w = 350, h = 150},
-                fontSize = 14
+                fontSize = 14,
+                clearOnLoad = false
             }
             saveConfiguration()
         end
@@ -171,15 +172,23 @@ local function loadScratchpad()
                 elseif lfs.attributes(path, "size") > 1024 * 1024 then
                     log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
                 else
-                    log("found page " .. path)
-                    table.insert(
-                        pages,
-                        {
-                            name = name:sub(1, -5),
-                            path = path
-                        }
-                    )
-                    pagesCount = pagesCount + 1
+                    if config.clearOnLoad then
+                        log("removing page " .. path)
+                        local _, err = os.remove(path)
+                        if err then
+                            log("Error removing page: " .. path)
+                        end
+                    else
+                        log("found page " .. path)
+                        table.insert(
+                            pages,
+                            {
+                                name = name:sub(1, -5),
+                                path = path
+                            }
+                        )
+                        pagesCount = pagesCount + 1
+                    end
                 end
             end
         end
@@ -188,6 +197,7 @@ local function loadScratchpad()
         if pagesCount == 0 then
             path = dirPath .. [[0000.txt]]
             log("creating page " .. path)
+            savePage(path, "", true)
             table.insert(
                 pages,
                 {
@@ -195,7 +205,7 @@ local function loadScratchpad()
                     path = path
                 }
             )
-            pagesCount = pagesCount + 1
+            pagesCount = 1
         end
     end
 
@@ -286,9 +296,9 @@ local function loadScratchpad()
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
             return {DMS = true, DDM = {precision = 4}, MGRS = true}
-        elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" then
+        elseif string.sub(ac, 1, 5) == "A-10C" or ac == "AV-8B" then
             return {DDM = true, MGRS = true}
-        elseif ac == "F-14B" or ac == "F-14A-135-GR" then
+        elseif string.sub(ac, 1, 4) == "F-14" then
             return {DMS = true}
         elseif ac == "M-2000C" then
             return {DDM = true}
@@ -298,7 +308,7 @@ local function loadScratchpad()
             return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "Ka-50" then
             return {DDM = {precision = 1, lonDegreesWidth = 3, showNegative = true}}
-        elseif ac == "SA342M" or ac == "SA342L" or ac == "SA342Mistral" or ac == "SA342Minigun" then
+        elseif string.sub(ac, 1, 5) == "SA342" then
             return {DDM = {precision = 1}}
         else
             return {NS430 = true, DMS = true, DDM = true, MGRS = true}
@@ -451,10 +461,7 @@ local function loadScratchpad()
             return
         end
 
-        crosshairWindow = DialogLoader.spawnDialogFromFile(
-            lfs.writedir() .. "Scripts\\Scratchpad\\CrosshairWindow.dlg",
-            cdata
-        )
+        crosshairWindow = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\Scratchpad\\CrosshairWindow.dlg")
 
         local screenWidth, screenHeigt = dxgui.GetScreenSize()
         local x = screenWidth/2 - 4
@@ -471,10 +478,7 @@ local function loadScratchpad()
 
         createCrosshairWindow()
 
-        window = DialogLoader.spawnDialogFromFile(
-            lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg",
-            cdata
-        )
+        window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg")
 
         windowDefaultSkin = window:getSkin()
         textarea = window.ScratchpadEditBox
