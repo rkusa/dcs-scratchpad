@@ -21,7 +21,7 @@ for _, r in pairs(keyMatrix) do
     end
 
     local onClick = function(text)
-      text:insertAtCursor(char)
+      text:insert(char)
     end
     if v == "⌫" then
       onClick = function(text)

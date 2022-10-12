@@ -71,14 +71,16 @@ local function loadScratchpad()
         textarea:setFocused(true)
     end
 
-    function Text:insertAtCursor(newText)
-        if type(newText) ~= "string" then
-            return
-        end
-
+    -- Returns the start end end offsets of the current selection
+    function getSelection()
         local text = textarea:getText()
         local lineCountBefore = textarea:getLineCount()
         local lineStart, indexStart, lineEnd, indexEnd = textarea:getSelectionNew()
+
+        -- Swap backwards selection to forward selection
+        if lineEnd < lineStart or (lineEnd == lineStart and indexEnd < indexStart) then
+            lineStart, indexStart, lineEnd, indexEnd = lineEnd, indexEnd, lineStart, indexStart
+        end
 
         -- DCS has no API to get the cursor offset relative to the text start, so there is quite
         -- some extra work necessary to calculate that based on what DCS provides.
@@ -94,7 +96,7 @@ local function loadScratchpad()
 
         local end_ = start
         if lineEnd > lineStart then
-            for i = lineStart, indexEnd do
+            for i = lineStart + 1, lineEnd do
                 end_ = string.find(text, "\n", end_ + 1, true)
                 if end_ == nil then
                     end_ = string.len(text)
@@ -106,52 +108,81 @@ local function loadScratchpad()
             end_ = end_ + (indexEnd - indexStart)
         end
 
+        return start, end_
+    end
+
+    -- Set the cursor to the specified offset and optional length (defaults to 0)
+    function setSelection(offset, len)
+        local text = textarea:getText()
+        local lineStart = 0
+        local indexStart = 0
+        local nl = string.byte("\n")
+        local to = math.min(offset, #text)
+        for i = 1, to do
+            if text:byte(i) == nl then
+                lineStart = lineStart + 1
+                indexStart = 0
+            else
+                indexStart = indexStart + 1
+            end
+        end
+
+        -- determine end
+        local lineEnd = lineStart
+        local indexEnd = indexStart
+        if len and len > 0 then
+            local from = math.min(offset, #text)
+            local to = math.min(offset + len, #text)
+            for i = from + 1, to do
+                if text:byte(i) == nl then
+                    lineEnd = lineEnd + 1
+                    indexEnd = 0
+                else
+                    indexEnd = indexEnd + 1
+                end
+            end
+        end
+
+        textarea:setSelectionNew(lineStart, indexStart, lineEnd, indexEnd)
+    end
+
+    function Text:insert(newText)
+        if type(newText) ~= "string" then
+            return
+        end
+
+        local text = textarea:getText()
+        local start, end_ = getSelection()
+
         -- replace the selection with the text
         textarea:setText(
             string.sub(text, 1, start)..
             newText..
-            string.sub(text, end_ + 1, string.len(text))
+            string.sub(text, end_ + 1, #text)
         )
 
         -- place cursor after the inserted text
-        lineEnd = lineStart
-        indexEnd = indexStart
-        local nl = string.byte("\n")
-        for i = 1, #newText do
-            if newText:byte(i) == nl then
-                lineEnd = lineEnd + 1
-                indexEnd = 0
-            else
-                indexEnd = indexEnd + 1
-            end
-        end
-        textarea:setSelectionNew(lineEnd, indexEnd, lineEnd, indexEnd)
+        setSelection(start + #newText)
         textarea:setFocused(true)
     end
 
-    function Text:insertBelowCursor(newText)
+    function Text:insertBelow(newText)
+        -- place cursor at the end of the current line (before the newline if there is any)
         local text = textarea:getText()
-        local lineCountBefore = textarea:getLineCount()
-        local _lineBegin, _indexBegin, lineEnd, _indexEnd = textarea:getSelectionNew()
-
-        -- find offset into string after the line the cursor is in
-        local offset = 0
-        for i = 0, lineEnd do
-            offset = string.find(text, "\n", offset + 1, true)
-            if offset == nil then
-                offset = string.len(text)
+        local start, end_ = getSelection()
+        local newPos = end_
+        local nl = string.byte("\n")
+        for i = end_ + 1, #text do
+            if text:byte(i) == nl then
                 break
             end
+            newPos = newPos + 1
         end
 
-        -- insert the coordinates after the line the cursor is in
-        textarea:setText(string.sub(text, 1, offset - 1) .. newText .. string.sub(text, offset + 1, string.len(text)))
+        setSelection(newPos)
 
-        -- place cursor after inserted text
-        local lineCountAdded = textarea:getLineCount() - lineCountBefore
-        local line = lineEnd + lineCountAdded - 1
-        textarea:setSelectionNew(line, 0, line, 0)
-        textarea:setFocused(true)
+        newText = "\n"..newText
+        self:insert(newText)
     end
 
     function Text:insertTop(newText)
@@ -159,7 +190,8 @@ local function loadScratchpad()
             return
         end
 
-        self:setText(newText .. "\n\n" .. self:getText())
+        setSelection(0)
+        self:insert(newText .. "\n\n")
     end
 
     function Text:insertBottom(newText)
@@ -167,80 +199,21 @@ local function loadScratchpad()
             return
         end
 
-        textarea:setText(self:getText() .. "\n\n" .. newText .. "\n")
-
-        -- set cursor to last line
-        local lineCount = textarea:getLineCount()
-        textarea:setSelectionNew(lineCount, 0, lineCount, 0)
-        textarea:setFocused(true)
+        local text = self:getText()
+        setSelection(#text)
+        self:insert("\n\n" .. newText .. "\n")
     end
 
     function Text:deleteBackward()
-        -- TODO: reduce code duplication with insertAtCursor
+        local start, end_ = getSelection()
 
-        local text = textarea:getText()
-        local lineCountBefore = textarea:getLineCount()
-        local lineStart, indexStart, lineEnd, indexEnd = textarea:getSelectionNew()
-
-        -- just delete selection if there is any
-        local len = 0
-        if lineStart == lineEnd and indexStart == indexEnd then
-            len = 1
+        -- if there is no selection, select the character just before the cursor; otherwise delete
+        -- the selected text
+        if start == end_ then
+            setSelection(start - 1, 1)
         end
 
-        -- DCS has no API to get the cursor offset relative to the text start, so there is quite
-        -- some extra work necessary to calculate that based on what DCS provides.
-        local start = 0
-        local lenPreviousLine = 0
-        for i = 1, lineStart do
-            local from = start + 1;
-            start = string.find(text, "\n", from, true)
-            lenPreviousLine = start - from
-            log("lenPreviousLine="..lenPreviousLine)
-            if start == nil then
-                start = string.len(text)
-                break
-            end
-        end
-        start = start + indexStart
-
-        local end_ = start
-        if lineEnd > lineStart then
-            for i = lineStart, indexEnd do
-                end_ = string.find(text, "\n", end_ + 1, true)
-                if end_ == nil then
-                    end_ = string.len(text)
-                    break
-                end
-            end
-            end_ = end_ + indexEnd
-        else
-            end_ = end_ + (indexEnd - indexStart)
-        end
-
-        -- remove from text
-        local deletedText = string.sub(text, start - len, end_)
-        log("len="..len)
-        log("deletedText="..deletedText)
-        log("a="..string.sub(text, 1, start - len))
-        log("b="..string.sub(text, end_ + 1, string.len(text)))
-        textarea:setText(
-            string.sub(text, 1, start - len)..string.sub(text, end_ + 1, string.len(text))
-        )
-
-        -- update cursor
-        local lineNew = lineStart
-        local indexNew = indexStart
-        if len > 0 then
-            if indexNew > 0 then
-                indexNew = indexNew - 1
-            elseif lineNew > 0 then
-                lineNew = lineNew - 1
-                indexNew = lenPreviousLine
-            end
-        end
-        textarea:setSelectionNew(lineNew, indexNew, lineNew, indexNew)
-        textarea:setFocused(true)
+        self:insert("")
     end
 
     local function loadPage(page)
@@ -364,7 +337,6 @@ local function loadScratchpad()
         -- scan scratchpad dir for pages
         for name in lfs.dir(dirPath) do
             local path = dirPath .. name
-            log(path)
             if lfs.attributes(path, "mode") == "file" then
                 if name:sub(-4) ~= ".txt" then
                     log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
@@ -548,7 +520,7 @@ local function loadScratchpad()
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
 
         local text = Text.new()
-        text:insertBelowCursor(result)
+        text:insertBelow(result)
 
         for _, listener in pairs(coordListeners) do
             if type(listener) == "function" then
