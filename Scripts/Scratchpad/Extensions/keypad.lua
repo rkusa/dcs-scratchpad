@@ -9,7 +9,6 @@ local keyMatrix = {
 local width = 30
 local height = 30
 
-local container = addRow()
 local y = 0
 for _, r in pairs(keyMatrix) do
   local x = 0
@@ -29,7 +28,7 @@ for _, r in pairs(keyMatrix) do
       end
     end
 
-    container:addButton(x, y, width, height, title, onClick)
+    addButton(x, y, width, height, title, onClick)
     x = x + width
   end
   y = y + width

@@ -655,23 +655,21 @@ local function loadScratchpad()
                 return { }
             end
 
+            -- prepare extension panel
+            local children = {}
+            table.insert(extensions, {children = children})
+
             -- create extension env
             local extEnv = {
-                addRow = function()
-                    local children = {}
-                    local row = {}
-                    function row:addButton(x, y, w, h, title, onClick)
-                        table.insert(children, {
-                            x = x,
-                            y = y,
-                            w = w,
-                            h = h,
-                            title = title,
-                            onClick = onClick
-                        })
-                    end
-                    table.insert(extensions, {children = children})
-                    return row
+                addButton = function(x, y, w, h, title, onClick)
+                    table.insert(children, {
+                        x = x,
+                        y = y,
+                        w = w,
+                        h = h,
+                        title = title,
+                        onClick = onClick
+                    })
                 end,
                 addCoordinateListener = function(listener)
                     table.insert(coordListeners, listener)
