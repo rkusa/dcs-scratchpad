@@ -543,7 +543,7 @@ local function loadScratchpad()
         )
 
         -- add insert coordinates hotkey
-        if config.hotkeyPrevPage then
+        if config.hotkeyInsertCoordinates then
             window:addHotKeyCallback(
                 config.hotkeyInsertCoordinates,
                 function()
@@ -593,7 +593,7 @@ local function loadScratchpad()
             end
 
             -- add next page hotkey
-            if config.hotkeyPrevPage then
+            if config.hotkeyNextPage then
                 window:addHotKeyCallback(
                     config.hotkeyNextPage,
                     function()
