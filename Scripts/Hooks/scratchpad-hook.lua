@@ -272,7 +272,7 @@ local function loadScratchpad()
                     degreesWidth = degreesWidth + 1
                 end
             end
-            return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
+            return string.sub(string.format('%s %0'..degreesWidth..'d°%0'..(precision+4)..'.'..(precision+1)..'f', h, g, m), 1, -2) .. "'"
         else -- Decimal Degrees
             return  string.format('%f', showNegative(d, h))
         end
