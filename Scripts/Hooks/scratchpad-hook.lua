@@ -453,8 +453,7 @@ local function loadScratchpad()
         end
 
         crosshairWindow = DialogLoader.spawnDialogFromFile(
-            lfs.writedir() .. "Scripts\\Scratchpad\\CrosshairWindow.dlg",
-            cdata
+            lfs.writedir() .. "Scripts\\Scratchpad\\CrosshairWindow.dlg"
         )
 
         local screenWidth, screenHeigt = dxgui.GetScreenSize()
@@ -473,8 +472,7 @@ local function loadScratchpad()
         createCrosshairWindow()
 
         window = DialogLoader.spawnDialogFromFile(
-            lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg",
-            cdata
+            lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg"
         )
 
         windowDefaultSkin = window:getSkin()
