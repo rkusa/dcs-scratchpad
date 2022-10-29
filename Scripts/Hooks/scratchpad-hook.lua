@@ -292,7 +292,7 @@ local function loadScratchpad()
         elseif ac == "F-14B" or ac == "F-14A-135-GR" then
             return {DMS = true}
         elseif ac == "M-2000C" then
-            return {DDM = true}
+            return {DDM = {precision = 1, lonDegreesWidth = 3}}
         elseif ac == "F-16C_50" then
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
@@ -323,7 +323,7 @@ local function loadScratchpad()
         if type.MGRS then
             result = result .. mgrs .. "\n"
         end
-        if  type.NS430 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %PlaceHolderName
+        if  type.NS430 then -- Degree Decimal formatted to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %PlaceHolderName
             result = result .. "FIX;" .. formatCoord("DD", true, lon, type.NS430) .. ";" .. formatCoord("DD", false, lat, type.NS430)  .. ";%PlaceHolderName\n"
         end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
