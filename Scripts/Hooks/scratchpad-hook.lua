@@ -1,14 +1,14 @@
 local function loadScratchpad()
     package.path = package.path .. ";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
-    local lfs = require("lfs")
-    local U = require("me_utilities")
-    local Skin = require("Skin")
     local DialogLoader = require("DialogLoader")
-    local Tools = require("tools")
-    local Input = require("Input")
     local dxgui = require('dxgui')
+    local Input = require("Input")
+    local lfs = require("lfs")
+    local Skin = require("Skin")
     local Terrain = require('terrain')
+    local Tools = require("tools")
+    local U = require("me_utilities")
 
     -- Scratchpad resources
     local window = nil
