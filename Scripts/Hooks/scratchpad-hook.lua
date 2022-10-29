@@ -8,6 +8,7 @@ local function loadScratchpad()
     local Tools = require("tools")
     local Input = require("Input")
     local dxgui = require('dxgui')
+    local Terrain = require('terrain')
 
     -- Scratchpad resources
     local window = nil
