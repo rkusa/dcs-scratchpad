@@ -71,10 +71,35 @@ local function loadScratchpad()
         textarea:setFocused(true)
     end
 
+    local function strLen(str)
+        local skip = 0
+        local len = 0
+        for i = 1, #str do
+            if skip == 0 then
+                local b = str:byte(i)
+                len = len + 1
+                if b < 128 then
+                    -- one byte char
+                elseif  b < 224 then
+                    -- two byte char
+                    skip = 1
+                elseif  b < 240 then
+                    -- two byte char
+                    skip = 2
+                elseif  b < 248 then
+                    -- two byte char
+                    skip = 3
+                end
+            else
+                skip = skip - 1
+            end
+        end
+        return len
+    end
+
     -- Returns the start end end offsets of the current selection
     function getSelection()
         local text = textarea:getText()
-        local lineCountBefore = textarea:getLineCount()
         local lineStart, indexStart, lineEnd, indexEnd = textarea:getSelectionNew()
 
         -- Swap backwards selection to forward selection
@@ -85,45 +110,96 @@ local function loadScratchpad()
         -- DCS has no API to get the cursor offset relative to the text start, so there is quite
         -- some extra work necessary to calculate that based on what DCS provides.
         local start = 0
-        for i = 1, lineStart do
-            start = string.find(text, "\n", start + 1, true)
-            if start == nil then
-                start = string.len(text)
-                break
-            end
+        local startByte = 0
+        for i = 0, lineStart - 1 do
+            start = start + textarea:getLineTextLength(i) + 1
+            startByte = string.find(text, "\n", startByte + 1, true)
         end
-        start = start + indexStart
 
         local end_ = start
-        if lineEnd > lineStart then
-            for i = lineStart + 1, lineEnd do
-                end_ = string.find(text, "\n", end_ + 1, true)
-                if end_ == nil then
-                    end_ = string.len(text)
-                    break
-                end
+        local endByte = startByte
+
+        start = start + indexStart
+        for i = 1, indexStart do
+            local b = text:byte(startByte + 1)
+            if b < 128 then
+                -- one byte char
+                startByte = startByte + 1
+            elseif  b < 224 then
+                -- two byte char
+                startByte = startByte + 2
+            elseif  b < 240 then
+                -- two byte char
+                startByte = startByte + 3
+            elseif  b < 248 then
+                -- two byte char
+                startByte = startByte + 4
             end
-            end_ = end_ + indexEnd
-        else
-            end_ = end_ + (indexEnd - indexStart)
         end
 
-        return start, end_
+        local remainder = 0
+        if lineEnd > lineStart then
+            for i = lineStart, lineEnd - 1 do
+                end_ = end_ + textarea:getLineTextLength(i) + 1
+                endByte = string.find(text, "\n", endByte + 1, true)
+            end
+            remainder = indexEnd
+        else
+            end_ = start
+            endByte = startByte
+            remainder = (indexEnd - indexStart)
+        end
+
+
+        end_ = end_ + remainder
+        for i = 1, remainder do
+            local b = text:byte(endByte + 1)
+            if b < 128 then
+                -- one byte char
+                endByte = endByte + 1
+            elseif  b < 224 then
+                -- two byte char
+                endByte = endByte + 2
+            elseif  b < 240 then
+                -- two byte char
+                endByte = endByte + 3
+            elseif  b < 248 then
+                -- two byte char
+                endByte = endByte + 4
+            end
+        end
+
+        return start, end_, startByte, endByte
     end
 
-    -- Set the cursor to the specified offset and optional length (defaults to 0)
-    function setSelection(offset, len)
+    -- Set the cursor to the specified position and optional length (defaults to 0)
+    function setSelection(pos, len)
         local text = textarea:getText()
         local lineStart = 0
         local indexStart = 0
         local nl = string.byte("\n")
-        local to = math.min(offset, #text)
+        local textLen = strLen(text)
+        local to = math.min(pos, textLen)
+        local offset = 0
         for i = 1, to do
-            if text:byte(i) == nl then
+            local b = text:byte(i + offset)
+            if b == nl then
                 lineStart = lineStart + 1
                 indexStart = 0
             else
                 indexStart = indexStart + 1
+                if b < 128 then
+                    -- one byte char
+                elseif  b < 224 then
+                    -- two byte char
+                    offset = offset + 1
+                elseif  b < 240 then
+                    -- two byte char
+                    offset = offset + 2
+                elseif  b < 248 then
+                    -- two byte char
+                    offset = offset + 3
+                end
             end
         end
 
@@ -131,14 +207,29 @@ local function loadScratchpad()
         local lineEnd = lineStart
         local indexEnd = indexStart
         if len and len > 0 then
-            local from = math.min(offset, #text)
-            local to = math.min(offset + len, #text)
+            local from = to
+            local to = math.min(pos + len, textLen)
             for i = from + 1, to do
-                if text:byte(i) == nl then
+                local b = text:byte(i + offset)
+                if b == nl then
                     lineEnd = lineEnd + 1
                     indexEnd = 0
                 else
                     indexEnd = indexEnd + 1
+
+                    -- very basic utf8 handling
+                    if b < 128 then
+                        -- one byte char
+                    elseif  b < 224 then
+                        -- two byte char
+                        offset = offset + 1
+                    elseif  b < 240 then
+                        -- two byte char
+                        offset = offset + 2
+                    elseif  b < 248 then
+                        -- two byte char
+                        offset = offset + 3
+                    end
                 end
             end
         end
@@ -152,31 +243,52 @@ local function loadScratchpad()
         end
 
         local text = textarea:getText()
-        local start, end_ = getSelection()
+        local start, end_, startByte, endByte = getSelection()
 
         -- replace the selection with the text
         textarea:setText(
-            string.sub(text, 1, start)..
+            string.sub(text, 1, startByte)..
             newText..
-            string.sub(text, end_ + 1, #text)
+            string.sub(text, endByte + 1, #text)
         )
 
         -- place cursor after the inserted text
-        setSelection(start + #newText)
+        setSelection(start + strLen(newText))
         textarea:setFocused(true)
     end
 
     function Text:insertBelow(newText)
         -- place cursor at the end of the current line (before the newline if there is any)
         local text = textarea:getText()
-        local start, end_ = getSelection()
+        local start, end_, startByte, endByte = getSelection()
         local newPos = end_
         local nl = string.byte("\n")
-        for i = end_ + 1, #text do
-            if text:byte(i) == nl then
-                break
+        local skip = 0
+        for i = endByte + 1, #text do
+            if skip == 0 then
+                local b = text:byte(i)
+                if b == nl then
+                    break
+                else
+                    newPos = newPos + 1
+
+                    -- very basic utf8 handling
+                    if b < 128 then
+                        -- one byte char
+                    elseif  b < 224 then
+                        -- two byte char
+                        skip = 1
+                    elseif  b < 240 then
+                        -- two byte char
+                        skip = 2
+                    elseif  b < 248 then
+                        -- two byte char
+                        skip = 3
+                    end
+                end
+            else
+                skip = skip - 1
             end
-            newPos = newPos + 1
         end
 
         setSelection(newPos)
