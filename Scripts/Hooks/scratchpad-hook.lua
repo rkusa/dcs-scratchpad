@@ -204,9 +204,9 @@ local function loadScratchpad()
         U.saveInFile(config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
     end
 
-    local function unlockKeyboardInput(releaseKeyboardKeys)
+    local function unlockKeyboardInput()
         if keyboardLocked then
-            DCS.unlockKeyboardInput(releaseKeyboardKeys)
+            DCS.unlockKeyboardInput(true)
             keyboardLocked = false
         end
     end
@@ -217,6 +217,27 @@ local function loadScratchpad()
         end
 
         local keyboardEvents = Input.getDeviceKeys(Input.getKeyboardDeviceName())
+        local inputActions = Input.getEnvTable().Actions
+
+        -- do not lock chat related hotkeys to prevent a mix of chat and Scratchpad causing a deadlock
+        -- in which the chat cannot be closed and thus most keyboard inputs don't work anymore
+        -- (code copied from `mul_chat.lua`)
+        local removeCommandEvents = function(commandEvents)
+            for i, commandEvent in ipairs(commandEvents) do
+                for j = #keyboardEvents, 1, -1 do
+                    if keyboardEvents[j] == commandEvent then
+                        table.remove(keyboardEvents, j)
+                        break
+                    end
+                end
+            end 
+        end
+        
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandChat))
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandAllChat))
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandFriendlyChat))
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandChatShowHide))
+
         DCS.lockKeyboardInput(keyboardEvents)
         keyboardLocked = true
     end
@@ -409,7 +430,7 @@ local function loadScratchpad()
 
     local function blur()
         textarea:setFocused(false)
-        unlockKeyboardInput(true)
+        unlockKeyboardInput()
         savePage(currentPage, textarea:getText(), true)
     end
 
