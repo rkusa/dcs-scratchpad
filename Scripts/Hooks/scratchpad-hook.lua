@@ -308,9 +308,9 @@ local function loadScratchpad()
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
             return {DMS = true, DDM = {precision = 4}, MGRS = true}
-        elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" then
+        elseif string.sub(ac, 1, 5) == "A-10C" or ac == "AV-8B" then
             return {DDM = true, MGRS = true}
-        elseif ac == "F-14B" or ac == "F-14A-135-GR" then
+        elseif string.sub(ac, 1, 4) == "F-14" then
             return {DMS = true}
         elseif ac == "M-2000C" then
             return {DDM = {precision = 1, lonDegreesWidth = 3}}
@@ -318,9 +318,9 @@ local function loadScratchpad()
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
             return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
-        elseif ac == "Ka-50" then
+        elseif string.sub(ac, 1,5) == "Ka-50" then
             return {DDM = {precision = 1, lonDegreesWidth = 3, showNegative = true}}
-        elseif ac == "SA342M" or ac == "SA342L" or ac == "SA342Mistral" or ac == "SA342Minigun" then
+        elseif string.sub(ac, 1, 5) == "SA342" then
             return {DDM = {precision = 1}}
         else
             return {NS430 = true, DMS = true, DDM = true, MGRS = true}
