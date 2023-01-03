@@ -1,13 +1,14 @@
 local function loadScratchpad()
     package.path = package.path .. ";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
-    local lfs = require("lfs")
-    local U = require("me_utilities")
-    local Skin = require("Skin")
     local DialogLoader = require("DialogLoader")
-    local Tools = require("tools")
-    local Input = require("Input")
     local dxgui = require('dxgui')
+    local Input = require("Input")
+    local lfs = require("lfs")
+    local Skin = require("Skin")
+    local Terrain = require('terrain')
+    local Tools = require("tools")
+    local U = require("me_utilities")
 
     -- Scratchpad resources
     local window = nil
@@ -203,9 +204,9 @@ local function loadScratchpad()
         U.saveInFile(config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
     end
 
-    local function unlockKeyboardInput(releaseKeyboardKeys)
+    local function unlockKeyboardInput()
         if keyboardLocked then
-            DCS.unlockKeyboardInput(releaseKeyboardKeys)
+            DCS.unlockKeyboardInput(true)
             keyboardLocked = false
         end
     end
@@ -216,6 +217,27 @@ local function loadScratchpad()
         end
 
         local keyboardEvents = Input.getDeviceKeys(Input.getKeyboardDeviceName())
+        local inputActions = Input.getEnvTable().Actions
+
+        -- do not lock chat related hotkeys to prevent a mix of chat and Scratchpad causing a deadlock
+        -- in which the chat cannot be closed and thus most keyboard inputs don't work anymore
+        -- (code copied from `mul_chat.lua`)
+        local removeCommandEvents = function(commandEvents)
+            for i, commandEvent in ipairs(commandEvents) do
+                for j = #keyboardEvents, 1, -1 do
+                    if keyboardEvents[j] == commandEvent then
+                        table.remove(keyboardEvents, j)
+                        break
+                    end
+                end
+            end 
+        end
+        
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandChat))
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandAllChat))
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandFriendlyChat))
+        removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandChatShowHide))
+
         DCS.lockKeyboardInput(keyboardEvents)
         keyboardLocked = true
     end
@@ -291,7 +313,7 @@ local function loadScratchpad()
         elseif ac == "F-14B" or ac == "F-14A-135-GR" then
             return {DMS = true}
         elseif ac == "M-2000C" then
-            return {DDM = true}
+            return {DDM = {precision = 1, lonDegreesWidth = 3}}
         elseif ac == "F-16C_50" then
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
@@ -322,7 +344,7 @@ local function loadScratchpad()
         if type.MGRS then
             result = result .. mgrs .. "\n"
         end
-        if  type.NS430 then -- Degree Decimal formated to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %PlaceHolderName
+        if  type.NS430 then -- Degree Decimal formatted to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %PlaceHolderName
             result = result .. "FIX;" .. formatCoord("DD", true, lon, type.NS430) .. ";" .. formatCoord("DD", false, lat, type.NS430)  .. ";%PlaceHolderName\n"
         end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
@@ -408,7 +430,7 @@ local function loadScratchpad()
 
     local function blur()
         textarea:setFocused(false)
-        unlockKeyboardInput(true)
+        unlockKeyboardInput()
         savePage(currentPage, textarea:getText(), true)
     end
 
@@ -452,8 +474,7 @@ local function loadScratchpad()
         end
 
         crosshairWindow = DialogLoader.spawnDialogFromFile(
-            lfs.writedir() .. "Scripts\\Scratchpad\\CrosshairWindow.dlg",
-            cdata
+            lfs.writedir() .. "Scripts\\Scratchpad\\CrosshairWindow.dlg"
         )
 
         local screenWidth, screenHeigt = dxgui.GetScreenSize()
@@ -472,8 +493,7 @@ local function loadScratchpad()
         createCrosshairWindow()
 
         window = DialogLoader.spawnDialogFromFile(
-            lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg",
-            cdata
+            lfs.writedir() .. "Scripts\\Scratchpad\\ScratchpadWindow.dlg"
         )
 
         windowDefaultSkin = window:getSkin()
