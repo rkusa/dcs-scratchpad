@@ -322,6 +322,8 @@ local function loadScratchpad()
             return {DDM = {precision = 1, lonDegreesWidth = 3, showNegative = true}}
         elseif ac == "SA342M" or ac == "SA342L" or ac == "SA342Mistral" or ac == "SA342Minigun" then
             return {DDM = {precision = 1}}
+        elseif ac == "Hercules" then
+            return {DDM = {precision = 3, lonDegreesWidth = 3}}
         else
             return {NS430 = true, DMS = true, DDM = true, MGRS = true}
         end
