@@ -311,14 +311,14 @@ local function loadScratchpad()
         elseif string.sub(ac, 1, 5) == "A-10C" or ac == "AV-8B" then
             return {DDM = true, MGRS = true}
         elseif string.sub(ac, 1, 4) == "F-14" then
-            return {DMS = true}
+            return {DDM = {precision = 1}}
         elseif ac == "M-2000C" then
             return {DDM = {precision = 1, lonDegreesWidth = 3}}
         elseif ac == "F-16C_50" then
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
             return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
-        elseif string.sub(ac, 1,5) == "Ka-50" then
+        elseif string.sub(ac, 1, 5) == "Ka-50" then
             return {DDM = {precision = 1, lonDegreesWidth = 3, showNegative = true}}
         elseif string.sub(ac, 1, 5) == "SA342" then
             return {DDM = {precision = 1}}
