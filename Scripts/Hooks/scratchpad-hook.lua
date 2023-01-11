@@ -322,6 +322,8 @@ local function loadScratchpad()
             return {DDM = {precision = 1, lonDegreesWidth = 3, showNegative = true}}
         elseif string.sub(ac, 1, 5) == "SA342" then
             return {DDM = {precision = 1}}
+        elseif ac == "Hercules" then
+            return {DDM = {precision = 3, lonDegreesWidth = 3}}
         else
             return {NS430 = true, DMS = true, DDM = true, MGRS = true}
         end
