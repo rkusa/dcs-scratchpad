@@ -311,7 +311,7 @@ local function loadScratchpad()
         elseif ac == "A-10C_2" or ac == "A-10C" or ac == "AV-8B" then
             return {DDM = true, MGRS = true}
         elseif ac == "F-14B" or ac == "F-14A-135-GR" then
-            return {DMS = true}
+            return {DDM = {precision = 1}}
         elseif ac == "M-2000C" then
             return {DDM = {precision = 1, lonDegreesWidth = 3}}
         elseif ac == "F-16C_50" then
