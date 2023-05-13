@@ -40,6 +40,8 @@ local function loadScratchpad()
     -- Extensions
     local extensions = {}
     local coordListeners = {}
+    local frameListeners = {}
+	local missionLoadEndListeners = {}
 
     local function log(str)
         if not str then
@@ -525,6 +527,14 @@ local function loadScratchpad()
         keyboardLocked = true
     end
 
+	local function runListeners(list)
+		for _, listener in pairs(list) do
+			if type(listener) == "function" then
+				listener()
+			end
+		end
+	end
+
     function formatCoord(format, isLat, d, opts)
         local function showNegative(d, h)
             if h == "S" or h == "W" then
@@ -634,11 +644,7 @@ local function loadScratchpad()
         local text = Text.new()
         text:insertBelow(result)
 
-        for _, listener in pairs(coordListeners) do
-            if type(listener) == "function" then
-                listener(text, lat, lon, alt)
-            end
-        end
+		runListeners(coordListeners)
     end
 
     local function setVisible(b)
@@ -757,6 +763,13 @@ local function loadScratchpad()
         isHidden = true
     end
 
+	function getTextArea()
+		return textarea
+	end
+
+	function getCurrentPage()
+		return currentPage
+	end
     local function loadExtensions()
         log("Loading extensions ...")
 
@@ -786,8 +799,19 @@ local function loadScratchpad()
                 addCoordinateListener = function(listener)
                     table.insert(coordListeners, listener)
                 end,
+                addFrameListener = function(listener)
+                    --TH table.insert(frameListeners, listener)
+					frameListeners[1] = listener
+                end,
+                addmissionLoadEndListener = function(listener)
+                    table.insert(missionLoadEndListeners, listener)
+                end,
                 formatCoord = formatCoord,
-                log = log
+                log = log,
+		getTextArea = getTextArea,
+		getCurrentPage = getCurrentPage,
+		savePage = savePage,
+		getSelection = getSelection
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)
@@ -1031,10 +1055,13 @@ local function loadScratchpad()
                 net.log("[Scratchpad] Failed to create window: " .. tostring(err))
             end
         end
+
+		runListeners(frameListeners)
     end
     function handler.onMissionLoadEnd()
         inMission = true
         updateCoordsMode()
+		runListeners(missionLoadEndListeners)
     end
     function handler.onSimulationStop()
         inMission = false
