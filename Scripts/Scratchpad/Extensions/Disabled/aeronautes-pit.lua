@@ -25,7 +25,7 @@ local function loglocal(str)
    end
 end
 
-local kpfile = lfs.writedir() .. '\\kp.lua'
+local delay = 0.1		-- default input delay
 local unittype = ''
 local kp = {}	-- keypad table for wp(), press() api
 local ttlist = {} --tool tips from clicabledata.lua
@@ -484,7 +484,7 @@ function push_stop_command(delay, c)
    if c.device and c.action and c.value then
       loglocal('push_stop_command: dev '..c.device ..', action '.. c.action ..', val '.. c.value)
       if not c.len then
-	 c.len = 10
+	 c.len = delay		-- default switch delay
       end
       table.insert(domacro.inp, {c.action, c.value, c.len, c.device})
    end
