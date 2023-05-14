@@ -1,3 +1,4 @@
+local socket = require('socket')
 lfs = require('lfs')
 --UC = require('utils_common')
 
@@ -17,7 +18,7 @@ function card2num(result)
    return result
 end
 
-local debug = 2
+local debug = 0
 local function loglocal(str)
    if debug > 1 then
       log(str)
@@ -74,141 +75,143 @@ local function assignKP()
    local function getTypeKP(unit)
       loglocal('getTypeKP begin')
 
+      local delay = 0.1
       if unit == 'AV8BNA' then
 	 return {
-	    ['1'] = {ufc_commands.Button_1, 1, 1, devices.UFCCONTROL},
-	    ['2'] = {ufc_commands.Button_2, 1, 1, devices.UFCCONTROL},
-	    ['3'] = {ufc_commands.Button_3, 1, 1, devices.UFCCONTROL},
-	    ['4'] = {ufc_commands.Button_4, 1, 1, devices.UFCCONTROL},
-	    ['5'] = {ufc_commands.Button_5, 1, 1, devices.UFCCONTROL},
-	    ['6'] = {ufc_commands.Button_6, 1, 1, devices.UFCCONTROL},
-	    ['7'] = {ufc_commands.Button_7, 1, 1, devices.UFCCONTROL},
-	    ['8'] = {ufc_commands.Button_8, 1, 1, devices.UFCCONTROL},
-	    ['9'] = {ufc_commands.Button_9, 1, 1, devices.UFCCONTROL},
-	    ['0'] = {ufc_commands.Button_0, 1, 1, devices.UFCCONTROL},
-	    ['e'] = {ufc_commands.Button_ENT, 1, 1, devices.UFCCONTROL},
-	    ['$'] = {ufc_commands.Button_4, 1, 1, devices.ODUCONTROL},
-	    ['N'] = {ufc_commands.Button_2, 1, 1, devices.UFCCONTROL},
-	    ['E'] = {ufc_commands.Button_6, 1, 1, devices.UFCCONTROL},
-	    ['W'] = {ufc_commands.Button_4, 1, 1, devices.UFCCONTROL},
-	    ['S'] = {ufc_commands.Button_8, 1, 1, devices.UFCCONTROL},
+	    ['1'] = {ufc_commands.Button_1, 1, delay, devices.UFCCONTROL},
+	    ['2'] = {ufc_commands.Button_2, 1, delay, devices.UFCCONTROL},
+	    ['3'] = {ufc_commands.Button_3, 1, delay, devices.UFCCONTROL},
+	    ['4'] = {ufc_commands.Button_4, 1, delay, devices.UFCCONTROL},
+	    ['5'] = {ufc_commands.Button_5, 1, delay, devices.UFCCONTROL},
+	    ['6'] = {ufc_commands.Button_6, 1, delay, devices.UFCCONTROL},
+	    ['7'] = {ufc_commands.Button_7, 1, delay, devices.UFCCONTROL},
+	    ['8'] = {ufc_commands.Button_8, 1, delay, devices.UFCCONTROL},
+	    ['9'] = {ufc_commands.Button_9, 1, delay, devices.UFCCONTROL},
+	    ['0'] = {ufc_commands.Button_0, 1, delay, devices.UFCCONTROL},
+	    ['e'] = {ufc_commands.Button_ENT, 1, delay, devices.UFCCONTROL},
+	    ['$'] = {ufc_commands.Button_4, 1, delay, devices.ODUCONTROL},
+	    ['N'] = {ufc_commands.Button_2, 1, delay, devices.UFCCONTROL},
+	    ['E'] = {ufc_commands.Button_6, 1, delay, devices.UFCCONTROL},
+	    ['W'] = {ufc_commands.Button_4, 1, delay, devices.UFCCONTROL},
+	    ['S'] = {ufc_commands.Button_8, 1, delay, devices.UFCCONTROL},
 	 }
       elseif unit == 'F-16C_50' then
 	 return {
-	    ['0'] = {ufc_commands.DIG0_M_SEL, 1, 1, devices.UFC},
-	    ['1'] = {ufc_commands.DIG1_T_ILS, 1, 1, devices.UFC},
-	    ['2'] = {ufc_commands.DIG2_ALOW, 1, 1, devices.UFC},
-	    ['3'] = {ufc_commands.DIG3, 1, 1, devices.UFC},
-	    ['4'] = {ufc_commands.DIG4_STPT, 1, 1, devices.UFC},
-	    ['5'] = {ufc_commands.DIG5_CRUS, 1, 1, devices.UFC},
-	    ['6'] = {ufc_commands.DIG6_TIME, 1, 1, devices.UFC},
-	    ['7'] = {ufc_commands.DIG7_MARK, 1, 1, devices.UFC},
-	    ['8'] = {ufc_commands.DIG8_FIX, 1, 1, devices.UFC},
-	    ['9'] = {ufc_commands.DIG9_A_CAL, 1, 1, devices.UFC},
-	    ['N'] = {ufc_commands.DIG2_ALOW, 1, 1, devices.UFC},
-	    ['E'] = {ufc_commands.DIG6_TIME, 1, 1, devices.UFC},
-	    ['W'] = {ufc_commands.DIG4_STPT, 1, 1, devices.UFC},
-	    ['S'] = {ufc_commands.DIG8_FIX, 1, 1, devices.UFC},
-	    e = {ufc_commands.ENTR, 1, 1, devices.UFC},
-	    p = {ufc_commands.DED_INC, 1, 1, devices.UFC},
-	    m = {ufc_commands.DED_DEC, 1, 1, devices.UFC},
-	    r = {ufc_commands.DCS_RTN, -1, 3, devices.UFC},
-	    s = {ufc_commands.DCS_SEQ, -1, 3, devices.UFC},
-	    u = {{ufc_commands.DCS_UP, 1, 3, devices.UFC},
-	       {ufc_commands.DCS_UP, 0, 1, devices.UFC}},
-	    d = {{ufc_commands.DCS_DOWN, -1, 3, devices.UFC}, 
-	       {ufc_commands.DCS_DOWN, 0, 1, devices.UFC}}, 
+	    ['0'] = {ufc_commands.DIG0_M_SEL, 1, delay, devices.UFC},
+	    ['1'] = {ufc_commands.DIG1_T_ILS, 1, delay, devices.UFC},
+	    ['2'] = {ufc_commands.DIG2_ALOW, 1, delay, devices.UFC},
+	    ['3'] = {ufc_commands.DIG3, 1, delay, devices.UFC},
+	    ['4'] = {ufc_commands.DIG4_STPT, 1, delay, devices.UFC},
+	    ['5'] = {ufc_commands.DIG5_CRUS, 1, delay, devices.UFC},
+	    ['6'] = {ufc_commands.DIG6_TIME, 1, delay, devices.UFC},
+	    ['7'] = {ufc_commands.DIG7_MARK, 1, delay, devices.UFC},
+	    ['8'] = {ufc_commands.DIG8_FIX, 1, delay, devices.UFC},
+	    ['9'] = {ufc_commands.DIG9_A_CAL, 1, delay, devices.UFC},
+	    ['N'] = {ufc_commands.DIG2_ALOW, 1, delay, devices.UFC},
+	    ['E'] = {ufc_commands.DIG6_TIME, 1, delay, devices.UFC},
+	    ['W'] = {ufc_commands.DIG4_STPT, 1, delay, devices.UFC},
+	    ['S'] = {ufc_commands.DIG8_FIX, 1, delay, devices.UFC},
+	    e = {ufc_commands.ENTR, 1, delay, devices.UFC},
+	    p = {ufc_commands.DED_INC, 1, delay, devices.UFC},
+	    m = {ufc_commands.DED_DEC, 1, delay, devices.UFC},
+	    r = {ufc_commands.DCS_RTN, -1, delay, devices.UFC},
+	    s = {ufc_commands.DCS_SEQ, -1, delay, devices.UFC},
+	    u = {{ufc_commands.DCS_UP, 1, delay, devices.UFC},
+	       {ufc_commands.DCS_UP, 0, 0, devices.UFC}},
+	    d = {{ufc_commands.DCS_DOWN, -1, delay, devices.UFC}, 
+	       {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}}, 
 	 }
       elseif unit == 'FA-18C_hornet' then
 	 return {
-	    ['0'] = {{UFC_commands.KbdSw0, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw0, 0, 10, devices.UFC},},
-	    ['1'] = {{UFC_commands.KbdSw1, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw1, 0, 10, devices.UFC},},
-	    ['2'] = {{UFC_commands.KbdSw2, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw2, 0, 10, devices.UFC},},
-	    ['3'] = {{UFC_commands.KbdSw3, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw3, 0, 10, devices.UFC},},
-	    ['4'] = {{UFC_commands.KbdSw4, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw4, 0, 20, devices.UFC},},
-	    ['5'] = {{UFC_commands.KbdSw5, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw5, 0, 10, devices.UFC},},
-	    ['6'] = {{UFC_commands.KbdSw6, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw6, 0, 10, devices.UFC},},
-	    ['7'] = {{UFC_commands.KbdSw7, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw7, 0, 10, devices.UFC},},
-	    ['8'] = {{UFC_commands.KbdSw8, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw8, 0, 10, devices.UFC},},
-	    ['9'] = {{UFC_commands.KbdSw9, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw9, 0, 10, devices.UFC},},
-	    ['N'] = {{UFC_commands.KbdSw2, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw2, 0, 10, devices.UFC},},
-	    ['E'] = {{UFC_commands.KbdSw6, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw6, 0, 10, devices.UFC},},
-	    ['W'] = {{UFC_commands.KbdSw4, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw4, 0, 10, devices.UFC},},
-	    ['S'] = {{UFC_commands.KbdSw8, 1, 10, devices.UFC},
-	       {UFC_commands.KbdSw8, 0, 10, devices.UFC},},
-	    [' '] = {{UFC_commands.KbdSwENT, 1, 5, devices.UFC},
-	       {UFC_commands.KbdSwENT, 0, 5, devices.UFC},},
-	    a = {{UFC_commands.OptSw1, 1, 5, devices.UFC},
-	       {UFC_commands.OptSw1, 0, 1, devices.UFC},},
-	    b = {{UFC_commands.OptSw2, 1, 5, devices.UFC},
-	       {UFC_commands.OptSw2, 0, 1, devices.UFC},},
-	    c = {{UFC_commands.OptSw3, 1, 5, devices.UFC},
-	       {UFC_commands.OptSw3, 0, 1, devices.UFC},},
-	    d = {{UFC_commands.OptSw4, 1, 5, devices.UFC},
-	       {UFC_commands.OptSw4, 0, 1, devices.UFC},x},
-	    e = {{UFC_commands.OptSw5, 1, 5, devices.UFC},
-	       {UFC_commands.OptSw5, 0, 1, devices.UFC},},
-	    d = {{MDI_commands.MDI_PB_5, 1, 5, devices.MDI_LEFT},
-	       {MDI_commands.MDI_PB_5, 0, 5, devices.MDI_LEFT},},
+	    ['0'] = {{UFC_commands.KbdSw0, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw0, 0, delay, devices.UFC},},
+	    ['1'] = {{UFC_commands.KbdSw1, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw1, 0, delay, devices.UFC},},
+	    ['2'] = {{UFC_commands.KbdSw2, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw2, 0, delay, devices.UFC},},
+	    ['3'] = {{UFC_commands.KbdSw3, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw3, 0, delay, devices.UFC},},
+	    ['4'] = {{UFC_commands.KbdSw4, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw4, 0, delay, devices.UFC},},
+	    ['5'] = {{UFC_commands.KbdSw5, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw5, 0, delay, devices.UFC},},
+	    ['6'] = {{UFC_commands.KbdSw6, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw6, 0, delay, devices.UFC},},
+	    ['7'] = {{UFC_commands.KbdSw7, 1, 0.20, devices.UFC},
+	       {UFC_commands.KbdSw7, 0, delay, devices.UFC},},
+	    ['8'] = {{UFC_commands.KbdSw8, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw8, 0, delay, devices.UFC},},
+	    ['9'] = {{UFC_commands.KbdSw9, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw9, 0, delay, devices.UFC},},
+	    ['N'] = {{UFC_commands.KbdSw2, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw2, 0, delay, devices.UFC},},
+	    ['E'] = {{UFC_commands.KbdSw6, 1, 1, devices.UFC},
+	       {UFC_commands.KbdSw6, 0, 1, devices.UFC},},
+	    ['W'] = {{UFC_commands.KbdSw4, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw4, 0, delay, devices.UFC},},
+	    ['S'] = {{UFC_commands.KbdSw8, 1, delay, devices.UFC},
+	       {UFC_commands.KbdSw8, 0, delay, devices.UFC},},
+	    [' '] = {{UFC_commands.KbdSwENT, 1, 0.5, devices.UFC},
+	       {UFC_commands.KbdSwENT, 0, 0.25, devices.UFC},},
+	    a = {{UFC_commands.OptSw1, 1, 0.25, devices.UFC},
+	       {UFC_commands.OptSw1, 0, 0.25, devices.UFC},},
+	    b = {{UFC_commands.OptSw2, 1, 0.25, devices.UFC},
+	       {UFC_commands.OptSw2, 0, 0.25, devices.UFC},},
+	    c = {{UFC_commands.OptSw3, 1, 0.25, devices.UFC},
+	       {UFC_commands.OptSw3, 0, 0.25, devices.UFC},},
+	    d = {{UFC_commands.OptSw4, 1, 0.25, devices.UFC},
+	       {UFC_commands.OptSw4, 0, 0.25, devices.UFC},x},
+	    e = {{UFC_commands.OptSw5, 1, 0.25, devices.UFC},
+	       {UFC_commands.OptSw5, 0, 0.25, devices.UFC},},
+	    d = {{MDI_commands.MDI_PB_5, 1, 0.25, devices.MDI_LEFT},
+	       {MDI_commands.MDI_PB_5, 0, 0.25, devices.MDI_LEFT},},
+	    ['_'] = {{0, 99, 1, 0}},
 	 }
       elseif unit == 'Ka-50' or unit == 'Ka-50_3' then
 	 return {
-	    ['0'] = {device_commands.Button_1, 1, 1, devices.PVI},
-	    ['1'] = {device_commands.Button_2, 1, 1, devices.PVI},
-	    ['2'] = {device_commands.Button_3, 1, 1, devices.PVI},
-	    ['3'] = {device_commands.Button_4, 1, 1, devices.PVI},
-	    ['4'] = {device_commands.Button_5, 1, 1, devices.PVI},
-	    ['5'] = {device_commands.Button_6, 1, 1, devices.PVI},
-	    ['6'] = {device_commands.Button_7, 1, 1, devices.PVI},
-	    ['7'] = {device_commands.Button_8, 1, 1, devices.PVI},
-	    ['8'] = {device_commands.Button_9, 1, 1, devices.PVI},
-	    ['9'] = {device_commands.Button_10, 1, 1, devices.PVI},
-	    ['N'] = {device_commands.Button_1, 1, 1, devices.PVI},
-	    ['E'] = {device_commands.Button_1, 1, 1, devices.PVI},
-	    ['W'] = {device_commands.Button_2, 1, 1, devices.PVI},
-	    ['S'] = {device_commands.Button_2, 1, 1, devices.PVI},
-	    e = {device_commands.Button_18, 1, 1, devices.PVI}, --NAV Enter
-	    w = {device_commands.Button_11, 1, 1, devices.PVI}, --NAV Waypoints
-	    t = {device_commands.Button_17, 1, 1, devices.PVI}, --NAV Targets
-	    n = {device_commands.Button_26, 0.2, 2, devices.PVI}, --NAV Master mode ent
-	    o = {device_commands.Button_26, 0.3, 2, devices.PVI}, --NAV Master mode oper
+	    ['0'] = {device_commands.Button_1, 1, delay, devices.PVI},
+	    ['1'] = {device_commands.Button_2, 1, delay, devices.PVI},
+	    ['2'] = {device_commands.Button_3, 1, delay, devices.PVI},
+	    ['3'] = {device_commands.Button_4, 1, delay, devices.PVI},
+	    ['4'] = {device_commands.Button_5, 1, delay, devices.PVI},
+	    ['5'] = {device_commands.Button_6, 1, delay, devices.PVI},
+	    ['6'] = {device_commands.Button_7, 1, delay, devices.PVI},
+	    ['7'] = {device_commands.Button_8, 1, delay, devices.PVI},
+	    ['8'] = {device_commands.Button_9, 1, delay, devices.PVI},
+	    ['9'] = {device_commands.Button_10, 1, delay, devices.PVI},
+	    ['N'] = {device_commands.Button_1, 1, delay, devices.PVI},
+	    ['E'] = {device_commands.Button_1, 1, delay, devices.PVI},
+	    ['W'] = {device_commands.Button_2, 1, delay, devices.PVI},
+	    ['S'] = {device_commands.Button_2, 1, delay, devices.PVI},
+	    e = {device_commands.Button_18, 1, delay, devices.PVI}, --NAV Enter
+	    w = {device_commands.Button_11, 1, delay, devices.PVI}, --NAV Waypoints
+	    t = {device_commands.Button_17, 1, delay, devices.PVI}, --NAV Targets
+	    n = {device_commands.Button_26, 0.2, delay, devices.PVI}, --NAV Master mode ent
+	    o = {device_commands.Button_26, 0.3, delay, devices.PVI}, --NAV Master mode oper
 	 }
       elseif unit == 'Hercules' then
 	 return {
-	    ['0'] = {CNI_MU.pilot_CNI_MU_KBD_0, 1, 3, devices.General},
-	    ['1'] = {CNI_MU.pilot_CNI_MU_KBD_1, 1, 3, devices.General},
-	    ['2'] = {CNI_MU.pilot_CNI_MU_KBD_2, 1, 3, devices.General},
-	    ['3'] = {CNI_MU.pilot_CNI_MU_KBD_3, 1, 3, devices.General},
-	    ['4'] = {CNI_MU.pilot_CNI_MU_KBD_4, 1, 3, devices.General},
-	    ['5'] = {CNI_MU.pilot_CNI_MU_KBD_5, 1, 3, devices.General},
-	    ['6'] = {CNI_MU.pilot_CNI_MU_KBD_6, 1, 3, devices.General},
-	    ['7'] = {CNI_MU.pilot_CNI_MU_KBD_7, 1, 3, devices.General},
-	    ['8'] = {CNI_MU.pilot_CNI_MU_KBD_8, 1, 3, devices.General},
-	    ['9'] = {CNI_MU.pilot_CNI_MU_KBD_9, 1, 3, devices.General},
-	    ['E'] = {CNI_MU.pilot_CNI_MU_KBD_E, 1, 3, devices.General},
-	    ['N'] = {CNI_MU.pilot_CNI_MU_KBD_N, 1, 3, devices.General},
-	    ['S'] = {CNI_MU.pilot_CNI_MU_KBD_S, 1, 3, devices.General},
-	    ['W'] = {CNI_MU.pilot_CNI_MU_KBD_W, 1, 3, devices.General},
-	    a = {CNI_MU.pilot_CNI_MU_SelectKey_001, 1, 3, devices.General}, --SelectKey 1; wp #
-	    b = {CNI_MU.pilot_CNI_MU_SelectKey_002, 1, 3, devices.General}, --SelectKey 2; wp name
-	    e = {CNI_MU.pilot_CNI_MU_SelectKey_005, 1, 3, devices.General}, --SelectKey 5; lat
-	    f = {CNI_MU.pilot_CNI_MU_SelectKey_006, 1, 3, devices.General}, --SelectKey 6; lon
-	    g = {CNI_MU.pilot_CNI_MU_SelectKey_007, 1, 3, devices.General}, --SelectKey 7; inc
-	    h = {CNI_MU.pilot_CNI_MU_SelectKey_008, 1, 3, devices.General}, --SelectKey 8; dec
-	    w = {CNI_MU.pilot_CNI_MU_NAV_CTRL, 1, 3, devices.General}, --NAV CTRL
+	    ['0'] = {CNI_MU.pilot_CNI_MU_KBD_0, 1, delay, devices.General},
+	    ['1'] = {CNI_MU.pilot_CNI_MU_KBD_1, 1, delay, devices.General},
+	    ['2'] = {CNI_MU.pilot_CNI_MU_KBD_2, 1, delay, devices.General},
+	    ['3'] = {CNI_MU.pilot_CNI_MU_KBD_3, 1, delay, devices.General},
+	    ['4'] = {CNI_MU.pilot_CNI_MU_KBD_4, 1, delay, devices.General},
+	    ['5'] = {CNI_MU.pilot_CNI_MU_KBD_5, 1, delay, devices.General},
+	    ['6'] = {CNI_MU.pilot_CNI_MU_KBD_6, 1, delay, devices.General},
+	    ['7'] = {CNI_MU.pilot_CNI_MU_KBD_7, 1, delay, devices.General},
+	    ['8'] = {CNI_MU.pilot_CNI_MU_KBD_8, 1, delay, devices.General},
+	    ['9'] = {CNI_MU.pilot_CNI_MU_KBD_9, 1, delay, devices.General},
+	    ['E'] = {CNI_MU.pilot_CNI_MU_KBD_E, 1, delay, devices.General},
+	    ['N'] = {CNI_MU.pilot_CNI_MU_KBD_N, 1, delay, devices.General},
+	    ['S'] = {CNI_MU.pilot_CNI_MU_KBD_S, 1, delay, devices.General},
+	    ['W'] = {CNI_MU.pilot_CNI_MU_KBD_W, 1, delay, devices.General},
+	    a = {CNI_MU.pilot_CNI_MU_SelectKey_001, 1, delay, devices.General}, --SelectKey 1; wp #
+	    b = {CNI_MU.pilot_CNI_MU_SelectKey_delay, 1, delay, devices.General}, --SelectKey 2; wp name
+	    e = {CNI_MU.pilot_CNI_MU_SelectKey_005, 1, delay, devices.General}, --SelectKey 5; lat
+	    f = {CNI_MU.pilot_CNI_MU_SelectKey_006, 1, delay, devices.General}, --SelectKey 6; lon
+	    g = {CNI_MU.pilot_CNI_MU_SelectKey_007, 1, delay, devices.General}, --SelectKey 7; inc
+	    h = {CNI_MU.pilot_CNI_MU_SelectKey_008, 1, delay, devices.General}, --SelectKey 8; dec
+	    w = {CNI_MU.pilot_CNI_MU_NAV_CTRL, 1, delay, devices.General}, --NAV CTRL
 	 }
       else
 	 loglocal('assignKP unknown unit: '..unit)
@@ -757,26 +760,23 @@ end)
 
 addFrameListener(function()
       if domacro.flag == true then
-	 if domacro.ctr > 0 then
-            domacro.ctr = domacro.ctr - 1
+	 now = socket.gettime()
+	 if now < domacro.ctr then
             return
 	 end
 	 if #domacro.inp == 0 then
             domacro.flag = false
             return
 	 end
-	 --[[
-	    loglocal('addFrameListener: '..domacro.idx.."/"..#domacro.inp..'ctr: '..domacro.ctr)
-	    --        loglocal('clock: '..os.clock())
-	 --]]
 
 	 i = domacro.idx
 	 key = domacro.inp[i][1]
 	 val = domacro.inp[i][2]
-	 domacro.ctr = domacro.inp[i][3] 
 	 device = domacro.inp[i][4]
-	 loglocal('handler loop: '..i..":"..device..":" .. key ..":".. val..' #domacro.inp: '..#domacro.inp)
+	 loglocal('handler loop: '..i..":"..device..":" .. key ..":".. val..' '..socket.gettime())
 	 assert(Export.GetDevice(device):performClickableAction(key, val))
+	 domacro.ctr = socket.gettime() + domacro.inp[i][3] 
+	 loglocal('BUGA: '..domacro.ctr)
 	 i = i + 1
 	 if i > #domacro.inp then
 	    domacro.inp = {}
