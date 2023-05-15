@@ -165,7 +165,7 @@ local function assignKP()
 	       {UFC_commands.OptSw5, 0, 0.25, devices.UFC},},
 	    d = {{MDI_commands.MDI_PB_5, 1, 0.25, devices.MDI_LEFT},
 	       {MDI_commands.MDI_PB_5, 0, 0.25, devices.MDI_LEFT},},
-	    ['_'] = {{0, 99, 1, 0}},
+	    ['_'] = {{0, 99, delay, 0}},
 	 }
       elseif unit == 'Ka-50' or unit == 'Ka-50_3' then
 	 return {
@@ -529,6 +529,10 @@ function ttt(name)
    ttf(name)
 end
 
+function delay(seconds)
+   loglocal('delay: '..seconds)
+   push_stop_command(0, {device = 0, action = 0, value = 0, len = seconds})
+end
 
 function prewp(num)
    loglocal('prewp: ')
@@ -576,6 +580,7 @@ function loadDTCBuffer(text)
 	  ttn = ttn,
 	  ttf = ttf,
 	  ttt = ttt,
+	  delay = delay,
 	  loglocal = loglocal,
    }
    setmetatable(env, {__index = _G})

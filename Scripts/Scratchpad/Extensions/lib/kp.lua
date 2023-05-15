@@ -98,7 +98,7 @@ function kpload(unit)
 	    {UFC_commands.OptSw5, 0, 0.25, devices.UFC},},
 	 d = {{MDI_commands.MDI_PB_5, 1, 0.25, devices.MDI_LEFT},
 	    {MDI_commands.MDI_PB_5, 0, 0.25, devices.MDI_LEFT},},
-	 ['_'] = {{0, 99, 1, 0}},
+	 ['_'] = {{0, 99, delay, 0}},
       }
    elseif unit == 'Ka-50' or unit == 'Ka-50_3' then
       return {
