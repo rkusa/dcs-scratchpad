@@ -763,13 +763,6 @@ local function loadScratchpad()
         isHidden = true
     end
 
-	function getTextArea()
-		return textarea
-	end
-
-	function getCurrentPage()
-		return currentPage
-	end
     local function loadExtensions()
         log("Loading extensions ...")
 
