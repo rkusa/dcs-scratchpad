@@ -1,10 +1,12 @@
 local function loadScratchpad()
     package.path = package.path .. ";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
+    local Button = require('Button')
     local DialogLoader = require("DialogLoader")
     local dxgui = require('dxgui')
     local Input = require("Input")
     local lfs = require("lfs")
+    local Panel = require('Panel')
     local Skin = require("Skin")
     local Terrain = require('terrain')
     local Tools = require("tools")
@@ -17,7 +19,7 @@ local function loadScratchpad()
     local logFile = io.open(lfs.writedir() .. [[Logs\Scratchpad.log]], "w")
     local config = nil
 
-    local panel = nil
+    local panels = {}
     local textarea = nil
     local crosshairCheckbox = nil
     local insertCoordsBtn = nil
@@ -28,13 +30,16 @@ local function loadScratchpad()
     local inMission = false
 
     -- Pages State
-    local dirPath = lfs.writedir() .. [[Scratchpad\]]
     local currentPage = nil
     local pagesCount = 0
     local pages = {}
 
     -- Crosshair resources
     local crosshairWindow = nil
+
+    -- Extensions
+    local extensions = {}
+    local coordListeners = {}
 
     local function log(str)
         if not str then
@@ -45,6 +50,282 @@ local function loadScratchpad()
             logFile:write("[" .. os.date("%H:%M:%S") .. "] " .. str .. "\r\n")
             logFile:flush()
         end
+    end
+
+    -- Type given to extensions to manipulate the Scratchpad's content
+
+    local Text = {}
+    function Text.new()
+        local c = {}
+        setmetatable(c, {__index = Text})
+        return c
+    end
+
+    function Text:getText()
+        return textarea:getText()
+    end
+
+    function Text:setText(text)
+        textarea:setText(text)
+        textarea:setSelectionNew(0, 0, 0, 0)
+        textarea:setFocused(true)
+    end
+
+    local function strLen(str)
+        local skip = 0
+        local len = 0
+        for i = 1, #str do
+            if skip == 0 then
+                local b = str:byte(i)
+                len = len + 1
+                if b < 128 then
+                    -- one byte char
+                elseif  b < 224 then
+                    -- two byte char
+                    skip = 1
+                elseif  b < 240 then
+                    -- two byte char
+                    skip = 2
+                elseif  b < 248 then
+                    -- two byte char
+                    skip = 3
+                end
+            else
+                skip = skip - 1
+            end
+        end
+        return len
+    end
+
+    -- Returns the start end end offsets of the current selection
+    function getSelection()
+        local text = textarea:getText()
+        local lineStart, indexStart, lineEnd, indexEnd = textarea:getSelectionNew()
+
+        -- Swap backwards selection to forward selection
+        if lineEnd < lineStart or (lineEnd == lineStart and indexEnd < indexStart) then
+            lineStart, indexStart, lineEnd, indexEnd = lineEnd, indexEnd, lineStart, indexStart
+        end
+
+        -- DCS has no API to get the cursor offset relative to the text start, so there is quite
+        -- some extra work necessary to calculate that based on what DCS provides.
+        local start = 0
+        local startByte = 0
+        for i = 0, lineStart - 1 do
+            start = start + textarea:getLineTextLength(i) + 1
+            startByte = string.find(text, "\n", startByte + 1, true)
+        end
+
+        local end_ = start
+        local endByte = startByte
+
+        start = start + indexStart
+        for i = 1, indexStart do
+            local b = text:byte(startByte + 1)
+            if b < 128 then
+                -- one byte char
+                startByte = startByte + 1
+            elseif  b < 224 then
+                -- two byte char
+                startByte = startByte + 2
+            elseif  b < 240 then
+                -- two byte char
+                startByte = startByte + 3
+            elseif  b < 248 then
+                -- two byte char
+                startByte = startByte + 4
+            end
+        end
+
+        local remainder = 0
+        if lineEnd > lineStart then
+            for i = lineStart, lineEnd - 1 do
+                end_ = end_ + textarea:getLineTextLength(i) + 1
+                endByte = string.find(text, "\n", endByte + 1, true)
+            end
+            remainder = indexEnd
+        else
+            end_ = start
+            endByte = startByte
+            remainder = (indexEnd - indexStart)
+        end
+
+
+        end_ = end_ + remainder
+        for i = 1, remainder do
+            local b = text:byte(endByte + 1)
+            if b < 128 then
+                -- one byte char
+                endByte = endByte + 1
+            elseif  b < 224 then
+                -- two byte char
+                endByte = endByte + 2
+            elseif  b < 240 then
+                -- two byte char
+                endByte = endByte + 3
+            elseif  b < 248 then
+                -- two byte char
+                endByte = endByte + 4
+            end
+        end
+
+        return start, end_, startByte, endByte
+    end
+
+    -- Set the cursor to the specified position and optional length (defaults to 0)
+    function setSelection(pos, len)
+        local text = textarea:getText()
+        local lineStart = 0
+        local indexStart = 0
+        local nl = string.byte("\n")
+        local textLen = strLen(text)
+        local to = math.min(pos, textLen)
+        local offset = 0
+        for i = 1, to do
+            local b = text:byte(i + offset)
+            if b == nl then
+                lineStart = lineStart + 1
+                indexStart = 0
+            else
+                indexStart = indexStart + 1
+                if b < 128 then
+                    -- one byte char
+                elseif  b < 224 then
+                    -- two byte char
+                    offset = offset + 1
+                elseif  b < 240 then
+                    -- two byte char
+                    offset = offset + 2
+                elseif  b < 248 then
+                    -- two byte char
+                    offset = offset + 3
+                end
+            end
+        end
+
+        -- determine end
+        local lineEnd = lineStart
+        local indexEnd = indexStart
+        if len and len > 0 then
+            local from = to
+            local to = math.min(pos + len, textLen)
+            for i = from + 1, to do
+                local b = text:byte(i + offset)
+                if b == nl then
+                    lineEnd = lineEnd + 1
+                    indexEnd = 0
+                else
+                    indexEnd = indexEnd + 1
+
+                    -- very basic utf8 handling
+                    if b < 128 then
+                        -- one byte char
+                    elseif  b < 224 then
+                        -- two byte char
+                        offset = offset + 1
+                    elseif  b < 240 then
+                        -- two byte char
+                        offset = offset + 2
+                    elseif  b < 248 then
+                        -- two byte char
+                        offset = offset + 3
+                    end
+                end
+            end
+        end
+
+        textarea:setSelectionNew(lineStart, indexStart, lineEnd, indexEnd)
+    end
+
+    function Text:insert(newText)
+        if type(newText) ~= "string" then
+            return
+        end
+
+        local text = textarea:getText()
+        local start, end_, startByte, endByte = getSelection()
+
+        -- replace the selection with the text
+        textarea:setText(
+            string.sub(text, 1, startByte)..
+            newText..
+            string.sub(text, endByte + 1, #text)
+        )
+
+        -- place cursor after the inserted text
+        setSelection(start + strLen(newText))
+        textarea:setFocused(true)
+    end
+
+    function Text:insertBelow(newText)
+        -- place cursor at the end of the current line (before the newline if there is any)
+        local text = textarea:getText()
+        local start, end_, startByte, endByte = getSelection()
+        local newPos = end_
+        local nl = string.byte("\n")
+        local skip = 0
+        for i = endByte + 1, #text do
+            if skip == 0 then
+                local b = text:byte(i)
+                if b == nl then
+                    break
+                else
+                    newPos = newPos + 1
+
+                    -- very basic utf8 handling
+                    if b < 128 then
+                        -- one byte char
+                    elseif  b < 224 then
+                        -- two byte char
+                        skip = 1
+                    elseif  b < 240 then
+                        -- two byte char
+                        skip = 2
+                    elseif  b < 248 then
+                        -- two byte char
+                        skip = 3
+                    end
+                end
+            else
+                skip = skip - 1
+            end
+        end
+
+        setSelection(newPos)
+
+        newText = "\n"..newText
+        self:insert(newText)
+    end
+
+    function Text:insertTop(newText)
+        if type(newText) ~= "string" then
+            return
+        end
+
+        setSelection(0)
+        self:insert(newText .. "\n\n")
+    end
+
+    function Text:insertBottom(newText)
+        if type(newText) ~= "string" then
+            return
+        end
+
+        local text = self:getText()
+        setSelection(#text)
+        self:insert("\n\n" .. newText .. "\n")
+    end
+
+    function Text:deleteBackward()
+        local start, end_ = getSelection()
+
+        -- if there is no selection, select the character just before the cursor; otherwise delete
+        -- the selected text
+        if start == end_ then
+            setSelection(start - 1, 1)
+        end
+
+        self:insert("")
     end
 
     local function loadPage(page)
@@ -132,6 +413,9 @@ local function loadScratchpad()
 
     local function loadConfiguration()
         log("Loading config file...")
+
+        local dirPath = lfs.writedir() .. [[Scratchpad\]]
+
         local tbl = Tools.safeDoFile(lfs.writedir() .. "Config/ScratchpadConfig.lua", false)
         if (tbl and tbl.config) then
             log("Configuration exists...")
@@ -165,7 +449,6 @@ local function loadScratchpad()
         -- scan scratchpad dir for pages
         for name in lfs.dir(dirPath) do
             local path = dirPath .. name
-            log(path)
             if lfs.attributes(path, "mode") == "file" then
                 if name:sub(-4) ~= ".txt" then
                     log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
@@ -325,7 +608,7 @@ local function loadScratchpad()
         elseif ac == "Hercules" then
             return {DDM = {precision = 3, lonDegreesWidth = 3}}
         else
-            return {NS430 = true, DMS = true, DDM = true, MGRS = true}
+            return {DMS = true, DDM = true, MGRS = true}
         end
     end
 
@@ -334,44 +617,28 @@ local function loadScratchpad()
         local alt = Terrain.GetSurfaceHeightWithSeabed(pos.x, pos.z)
         local lat, lon = Terrain.convertMetersToLatLon(pos.x, pos.z)
         local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
-        local type = coordsType()
+        local types = coordsType()
 
         local result = "\n\n"
-        if type.DMS then
-            result = result .. formatCoord("DMS", true, lat, type.DMS) .. ", " .. formatCoord("DMS", false, lon, type.DMS) .. "\n"
+        if types.DMS then
+            result = result .. formatCoord("DMS", true, lat, types.DMS) .. ", " .. formatCoord("DMS", false, lon, types.DMS) .. "\n"
         end
-        if type.DDM then
-            result = result .. formatCoord("DDM", true, lat, type.DDM) .. ", " .. formatCoord("DDM", false, lon, type.DDM) .. "\n"
+        if types.DDM then
+            result = result .. formatCoord("DDM", true, lat, types.DDM) .. ", " .. formatCoord("DDM", false, lon, types.DDM) .. "\n"
         end
-        if type.MGRS then
+        if types.MGRS then
             result = result .. mgrs .. "\n"
-        end
-        if  type.NS430 then -- Degree Decimal formatted to be used in NS430 navaid.dat file for flight planning purposes. Just edit the %PlaceHolderName
-            result = result .. "FIX;" .. formatCoord("DD", true, lon, type.NS430) .. ";" .. formatCoord("DD", false, lat, type.NS430)  .. ";%PlaceHolderName\n"
         end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
 
-        local text = textarea:getText()
-        local lineCountBefore = textarea:getLineCount()
-        local _lineBegin, _indexBegin, lineEnd, _indexEnd = textarea:getSelectionNew()
+        local text = Text.new()
+        text:insertBelow(result)
 
-        -- find offset into string after the line the cursor is in
-        local offset = 0
-        for i = 0, lineEnd do
-            offset = string.find(text, "\n", offset + 1, true)
-            if offset == nil then
-                offset = string.len(text)
-                break
+        for _, listener in pairs(coordListeners) do
+            if type(listener) == "function" then
+                listener(text, lat, lon, alt)
             end
         end
-
-        -- insert the coordinates after the line the cursor is in
-        textarea:setText(string.sub(text, 1, offset - 1) .. result .. string.sub(text, offset + 1, string.len(text)))
-
-        -- place cursor after inserted text
-        local lineCountAdded = textarea:getLineCount() - lineCountBefore
-        local line = lineEnd + lineCountAdded - 1
-        textarea:setSelectionNew(line, 0, line, 0)
     end
 
     local function setVisible(b)
@@ -379,23 +646,38 @@ local function loadScratchpad()
     end
 
     local function handleResize(self)
-        local w, h = self:getSize()
+        local newWidth, newHeight = self:getSize()
 
         -- prevent too small size that cannot be properly interacted with anymore
-        if w < 10 then
-            w = 50
-        end
-        if h < 10 then
-            h = 30
+        if newWidth < 10 then
+            newWidth = 50
         end
 
-        local panelY = 20 + 20 -- panel height + window title bar height
-        local windowTitleBarHeight = 20
-        textarea:setBounds(0, 0, w, h - panelY)
-        panel:setBounds(0, h - panelY, w, 20)
+        local panelsHeight = 0
+        for _, panel in pairs(panels) do
+            local w, h = panel:getSize()
+            panelsHeight = panelsHeight + h
+            if newWidth < w then
+                newWidth = w
+            end
+        end
 
-        self:setSize(w, h)
-        config.windowSize = {w = w, h = h}
+        local minHeight = 10 + panelsHeight
+        if newHeight < minHeight then
+            newHeight = minHeight
+        end
+
+        local y = newHeight - panelsHeight - 20 -- window title height
+        textarea:setSize(newWidth, y)
+
+        for _, panel in pairs(panels) do
+            local w, h = panel:getSize()
+            panel:setPosition(0, y)
+            y = y + h
+        end
+
+        self:setSize(newWidth, newHeight)
+        config.windowSize = {w = newWidth, h = newHeight}
         saveConfiguration()
     end
 
@@ -447,8 +729,10 @@ local function loadScratchpad()
         window:setVisible(true)
         window:setSkin(windowDefaultSkin)
         textarea:setVisible(true)
-        panel:setVisible(true)
         window:setHasCursor(true)
+        for _, panel in pairs(panels) do
+            panel:setVisible(true)
+        end
 
         updateCoordsMode()
 
@@ -461,13 +745,78 @@ local function loadScratchpad()
 
         window:setSkin(windowSkinHidden)
         textarea:setVisible(false)
-        panel:setVisible(false)
         window:setHasCursor(false)
+        for _, panel in pairs(panels) do
+            panel:setVisible(false)
+        end
+
         blur()
 
         crosshairWindow:setVisible(false)
 
         isHidden = true
+    end
+
+    local function loadExtensions()
+        log("Loading extensions ...")
+
+        local function loadExtension(path)
+            local f, err = loadfile(path)
+            if not f then
+                log("Error reading file `"..path.."`: "..err)
+                return { }
+            end
+
+            -- prepare extension panel
+            local children = {}
+            table.insert(extensions, {children = children})
+
+            -- create extension env
+            local extEnv = {
+                addButton = function(x, y, w, h, title, onClick)
+                    table.insert(children, {
+                        x = x,
+                        y = y,
+                        w = w,
+                        h = h,
+                        title = title,
+                        onClick = onClick
+                    })
+                end,
+                addCoordinateListener = function(listener)
+                    table.insert(coordListeners, listener)
+                end,
+                formatCoord = formatCoord,
+                log = log
+            }
+            setmetatable(extEnv, {__index = _G})
+            setfenv(f, extEnv)
+
+            local ok, res = pcall(f)
+            if not ok then
+                log("Error executing extension `"..path.."`: "..res)
+                return
+            end
+        end
+
+        -- scan `DCS\Scripts\Scratchpad\Extensions` dir for lua files
+        local extensionsPath = lfs.writedir() .. [[Scripts\Scratchpad\Extensions\]]
+        for name in lfs.dir(extensionsPath) do
+            local path = extensionsPath .. name
+            log(path)
+            if lfs.attributes(path, "mode") == "file" then
+                if name:sub(-4) ~= ".lua" then
+                    log("Ignoring file " .. name .. ", because of it doesn't seem to be an extension (.lua)")
+                elseif lfs.attributes(path, "size") > 1024 * 1024 then
+                    log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
+                else
+                    log("found extension " .. path)
+                    loadExtension(path)
+                end
+            end
+        end
+
+        log("Extensions loaded.")
     end
 
     local function createCrosshairWindow()
@@ -500,11 +849,11 @@ local function loadScratchpad()
 
         windowDefaultSkin = window:getSkin()
         textarea = window.ScratchpadEditBox
-        panel = window.Box
-        crosshairCheckbox = panel.ScratchpadCrosshairCheckBox
-        insertCoordsBtn = panel.ScratchpadInsertCoordsButton
-        local prevButton = panel.ScratchpadPrevButton
-        local nextButton = panel.ScratchpadNextButton
+        table.insert(panels, window.Box)
+        crosshairCheckbox = window.Box.ScratchpadCrosshairCheckBox
+        insertCoordsBtn = window.Box.ScratchpadInsertCoordsButton
+        local prevButton = window.Box.ScratchpadPrevButton
+        local nextButton = window.Box.ScratchpadNextButton
 
         -- setup textarea
         local skin = textarea:getSkin()
@@ -536,67 +885,20 @@ local function loadScratchpad()
                 crosshairWindow:setVisible(checked)
             end
         )
-        insertCoordsBtn:addMouseDownCallback(
+        insertCoordsBtn:addMouseUpCallback(
             function(self)
                 insertCoordinates()
             end
         )
 
-        -- setup window
-        window:setBounds(
-            config.windowPosition.x,
-            config.windowPosition.y,
-            config.windowSize.w,
-            config.windowSize.h
-        )
-        handleResize(window)
-        handleMove(window)
-
-        -- add open/close hotkey
-        window:addHotKeyCallback(
-            config.hotkey,
-            function()
-                if isHidden == true then
-                    show()
-                else
-                    hide()
-                end
-            end
-        )
-
-        -- add insert coordinates hotkey
-        if config.hotkeyInsertCoordinates then
-            window:addHotKeyCallback(
-                config.hotkeyInsertCoordinates,
-                function()
-                    if isHidden == false and inMission and crosshairCheckbox:getState() then
-                        insertCoordinates()
-                    end
-                end
-            )
-        end
-
-        window:addSizeCallback(handleResize)
-        window:addPositionCallback(handleMove)
-
-        -- remove the focus from the textare when clicking outside of the Scratchpad
-        dxgui.AddMouseCallback("down", function(x, y)
-            if not isHidden then
-                local winX, winY, winW, winH = window:getBounds()
-                if x < winX or x > (winX + winW) or y < winY or y > (winY + winH) then
-                    blur()
-                end
-            end
-        end)
-
         -- setup prev/next buttons
         if pagesCount > 1 then
-            prevButton:addMouseDownCallback(
+            prevButton:addMouseUpCallback(
                 function(self)
                     prevPage()
                 end
             )
-            nextButton:addMouseDownCallback(
+            nextButton:addMouseUpCallback(
                 function(self)
                     nextPage()
                 end
@@ -626,7 +928,7 @@ local function loadScratchpad()
                 )
             end
         else
-            -- move inserts coord checkbox and button to the left
+            -- move insert coord checkbox and button to the left
             crosshairCheckbox:setPosition(0, 1)
             insertCoordsBtn:setPosition(25, 0)
             -- hide prev/next buttons
@@ -634,10 +936,84 @@ local function loadScratchpad()
             nextButton:setVisible(false)
         end
 
-        window:setVisible(true)
-        nextPage()
+        -- add extensions
+        local buttonSkin = prevButton:getSkin()
+        for _, container in pairs(extensions) do
+            local panel = Panel.new()
+            local panelWidth = 0
+            local panelHeight = 0
+            for _, child in pairs(container.children) do
+                if child.x + child.w > panelWidth then
+                    panelWidth = child.x + child.w
+                end
+                if child.y + child.h > panelHeight then
+                    panelHeight = child.y + child.h
+                end
 
+                local button = Button.new(child.title)
+                button:setBounds(child.x, child.y, child.w, child.h)
+                button:setSkin(buttonSkin)
+                -- Needs to be mouse up for the refocus of the textarea to work
+                button:addMouseUpCallback(function(self)
+                    child.onClick(Text.new())
+                end)
+                panel:insertWidget(button)
+            end
+            panel:setBounds(0, 0, panelWidth, panelHeight)
+            window:insertWidget(panel)
+            table.insert(panels, panel)
+        end
+
+        -- add open/close hotkey
+        window:addHotKeyCallback(
+            config.hotkey,
+            function()
+                if isHidden == true then
+                    show()
+                else
+                    hide()
+                end
+            end
+        )
+
+        -- add insert coordinates hotkey
+        if config.hotkeyPrevPage then
+            window:addHotKeyCallback(
+                config.hotkeyInsertCoordinates,
+                function()
+                    if isHidden == false and inMission and crosshairCheckbox:getState() then
+                        insertCoordinates()
+                    end
+                end
+            )
+        end
+
+        window:addSizeCallback(handleResize)
+        window:addPositionCallback(handleMove)
+
+        -- remove the focus from the textare when clicking outside of the Scratchpad
+        dxgui.AddMouseCallback("down", function(x, y)
+            if not isHidden then
+                local winX, winY, winW, winH = window:getBounds()
+                if x < winX or x > (winX + winW) or y < winY or y > (winY + winH) then
+                    blur()
+                end
+            end
+        end)
+
+        -- setup window
+        window:setBounds(
+            config.windowPosition.x,
+            config.windowPosition.y,
+            config.windowSize.w,
+            config.windowSize.h
+        )
+        window:setVisible(true)
+        handleResize(window)
+        handleMove(window)
+        nextPage()
         hide()
+
         log("Scratchpad window created")
     end
 
@@ -645,11 +1021,15 @@ local function loadScratchpad()
     function handler.onSimulationFrame()
         if config == nil then
             loadConfiguration()
+            loadExtensions()
         end
 
         if not window then
             log("Creating Scratchpad window hidden...")
-            createScratchpadWindow()
+            local ok, err = pcall(createScratchpadWindow)
+            if not ok then
+                net.log("[Scratchpad] Failed to create window: " .. tostring(err))
+            end
         end
     end
     function handler.onMissionLoadEnd()
