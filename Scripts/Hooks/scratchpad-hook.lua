@@ -595,6 +595,8 @@ local function loadScratchpad()
             return {DDM = true, MGRS = true}
         elseif string.sub(ac, 1, 4) == "F-14" then
             return {DDM = {precision = 1}}
+        elseif ac == "F-15ESE" then
+            return {DDM = {precision = 3, lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "M-2000C" then
             return {DDM = {precision = 1, lonDegreesWidth = 3}}
         elseif ac == "F-16C_50" then
