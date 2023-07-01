@@ -19,6 +19,7 @@ Some settings can be changed in your DCS saved games folder under `Config/Scratc
 - `hotkeyNextPage` hotkey to switch to the next page (not set by default) ¹
 - `hotkeyPrevPage` hotkey to switch to the next page (not set by default) ¹
 - `hotkeyInsertCoordinates` hotkey to add coordinates from the F10 map (not set by default) ¹
+- `hotkeyReloadPages` hotkey to reload all pages from disk (useful if they were modified by other tools; not set by default) ¹
 - `fontSize` increase or decrease the font size of the Scratchpads textarea (`14` by default)
 
 _¹ check `DCS World\dxgui\bind\KeyNames.txt` to find how to reference a key; only the keys can be used, that work without having to press `Shift` - so `(` cannot be used, but `Shift+9` can_
