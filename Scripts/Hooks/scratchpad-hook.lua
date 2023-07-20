@@ -489,6 +489,50 @@ local function loadScratchpad()
         U.saveInFile(config, "config", lfs.writedir() .. "Config/ScratchpadConfig.lua")
     end
 
+
+    local function loadPages()
+        log("Loading pages ...")
+
+        pages = {}
+        local dirPath = lfs.writedir() .. [[Scratchpad\]]
+
+        -- scan scratchpad dir for pages
+        for name in lfs.dir(dirPath) do
+            local path = dirPath .. name
+            if lfs.attributes(path, "mode") == "file" then
+                if name:sub(-4) ~= ".txt" then
+                    log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
+                elseif lfs.attributes(path, "size") > 1024 * 1024 then
+                    log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
+                else
+                    log("found page " .. path)
+                    table.insert(
+                        pages,
+                        {
+                            name = name:sub(1, -5),
+                            path = path
+                        }
+                    )
+                    pagesCount = pagesCount + 1
+                end
+            end
+        end
+
+        -- there are no pages yet, create one
+        if pagesCount == 0 then
+            path = dirPath .. [[0000.txt]]
+            log("creating page " .. path)
+            table.insert(
+                pages,
+                {
+                    name = "0000",
+                    path = path
+                }
+            )
+            pagesCount = pagesCount + 1
+        end
+    end
+
     local function unlockKeyboardInput()
         if keyboardLocked then
             DCS.unlockKeyboardInput(true)
@@ -605,6 +649,8 @@ local function loadScratchpad()
             return {DDM = true, MGRS = true}
         elseif string.sub(ac, 1, 4) == "F-14" then
             return {DDM = {precision = 1}}
+        elseif ac == "F-15ESE" then
+            return {DDM = {precision = 3, lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "M-2000C" then
             return {DDM = {precision = 1, lonDegreesWidth = 3}}
         elseif ac == "F-16C_50" then
@@ -994,13 +1040,35 @@ local function loadScratchpad()
         )
 
         -- add insert coordinates hotkey
-        if config.hotkeyPrevPage then
+        if config.hotkeyInsertCoordinates then
             window:addHotKeyCallback(
                 config.hotkeyInsertCoordinates,
                 function()
                     if isHidden == false and inMission and crosshairCheckbox:getState() then
                         insertCoordinates()
                     end
+                end
+            )
+        end
+
+        -- add reload pages hotkey
+        if config.hotkeyReloadPages then
+            window:addHotKeyCallback(
+                config.hotkeyReloadPages,
+                function()
+                    loadPages()
+                    if currentPage ~= nil then
+                        for _, page in pairs(pages) do
+                            if page.path == currentPage then
+                                loadPage(page)
+                                return
+                            end
+                        end
+                    end
+
+                    -- file not found anymore restart at the beginning
+                    currentPage = nil
+                    nextPage()
                 end
             )
         end
@@ -1038,6 +1106,7 @@ local function loadScratchpad()
     function handler.onSimulationFrame()
         if config == nil then
             loadConfiguration()
+            loadPages()
             loadExtensions()
         end
 

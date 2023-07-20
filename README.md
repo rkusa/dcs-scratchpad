@@ -19,6 +19,7 @@ Some settings can be changed in your DCS saved games folder under `Config/Scratc
 - `hotkeyNextPage` hotkey to switch to the next page (not set by default) ¹
 - `hotkeyPrevPage` hotkey to switch to the next page (not set by default) ¹
 - `hotkeyInsertCoordinates` hotkey to add coordinates from the F10 map (not set by default) ¹
+- `hotkeyReloadPages` hotkey to reload all pages from disk (useful if they were modified by other tools; not set by default) ¹
 - `fontSize` increase or decrease the font size of the Scratchpads textarea (`14` by default)
 
 _¹ check `DCS World\dxgui\bind\KeyNames.txt` to find how to reference a key; only the keys can be used, that work without having to press `Shift` - so `(` cannot be used, but `Shift+9` can_
@@ -35,10 +36,40 @@ When DCS starts, the Scratchpad looks for all text files inside the `Scratchpad\
 
 This is only available in single player or for servers that have _Allow Player Export_ enabled. If available, you'll have a checkbox at the bottom for the Scratchpad. The mode to insert coordinates is active while the checkbox is checked. While active, you'll have a white dot in the center of your screen and an additional `+ L/L` button below the text area of the Scratchpad. Open the F10 map and align the white dot with your location of interest and hit the `+ L/L` button. This will add the coordinates of the location below the white cursor to your Scratchpad.
 
-### Insert waypoints into the NS430
+## Extensions
 
-Hitting the `+L/L` button in spectator or an aircraft that can use the NS430 inserts a line that looks like `FIX;-88.245167;36.117167;%PlaceholderName`. The `%PlaceholderName` must be changed to a 1-5 character long alpha-numeric string (e.g. `1A`, `1B`, `2`, `3`, `WILLO`). This can then be added into the `navaids.dat` in the main DCS folder `.\DCS World OpenBeta\Mods\aircraft\NS430\Cockpit\Scripts\avionics\terrain\navaids.dat` (you need to respawn for the `navaids.dat` changes to take effect) and then be loaded into the NS430 via the Flight Plan Page or Direct-To page.
+Scratchpad supports extensions. Most prominent use-case is to add a virtual keyboard. There are some example extensions in `Saved Games\DCS.openbeta\Scripts\Scratchpad\Extensions\Disabled\`. To
+enable any of them, copy the file over to `Saved Games\DCS.openbeta\Scripts\Scratchpad\Extensions\`.
 
+The available APIs to the extensions are:
+
+```lua
+-- Log to `Saved Games\DCS.openbeta\Logs\Scratchpad.log`
+log(text)
+
+-- Format coordinates with `format` being either `DMS` or `DDM`, `isLat` `true` if the provided `d`
+-- is the latitude, and `false` if it is the longitude, and `opts` allow to fine-tune the format
+-- (checkout `Scripts/Hooks/scratchpad-hook.lua` `function coordsType()` for examples).
+formatCoord(format, isLat, d, opts)
+
+-- Add a `listener` that is executed every time the user adds a coordinate (via the +L/L button).
+-- See `Extensions/Disabled/ns430.lua` for an example.
+addCoordinateListener(listener(text, lat, lon, alt))
+
+-- Add a button positioned at `left`/`top` (relative to the plugin's container), with the size of
+-- `width`/`height`, the given `title` and the `onClick` callback that is executed when the button
+-- is pressed.
+addButton(left, top, width, height, title, onClick(text))
+
+-- The `text` given to the `addCoordinateListener` and `onClick` callbacks can be mutated with the
+-- following methods:
+  text:getText()
+  text:setText(text)
+  text:insertAtCursor(text)
+  text:insertBelowCursor(text)
+  text:insertTop(text)
+  text:insertBottom(text)
+```
 
 ## Kudos
 
