@@ -445,42 +445,6 @@ local function loadScratchpad()
             }
             saveConfiguration()
         end
-
-        -- scan scratchpad dir for pages
-        for name in lfs.dir(dirPath) do
-            local path = dirPath .. name
-            if lfs.attributes(path, "mode") == "file" then
-                if name:sub(-4) ~= ".txt" then
-                    log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
-                elseif lfs.attributes(path, "size") > 1024 * 1024 then
-                    log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
-                else
-                    log("found page " .. path)
-                    table.insert(
-                        pages,
-                        {
-                            name = name:sub(1, -5),
-                            path = path
-                        }
-                    )
-                    pagesCount = pagesCount + 1
-                end
-            end
-        end
-
-        -- there are no pages yet, create one
-        if pagesCount == 0 then
-            path = dirPath .. [[0000.txt]]
-            log("creating page " .. path)
-            table.insert(
-                pages,
-                {
-                    name = "0000",
-                    path = path
-                }
-            )
-            pagesCount = pagesCount + 1
-        end
     end
 
     local function saveConfiguration()
@@ -849,7 +813,6 @@ local function loadScratchpad()
         local extensionsPath = lfs.writedir() .. [[Scripts\Scratchpad\Extensions\]]
         for name in lfs.dir(extensionsPath) do
             local path = extensionsPath .. name
-            log(path)
             if lfs.attributes(path, "mode") == "file" then
                 if name:sub(-4) ~= ".lua" then
                     log("Ignoring file " .. name .. ", because of it doesn't seem to be an extension (.lua)")
