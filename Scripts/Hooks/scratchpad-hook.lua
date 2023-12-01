@@ -535,13 +535,13 @@ local function loadScratchpad()
         keyboardLocked = true
     end
 
-	local function runListeners(list)
-		for _, listener in pairs(list) do
-			if type(listener) == "function" then
-				listener()
-			end
-		end
-	end
+        local function runListeners(list)
+            for _, listener in pairs(list) do
+                if type(listener) == "function" then
+                        listener()
+                end
+            end
+        end
 
     function formatCoord(format, isLat, d, opts)
         local function showNegative(d, h)
@@ -654,7 +654,7 @@ local function loadScratchpad()
         local text = Text.new()
         text:insertBelow(result)
 
-		runListeners(coordListeners)
+        runListeners(coordListeners)
     end
 
     local function setVisible(b)
@@ -811,9 +811,6 @@ local function loadScratchpad()
                 end,
                 formatCoord = formatCoord,
                 log = log,
-		getTextArea = getTextArea,
-		getCurrentPage = getCurrentPage,
-		savePage = savePage,
 		getSelection = getSelection
             }
             setmetatable(extEnv, {__index = _G})
@@ -1081,12 +1078,12 @@ local function loadScratchpad()
             end
         end
 
-		runListeners(frameListeners)
+        runListeners(frameListeners)
     end
     function handler.onMissionLoadEnd()
         inMission = true
         updateCoordsMode()
-		runListeners(missionLoadEndListeners)
+        runListeners(missionLoadEndListeners)
     end
     function handler.onSimulationStop()
         inMission = false
