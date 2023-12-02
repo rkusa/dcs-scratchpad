@@ -802,9 +802,8 @@ local function loadScratchpad()
                 addCoordinateListener = function(listener)
                     table.insert(coordListeners, listener)
                 end,
-                addFrameListener = function(listener)
-                    --TH table.insert(frameListeners, listener)
-					frameListeners[1] = listener
+                addFrameListener = function(name, listener)
+                    frameListeners[name] = listener
                 end,
                 addmissionLoadEndListener = function(listener)
                     table.insert(missionLoadEndListeners, listener)
