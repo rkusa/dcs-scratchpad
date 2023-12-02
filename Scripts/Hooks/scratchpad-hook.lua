@@ -810,7 +810,7 @@ local function loadScratchpad()
                 end,
                 formatCoord = formatCoord,
                 log = log,
-		getSelection = getSelection
+                getSelection = getSelection
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)
