@@ -1,6 +1,5 @@
 local socket = require('socket')
 lfs = require('lfs')
---UC = require('utils_common')
 
 local domacro = {
    flag = true,
@@ -18,9 +17,12 @@ function card2num(result)
    return result
 end
 
-local debug = 0
-local function loglocal(str)
-   if debug > 1 then
+local debug = 1
+local function loglocal(str, lvl)
+   if not lvl then
+      lvl = 2
+   end
+   if debug > lvl then
       log(str)
    end
 end
@@ -29,6 +31,24 @@ local delay = 0.1		-- default input delay
 local unittype = ''
 local kp = {}	-- keypad table for wp(), press() api
 local ttlist = {} --tool tips from clicabledata.lua
+
+local function copytable(src)
+   dst = {}
+   for i, j in pairs(src) do
+      dst[i] = j
+   end
+   return dst
+end
+local wpsdefaults = { 
+   initialize = false,  --reset all values to defaults
+   enable = true,       --disable STR number assignment
+   diff = 1,            --next value of STR number relative to cur
+   cur = 2,            --STR number to switch to before entering LL
+   route = 'A',         --optional route can be one of ''.ABC
+   menus = '',          --optional menu keys to press() before any data entry
+}
+local wps = copytable(wpsdefaults)   --waypoint sequence used by wp(); also initialized in uploadinit()
+
 local LT = {	-- per module customization for convenience api
    ['AV8BNA'] = {
       ['coordsType'] = {format = 'DMS', lonDegreesWidth = 3},
@@ -36,6 +56,38 @@ local LT = {	-- per module customization for convenience api
       prewp = function() press('') end,
       midwp = function(result) return result end,
       postwp = function() press('') end,
+   },
+   ["F-15ESE"] = {
+      ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
+      ['wpentry'] = 'LATbLONcALTg',
+      prewp = function() 
+         if wps.enable then
+            if wps.menus ~= "" then
+               loglocal('F15 prewp(): menus press() '..tmp, 3)
+               press(wps.menus)
+            end
+            local tmp = tostring(wps.cur)
+            if wps.route then
+               tmp = tmp .. wps.route..'a'
+            end
+            loglocal('F15 prewp(): cur press() '..tmp, 3)
+            press(tmp)
+         end
+         return end,
+      midwp = function(result) return result end,
+      postwp = function()
+         if wps.enable and wps.cur ~= -1 then
+            wps.cur = wps.cur + wps.diff
+            if wps.cur < 1 then wps.cur = 99 end
+            if wps.cur > 99 then wps.cur = 1 end
+            return 
+         end
+      end,
+      llconvert =function(result)
+         result = string.gsub(result, "[°'\".]", "")
+         result = string.gsub(result, "([NEWS]) ", "%1")
+         return result
+      end,
    },
    ["F-16C_50"] = {
       ['coordsType'] = {format = 'DDM', lonDegreesWidth = 3},
@@ -46,10 +98,16 @@ local LT = {	-- per module customization for convenience api
    },
    ["FA-18C_hornet"] = {
       ['coordsType'] = {format = 'DDM', precision = 4},
-      ['wpentry'] = 'daLAT LON cALT ',
+      ['wpentry'] = 'faLAT LON caALT h',
       prewp = function() return end,
       midwp = function(result) return result end,
       postwp = function() return end,
+      llconvert =function(result)
+         result = string.gsub(result, "[°'\"]", "")
+         result = string.gsub(result, "([NEWS]) ", "%1")
+         result = string.gsub(result, "[.]", " ")
+         return result
+      end,
    },
    ['Hercules'] = {
       ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
@@ -75,144 +133,233 @@ local function assignKP()
    local function getTypeKP(unit)
       loglocal('getTypeKP begin')
 
+-- SNIP BEGIN for kp.lua ##############################################
       local delay = 0.1
       if unit == 'AV8BNA' then
-	 return {
-	    ['1'] = {ufc_commands.Button_1, 1, delay, devices.UFCCONTROL},
-	    ['2'] = {ufc_commands.Button_2, 1, delay, devices.UFCCONTROL},
-	    ['3'] = {ufc_commands.Button_3, 1, delay, devices.UFCCONTROL},
-	    ['4'] = {ufc_commands.Button_4, 1, delay, devices.UFCCONTROL},
-	    ['5'] = {ufc_commands.Button_5, 1, delay, devices.UFCCONTROL},
-	    ['6'] = {ufc_commands.Button_6, 1, delay, devices.UFCCONTROL},
-	    ['7'] = {ufc_commands.Button_7, 1, delay, devices.UFCCONTROL},
-	    ['8'] = {ufc_commands.Button_8, 1, delay, devices.UFCCONTROL},
-	    ['9'] = {ufc_commands.Button_9, 1, delay, devices.UFCCONTROL},
-	    ['0'] = {ufc_commands.Button_0, 1, delay, devices.UFCCONTROL},
-	    ['e'] = {ufc_commands.Button_ENT, 1, delay, devices.UFCCONTROL},
-	    ['$'] = {ufc_commands.Button_4, 1, delay, devices.ODUCONTROL},
-	    ['N'] = {ufc_commands.Button_2, 1, delay, devices.UFCCONTROL},
-	    ['E'] = {ufc_commands.Button_6, 1, delay, devices.UFCCONTROL},
-	    ['W'] = {ufc_commands.Button_4, 1, delay, devices.UFCCONTROL},
-	    ['S'] = {ufc_commands.Button_8, 1, delay, devices.UFCCONTROL},
-	 }
+         return {
+            ['1'] = {ufc_commands.Button_1, 1, delay, devices.UFCCONTROL},
+            ['2'] = {ufc_commands.Button_2, 1, delay, devices.UFCCONTROL},
+            ['3'] = {ufc_commands.Button_3, 1, delay, devices.UFCCONTROL},
+            ['4'] = {ufc_commands.Button_4, 1, delay, devices.UFCCONTROL},
+            ['5'] = {ufc_commands.Button_5, 1, delay, devices.UFCCONTROL},
+            ['6'] = {ufc_commands.Button_6, 1, delay, devices.UFCCONTROL},
+            ['7'] = {ufc_commands.Button_7, 1, delay, devices.UFCCONTROL},
+            ['8'] = {ufc_commands.Button_8, 1, delay, devices.UFCCONTROL},
+            ['9'] = {ufc_commands.Button_9, 1, delay, devices.UFCCONTROL},
+            ['0'] = {ufc_commands.Button_0, 1, delay, devices.UFCCONTROL},
+            ['e'] = {ufc_commands.Button_ENT, 1, delay, devices.UFCCONTROL},
+            ['$'] = {ufc_commands.Button_4, 1, delay, devices.ODUCONTROL},
+            ['N'] = {ufc_commands.Button_2, 1, delay, devices.UFCCONTROL},
+            ['E'] = {ufc_commands.Button_6, 1, delay, devices.UFCCONTROL},
+            ['W'] = {ufc_commands.Button_4, 1, delay, devices.UFCCONTROL},
+            ['S'] = {ufc_commands.Button_8, 1, delay, devices.UFCCONTROL},
+         }
+        elseif unit == 'F-15ESE' then
+            return {
+                 ['0'] = {{ufc_commands.UFC_KEY__0, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY__0, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['1'] = {{ufc_commands.UFC_KEY_A1, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_A1, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['2'] = {{ufc_commands.UFC_KEY_N2, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_N2, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['3'] = {{ufc_commands.UFC_KEY_B3, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_B3, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['4'] = {{ufc_commands.UFC_KEY_W4, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_W4, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['5'] = {{ufc_commands.UFC_KEY_M5, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_M5, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['6'] = {{ufc_commands.UFC_KEY_E6, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_E6, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['7'] = {{ufc_commands.UFC_KEY__7, 1, 0.20, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY__7, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['8'] = {{ufc_commands.UFC_KEY_S8, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_S8, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['9'] = {{ufc_commands.UFC_KEY_C9, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_C9, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['N'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_N2, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_N2, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['E'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_E6, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_E6, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['W'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_W4, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_W4, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['S'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_S8, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_S8, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['A'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_A1, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_A1, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['B'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_B3, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_B3, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['C'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_C9, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_C9, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['M'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_M5, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_KEY_M5, 0, delay, devices.UFCCTRL_FRONT},},
+                 [' '] = {0, 0, delay, devices.UFCCTRL_FRONT},
+                 a = {{ufc_commands.UFC_PB_1, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_1, 0, delay, devices.UFCCTRL_FRONT},},
+                 b = {{ufc_commands.UFC_PB_2, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_2, 0, delay, devices.UFCCTRL_FRONT},},
+                 c = {{ufc_commands.UFC_PB_3, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_3, 0, delay, devices.UFCCTRL_FRONT},},
+                 d = {{ufc_commands.UFC_PB_4, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_4, 0, delay, devices.UFCCTRL_FRONT},},
+                 e = {{ufc_commands.UFC_PB_5, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_5, 0, delay, devices.UFCCTRL_FRONT},},
+                 f = {{ufc_commands.UFC_PB_6, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_6, 0, delay, devices.UFCCTRL_FRONT},},
+                 g = {{ufc_commands.UFC_PB_7, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_7, 0, delay, devices.UFCCTRL_FRONT},},
+                 h = {{ufc_commands.UFC_PB_8, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_8, 0, delay, devices.UFCCTRL_FRONT},},
+                 i = {{ufc_commands.UFC_PB_9, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_9, 0, delay, devices.UFCCTRL_FRONT},},
+                 j = {{ufc_commands.UFC_PB_0, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_PB_0, 0, delay, devices.UFCCTRL_FRONT},},
+                 m = {{ufc_commands.UFC_MENU, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_MENU, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['^'] = {{ufc_commands.UFC_SHF, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_SHF, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['.'] = {{ufc_commands.UFC_DOT, 1, delay, devices.UFCCTRL_FRONT},
+                    {ufc_commands.UFC_DOT, 0, delay, devices.UFCCTRL_FRONT},},
+                 ['_'] = {{0, 99, delay, 0}},
+            }
       elseif unit == 'F-16C_50' then
-	 return {
-	    ['0'] = {ufc_commands.DIG0_M_SEL, 1, delay, devices.UFC},
-	    ['1'] = {ufc_commands.DIG1_T_ILS, 1, delay, devices.UFC},
-	    ['2'] = {ufc_commands.DIG2_ALOW, 1, delay, devices.UFC},
-	    ['3'] = {ufc_commands.DIG3, 1, delay, devices.UFC},
-	    ['4'] = {ufc_commands.DIG4_STPT, 1, delay, devices.UFC},
-	    ['5'] = {ufc_commands.DIG5_CRUS, 1, delay, devices.UFC},
-	    ['6'] = {ufc_commands.DIG6_TIME, 1, delay, devices.UFC},
-	    ['7'] = {ufc_commands.DIG7_MARK, 1, delay, devices.UFC},
-	    ['8'] = {ufc_commands.DIG8_FIX, 1, delay, devices.UFC},
-	    ['9'] = {ufc_commands.DIG9_A_CAL, 1, delay, devices.UFC},
-	    ['N'] = {ufc_commands.DIG2_ALOW, 1, delay, devices.UFC},
-	    ['E'] = {ufc_commands.DIG6_TIME, 1, delay, devices.UFC},
-	    ['W'] = {ufc_commands.DIG4_STPT, 1, delay, devices.UFC},
-	    ['S'] = {ufc_commands.DIG8_FIX, 1, delay, devices.UFC},
-	    e = {ufc_commands.ENTR, 1, delay, devices.UFC},
-	    p = {ufc_commands.DED_INC, 1, delay, devices.UFC},
-	    m = {ufc_commands.DED_DEC, 1, delay, devices.UFC},
-	    r = {ufc_commands.DCS_RTN, -1, delay, devices.UFC},
-	    s = {ufc_commands.DCS_SEQ, -1, delay, devices.UFC},
-	    u = {{ufc_commands.DCS_UP, 1, delay, devices.UFC},
-	       {ufc_commands.DCS_UP, 0, 0, devices.UFC}},
-	    d = {{ufc_commands.DCS_DOWN, -1, delay, devices.UFC}, 
-	       {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}}, 
-	 }
+         return {
+            ['0'] = {ufc_commands.DIG0_M_SEL, 1, delay, devices.UFC},
+            ['1'] = {ufc_commands.DIG1_T_ILS, 1, delay, devices.UFC},
+            ['2'] = {ufc_commands.DIG2_ALOW, 1, delay, devices.UFC},
+            ['3'] = {ufc_commands.DIG3, 1, delay, devices.UFC},
+            ['4'] = {ufc_commands.DIG4_STPT, 1, delay, devices.UFC},
+            ['5'] = {ufc_commands.DIG5_CRUS, 1, delay, devices.UFC},
+            ['6'] = {ufc_commands.DIG6_TIME, 1, delay, devices.UFC},
+            ['7'] = {ufc_commands.DIG7_MARK, 1, delay, devices.UFC},
+            ['8'] = {ufc_commands.DIG8_FIX, 1, delay, devices.UFC},
+            ['9'] = {ufc_commands.DIG9_A_CAL, 1, delay, devices.UFC},
+            ['N'] = {ufc_commands.DIG2_ALOW, 1, delay, devices.UFC},
+            ['E'] = {ufc_commands.DIG6_TIME, 1, delay, devices.UFC},
+            ['W'] = {ufc_commands.DIG4_STPT, 1, delay, devices.UFC},
+            ['S'] = {ufc_commands.DIG8_FIX, 1, delay, devices.UFC},
+            e = {ufc_commands.ENTR, 1, delay, devices.UFC},
+            p = {ufc_commands.DED_INC, 1, delay, devices.UFC},
+            m = {ufc_commands.DED_DEC, 1, delay, devices.UFC},
+            r = {ufc_commands.DCS_RTN, -1, delay, devices.UFC},
+            s = {ufc_commands.DCS_SEQ, -1, delay, devices.UFC},
+            u = {{ufc_commands.DCS_UP, 1, delay, devices.UFC},
+               {ufc_commands.DCS_UP, 0, 0, devices.UFC}},
+            d = {{ufc_commands.DCS_DOWN, -1, delay, devices.UFC}, 
+               {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}}, 
+         }
       elseif unit == 'FA-18C_hornet' then
-	 return {
-	    ['0'] = {{UFC_commands.KbdSw0, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw0, 0, delay, devices.UFC},},
-	    ['1'] = {{UFC_commands.KbdSw1, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw1, 0, delay, devices.UFC},},
-	    ['2'] = {{UFC_commands.KbdSw2, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw2, 0, delay, devices.UFC},},
-	    ['3'] = {{UFC_commands.KbdSw3, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw3, 0, delay, devices.UFC},},
-	    ['4'] = {{UFC_commands.KbdSw4, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw4, 0, delay, devices.UFC},},
-	    ['5'] = {{UFC_commands.KbdSw5, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw5, 0, delay, devices.UFC},},
-	    ['6'] = {{UFC_commands.KbdSw6, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw6, 0, delay, devices.UFC},},
-	    ['7'] = {{UFC_commands.KbdSw7, 1, 0.20, devices.UFC},
-	       {UFC_commands.KbdSw7, 0, delay, devices.UFC},},
-	    ['8'] = {{UFC_commands.KbdSw8, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw8, 0, delay, devices.UFC},},
-	    ['9'] = {{UFC_commands.KbdSw9, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw9, 0, delay, devices.UFC},},
-	    ['N'] = {{UFC_commands.KbdSw2, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw2, 0, delay, devices.UFC},},
-	    ['E'] = {{UFC_commands.KbdSw6, 1, 1, devices.UFC},
-	       {UFC_commands.KbdSw6, 0, 1, devices.UFC},},
-	    ['W'] = {{UFC_commands.KbdSw4, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw4, 0, delay, devices.UFC},},
-	    ['S'] = {{UFC_commands.KbdSw8, 1, delay, devices.UFC},
-	       {UFC_commands.KbdSw8, 0, delay, devices.UFC},},
-	    [' '] = {{UFC_commands.KbdSwENT, 1, 0.5, devices.UFC},
-	       {UFC_commands.KbdSwENT, 0, 0.25, devices.UFC},},
-	    a = {{UFC_commands.OptSw1, 1, 0.25, devices.UFC},
-	       {UFC_commands.OptSw1, 0, 0.25, devices.UFC},},
-	    b = {{UFC_commands.OptSw2, 1, 0.25, devices.UFC},
-	       {UFC_commands.OptSw2, 0, 0.25, devices.UFC},},
-	    c = {{UFC_commands.OptSw3, 1, 0.25, devices.UFC},
-	       {UFC_commands.OptSw3, 0, 0.25, devices.UFC},},
-	    d = {{UFC_commands.OptSw4, 1, 0.25, devices.UFC},
-	       {UFC_commands.OptSw4, 0, 0.25, devices.UFC},x},
-	    e = {{UFC_commands.OptSw5, 1, 0.25, devices.UFC},
-	       {UFC_commands.OptSw5, 0, 0.25, devices.UFC},},
-	    d = {{MDI_commands.MDI_PB_5, 1, 0.25, devices.MDI_LEFT},
-	       {MDI_commands.MDI_PB_5, 0, 0.25, devices.MDI_LEFT},},
-	    ['_'] = {{0, 99, delay, 0}},
-	 }
+         return {
+            ['0'] = {{UFC_commands.KbdSw0, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw0, 0, delay, devices.UFC},},
+            ['1'] = {{UFC_commands.KbdSw1, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw1, 0, delay, devices.UFC},},
+            ['2'] = {{UFC_commands.KbdSw2, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw2, 0, delay, devices.UFC},},
+            ['3'] = {{UFC_commands.KbdSw3, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw3, 0, delay, devices.UFC},},
+            ['4'] = {{UFC_commands.KbdSw4, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw4, 0, delay, devices.UFC},},
+            ['5'] = {{UFC_commands.KbdSw5, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw5, 0, delay, devices.UFC},},
+            ['6'] = {{UFC_commands.KbdSw6, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw6, 0, delay, devices.UFC},},
+            ['7'] = {{UFC_commands.KbdSw7, 1, 0.20, devices.UFC},
+               {UFC_commands.KbdSw7, 0, delay, devices.UFC},},
+            ['8'] = {{UFC_commands.KbdSw8, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw8, 0, delay, devices.UFC},},
+            ['9'] = {{UFC_commands.KbdSw9, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw9, 0, delay, devices.UFC},},
+            ['N'] = {{UFC_commands.KbdSw2, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw2, 0, delay, devices.UFC},},
+            ['E'] = {{UFC_commands.KbdSw6, 1, 1, devices.UFC},
+               {UFC_commands.KbdSw6, 0, 1, devices.UFC},},
+            ['W'] = {{UFC_commands.KbdSw4, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw4, 0, delay, devices.UFC},},
+            ['S'] = {{UFC_commands.KbdSw8, 1, delay, devices.UFC},
+               {UFC_commands.KbdSw8, 0, delay, devices.UFC},},
+            [' '] = {{UFC_commands.KbdSwENT, 1, 0.5, devices.UFC},
+               {UFC_commands.KbdSwENT, 0, 0.25, devices.UFC},},
+            a = {{UFC_commands.OptSw1, 1, 0.25, devices.UFC},
+               {UFC_commands.OptSw1, 0, 0.25, devices.UFC},},
+            b = {{UFC_commands.OptSw2, 1, 0.25, devices.UFC},
+               {UFC_commands.OptSw2, 0, 0.25, devices.UFC},},
+            c = {{UFC_commands.OptSw3, 1, 0.25, devices.UFC},
+               {UFC_commands.OptSw3, 0, 0.25, devices.UFC},},
+            d = {{UFC_commands.OptSw4, 1, 0.25, devices.UFC},
+               {UFC_commands.OptSw4, 0, 0.25, devices.UFC},x},
+            e = {{UFC_commands.OptSw5, 1, 0.25, devices.UFC},
+               {UFC_commands.OptSw5, 0, 0.25, devices.UFC},},
+            f = {{AMPCD_commands.AMPCD_PB_5, 1, 0.25, devices.AMPCD},
+               {AMPCD_commands.AMPCD_PB_5, 0, 0.25, devices.AMPCD},},
+            g = {{AMPCD_commands.AMPCD_PB_12, 1, 0.25, devices.AMPCD},
+               {AMPCD_commands.AMPCD_PB_12, 0, 0.25, devices.AMPCD},},
+            h = {{AMPCD_commands.AMPCD_PB_13, 1, 0.25, devices.AMPCD},
+               {AMPCD_commands.AMPCD_PB_13, 0, 0.25, devices.AMPCD},},
+            ['_'] = {{0, 99, 1, 0}},
+         }
       elseif unit == 'Ka-50' or unit == 'Ka-50_3' then
-	 return {
-	    ['0'] = {device_commands.Button_1, 1, delay, devices.PVI},
-	    ['1'] = {device_commands.Button_2, 1, delay, devices.PVI},
-	    ['2'] = {device_commands.Button_3, 1, delay, devices.PVI},
-	    ['3'] = {device_commands.Button_4, 1, delay, devices.PVI},
-	    ['4'] = {device_commands.Button_5, 1, delay, devices.PVI},
-	    ['5'] = {device_commands.Button_6, 1, delay, devices.PVI},
-	    ['6'] = {device_commands.Button_7, 1, delay, devices.PVI},
-	    ['7'] = {device_commands.Button_8, 1, delay, devices.PVI},
-	    ['8'] = {device_commands.Button_9, 1, delay, devices.PVI},
-	    ['9'] = {device_commands.Button_10, 1, delay, devices.PVI},
-	    ['N'] = {device_commands.Button_1, 1, delay, devices.PVI},
-	    ['E'] = {device_commands.Button_1, 1, delay, devices.PVI},
-	    ['W'] = {device_commands.Button_2, 1, delay, devices.PVI},
-	    ['S'] = {device_commands.Button_2, 1, delay, devices.PVI},
-	    e = {device_commands.Button_18, 1, delay, devices.PVI}, --NAV Enter
-	    w = {device_commands.Button_11, 1, delay, devices.PVI}, --NAV Waypoints
-	    t = {device_commands.Button_17, 1, delay, devices.PVI}, --NAV Targets
-	    n = {device_commands.Button_26, 0.2, delay, devices.PVI}, --NAV Master mode ent
-	    o = {device_commands.Button_26, 0.3, delay, devices.PVI}, --NAV Master mode oper
-	 }
+         return {
+            ['0'] = {device_commands.Button_1, 1, delay, devices.PVI},
+            ['1'] = {device_commands.Button_2, 1, delay, devices.PVI},
+            ['2'] = {device_commands.Button_3, 1, delay, devices.PVI},
+            ['3'] = {device_commands.Button_4, 1, delay, devices.PVI},
+            ['4'] = {device_commands.Button_5, 1, delay, devices.PVI},
+            ['5'] = {device_commands.Button_6, 1, delay, devices.PVI},
+            ['6'] = {device_commands.Button_7, 1, delay, devices.PVI},
+            ['7'] = {device_commands.Button_8, 1, delay, devices.PVI},
+            ['8'] = {device_commands.Button_9, 1, delay, devices.PVI},
+            ['9'] = {device_commands.Button_10, 1, delay, devices.PVI},
+            ['N'] = {device_commands.Button_1, 1, delay, devices.PVI},
+            ['E'] = {device_commands.Button_1, 1, delay, devices.PVI},
+            ['W'] = {device_commands.Button_2, 1, delay, devices.PVI},
+            ['S'] = {device_commands.Button_2, 1, delay, devices.PVI},
+            e = {device_commands.Button_18, 1, delay, devices.PVI}, --NAV Enter
+            w = {device_commands.Button_11, 1, delay, devices.PVI}, --NAV Waypoints
+            t = {device_commands.Button_17, 1, delay, devices.PVI}, --NAV Targets
+            n = {device_commands.Button_26, 0.2, delay, devices.PVI}, --NAV Master mode ent
+            o = {device_commands.Button_26, 0.3, delay, devices.PVI}, --NAV Master mode oper
+         }
       elseif unit == 'Hercules' then
-	 return {
-	    ['0'] = {CNI_MU.pilot_CNI_MU_KBD_0, 1, delay, devices.General},
-	    ['1'] = {CNI_MU.pilot_CNI_MU_KBD_1, 1, delay, devices.General},
-	    ['2'] = {CNI_MU.pilot_CNI_MU_KBD_2, 1, delay, devices.General},
-	    ['3'] = {CNI_MU.pilot_CNI_MU_KBD_3, 1, delay, devices.General},
-	    ['4'] = {CNI_MU.pilot_CNI_MU_KBD_4, 1, delay, devices.General},
-	    ['5'] = {CNI_MU.pilot_CNI_MU_KBD_5, 1, delay, devices.General},
-	    ['6'] = {CNI_MU.pilot_CNI_MU_KBD_6, 1, delay, devices.General},
-	    ['7'] = {CNI_MU.pilot_CNI_MU_KBD_7, 1, delay, devices.General},
-	    ['8'] = {CNI_MU.pilot_CNI_MU_KBD_8, 1, delay, devices.General},
-	    ['9'] = {CNI_MU.pilot_CNI_MU_KBD_9, 1, delay, devices.General},
-	    ['E'] = {CNI_MU.pilot_CNI_MU_KBD_E, 1, delay, devices.General},
-	    ['N'] = {CNI_MU.pilot_CNI_MU_KBD_N, 1, delay, devices.General},
-	    ['S'] = {CNI_MU.pilot_CNI_MU_KBD_S, 1, delay, devices.General},
-	    ['W'] = {CNI_MU.pilot_CNI_MU_KBD_W, 1, delay, devices.General},
-	    a = {CNI_MU.pilot_CNI_MU_SelectKey_001, 1, delay, devices.General}, --SelectKey 1; wp #
-	    b = {CNI_MU.pilot_CNI_MU_SelectKey_delay, 1, delay, devices.General}, --SelectKey 2; wp name
-	    e = {CNI_MU.pilot_CNI_MU_SelectKey_005, 1, delay, devices.General}, --SelectKey 5; lat
-	    f = {CNI_MU.pilot_CNI_MU_SelectKey_006, 1, delay, devices.General}, --SelectKey 6; lon
-	    g = {CNI_MU.pilot_CNI_MU_SelectKey_007, 1, delay, devices.General}, --SelectKey 7; inc
-	    h = {CNI_MU.pilot_CNI_MU_SelectKey_008, 1, delay, devices.General}, --SelectKey 8; dec
-	    w = {CNI_MU.pilot_CNI_MU_NAV_CTRL, 1, delay, devices.General}, --NAV CTRL
-	 }
+         return {
+            ['0'] = {CNI_MU.pilot_CNI_MU_KBD_0, 1, delay, devices.General},
+            ['1'] = {CNI_MU.pilot_CNI_MU_KBD_1, 1, delay, devices.General},
+            ['2'] = {CNI_MU.pilot_CNI_MU_KBD_2, 1, delay, devices.General},
+            ['3'] = {CNI_MU.pilot_CNI_MU_KBD_3, 1, delay, devices.General},
+            ['4'] = {CNI_MU.pilot_CNI_MU_KBD_4, 1, delay, devices.General},
+            ['5'] = {CNI_MU.pilot_CNI_MU_KBD_5, 1, delay, devices.General},
+            ['6'] = {CNI_MU.pilot_CNI_MU_KBD_6, 1, delay, devices.General},
+            ['7'] = {CNI_MU.pilot_CNI_MU_KBD_7, 1, delay, devices.General},
+            ['8'] = {CNI_MU.pilot_CNI_MU_KBD_8, 1, delay, devices.General},
+            ['9'] = {CNI_MU.pilot_CNI_MU_KBD_9, 1, delay, devices.General},
+            ['E'] = {CNI_MU.pilot_CNI_MU_KBD_E, 1, delay, devices.General},
+            ['N'] = {CNI_MU.pilot_CNI_MU_KBD_N, 1, delay, devices.General},
+            ['S'] = {CNI_MU.pilot_CNI_MU_KBD_S, 1, delay, devices.General},
+	 ['W'] = {CNI_MU.pilot_CNI_MU_KBD_W, 1, delay, devices.General},
+	 a = {CNI_MU.pilot_CNI_MU_SelectKey_001, 1, delay, devices.General}, --SelectKey 1; wp #
+	 b = {CNI_MU.pilot_CNI_MU_SelectKey_delay, 1, delay, devices.General}, --SelectKey 2; wp name
+	 e = {CNI_MU.pilot_CNI_MU_SelectKey_005, 1, delay, devices.General}, --SelectKey 5; lat
+	 f = {CNI_MU.pilot_CNI_MU_SelectKey_006, 1, delay, devices.General}, --SelectKey 6; lon
+	 g = {CNI_MU.pilot_CNI_MU_SelectKey_007, 1, delay, devices.General}, --SelectKey 7; inc
+	 h = {CNI_MU.pilot_CNI_MU_SelectKey_008, 1, delay, devices.General}, --SelectKey 8; dec
+	 w = {CNI_MU.pilot_CNI_MU_NAV_CTRL, 1, delay, devices.General}, --NAV CTRL
+      }
+-- SNIP END for kp.lua ##############################################
       else
 	 loglocal('assignKP unknown unit: '..unit)
 	 return 
@@ -223,23 +370,15 @@ local function assignKP()
    local kpfun = ''
    local atr = lfs.attributes(kpfile)
    if atr and atr.mode == 'file' then
-      loglocal('BAH: using kpfile '..kpfile)
-      --[[
-	 local kpfun, err = loadfile(kpfile)
-	 if not kpfun then
-	 loglocal("Error reading file `"..kpfile.."`: "..err)
-	 return { }
-	 end
-      --]]
-      --		kp = dofile(kpfile)
+      loglocal('aeronautespit: using kpfile '..kpfile)
       assert(loadfile(kpfile))()
-      loglocal('upload2 assignKP calling kpload() '..unittype)
+      loglocal('aeronautespit assignKP calling kpload() '..unittype)
       kp = kpload(unittype)
-      loglocal('upload2 assignKP calling ltload() ')
+      loglocal('aeronautespit assignKP calling ltload() ')
       table.insert(LT, ltload())
-      loglocal('BAH: done kpfile '..type(kp)..'; '..type(kpfun))
+      loglocal('aeronautespit: done kpfile '..type(kp)..'; '..type(kpfun))
    else
-      loglocal('BAH using builtin kp')
+      loglocal('aeronautespit using builtin kp')
       kpfun = getTypeKP
       kp = kpfun(unittype)
    end
@@ -253,7 +392,6 @@ function searchmodules()
    local moddir2name = {}
 
    function scandir(dir)
-      --	loglocal('dir: '..dir)
       local total = 0
       for i,j in lfs.dir(dir) do
 	 atr = lfs.attributes(dir..i)
@@ -279,7 +417,7 @@ function searchmodules()
 	    if ut then
 	       modname2dir[ut] = moddir2name[i]
 	       modnametot = modnametot + 1
-	       loglocal('upload2 searchmodules: added '..ut)
+	       loglocal('aeronautespit searchmodules: added '..ut)
 	    end
 	 end
       else
@@ -287,7 +425,7 @@ function searchmodules()
       end
    end
 
-   loglocal('upload2 searchmodules found: '..scandirtot..' named: '..modnametot)
+   loglocal('aeronautespit searchmodules found: '..scandirtot..' named: '..modnametot)
 end
 
 searchmodules()
@@ -297,11 +435,12 @@ for i,j in pairs(modname2dir) do
       LT[i] = {}
    end
    LT[i].dirname = j.dir
-   loglocal('upload2 cycle LT.dirname: '..i..' = '..LT[i].dirname)
+   loglocal('aeronautespit cycle LT.dirname: '..i..' = '..LT[i].dirname)
 end
 
 function uploadinit()
    loglocal('init: begin')
+   wps = copytable(wpsdefaults)
    local newunittype = DCS.getPlayerUnitType()
    if newunittype == unittype then
       if not unittype then
@@ -328,7 +467,7 @@ function uploadinit()
       return
    end
 
-   loglocal('cycle thru dirs,')
+   loglocal('cycle thru modules,')
    for i,j in pairs(LT) do
       if LT[i].dirname then
 	 loglocal('cycle dir: '..LT[i].dirname)
@@ -338,12 +477,12 @@ function uploadinit()
    end
 
    if not unittype then
-      loglocal('upload2 init unittype nil')
+      loglocal('aeronautespit init unittype nil')
       return
    end
    
-   if not LT[unittype].dirname then 
-      loglocal('upload2 init LT[].dirname undefined for '..unittype)
+   if not LT[unittype].dirname then
+      loglocal('aeronautespit init LT[].dirname undefined for '..unittype)
       return
    end
    local dirname = LT[unittype].dirname
@@ -351,20 +490,20 @@ function uploadinit()
    function checkfile(fn)
       atr = lfs.attributes(fn)
       if not atr then
-	 loglocal('upload2 checkfile attributes nil, '..fn)
+	 loglocal('aeronautespit checkfile attributes nil, '..fn)
 	 return
       end 	
       return true
    end
 
    --[[ 
-      devices table in devices.lua
-      _commands tables in command_defs.lua
-      association of device and _commands in clickabledata.lua
+      sources for macro defined variables: devices table in devices.lua
+         _commands tables in command_defs.lua
+         association of device and _commands in clickabledata.lua
    --]]
 
    --[[
-      checkcockpitfile() is a kludge because the second arg to make_flyable() in
+      checkcockpitfile() is a workaround because the second arg to make_flyable() in
       entry.lua, should be parsed and the device files are not always defined to be in
       Cockpit/Scripts dir.
    --]]
@@ -382,41 +521,35 @@ function uploadinit()
    end
    
    local infn = dirname .."\\Cockpit\\Scripts\\command_defs.lua"
-   --   if not checkfile(infn) then
    local infn = checkcockpitfile(dirname, 'command_defs.lua')
    if not infn then
-      loglocal('upload2 init file not available, '.. infn)
+      loglocal('aeronautespit init file not available, '.. infn)
       return
    end
    dofile(infn)
    
-   --   infn = dirname .."\\Cockpit\\Scripts\\devices.lua"
-   --   if not checkfile(infn) then
    infn = checkcockpitfile(dirname, 'devices.lua')
    if not infn then
-      loglocal('upload2 init file not available, '.. infn)
+      loglocal('aeronautespit init file not available, '.. infn)
       return
    end
    dofile(infn)
 
-   -- parse clickabledata for tool tip names of cockpit controls
-   --   infn = dirname .."\\Cockpit\\Scripts\\clickabledata.lua"
-   --   if not checkfile(infn) then
    infn = checkcockpitfile(dirname, 'clickabledata.lua')
    if not infn then
-      loglocal('upload2 init file not available, '.. infn)
+      loglocal('aeronautespit init file not available, '.. infn)
       return
    end
 
    local infile = io.open(infn)
    if not infile then
-      loglocal('upload2: open file fail; ' .. infn)
+      loglocal('aeronautespit: open file fail; ' .. infn)
       return(nil)
    end
 
    local line = infile:read('*line')
    if not line then
-      loglocal('upload2: read file fail; ' .. infn)
+      loglocal('aeronautespit: read file fail; ' .. infn)
       return(nil)
    end
 
@@ -424,7 +557,6 @@ function uploadinit()
    while line do
       tt, dev, butn = string.match(line, '^elements%[".+"%]%s*=.+%("(.+)"%)%s*,%s*([^,]+),%s*([^,]+)')
       if tt then
-	 --	 loglocal(string.format('found a tt: %s, dev: %s, button: %s',tt, dev, butn))
 	 ttlist[tt] = {device = dev, action = butn}
       end
       line = infile:read('*line')
@@ -442,30 +574,36 @@ function uploadinit()
 end
 
 function press(inp)
+   loglocal('press(): '..inp, 5)
    if type(inp) ~= 'string' then
-      loglocal('upload2 press: non string type, '..type(inp))
+      loglocal('aeronautespit press: non string type, '..type(inp))
       return
    end
    
    for key in string.gmatch(inp, '.') do
       if kp[key] == nil then
-	 loglocal("upload: press() nil " .. key)
+	 loglocal("upload: press() nil " .. key, 0)
 	 return ""
       end
       if type(kp[key][1]) == 'table' then
 	 a = kp[key]
+         local ctr = 0
 	 for i,j in pairs(a) do
-	    --loglocal('press: insert1 '..a[i][1]..', '..a[i][2])
+	    loglocal('press(): insert1 '..a[i][1]..', '..a[i][2], 5)
 	    table.insert(domacro.inp, a[i])
+            ctr = ctr + 1
 	 end
       else    
+	 loglocal('press(): insert2 key '..key, 5)
 	 table.insert(domacro.inp, kp[key])
-	 --loglocal('press: insert2 key '..key )
       end
    end
+   loglocal('press(): exit', 5)
 end
 
 function waypointUFCMacro(result)
+   prewp()
+
    result = convertformatCoords(result)
    --result = string.gsub(result, " ", "ed")
    result = midwp(result)
@@ -480,7 +618,7 @@ domacro.idx = 1
 domacro.inp = {}
 
 function push_stop_command(delay, c)
-   loglocal('upload2: push_stop_command() start '..type(c))
+   loglocal('aeronautespit: push_stop_command() start '..type(c))
    if c.device and c.action and c.value then
       loglocal('push_stop_command: dev '..c.device ..', action '.. c.action ..', val '.. c.value)
       if not c.len then
@@ -491,42 +629,49 @@ function push_stop_command(delay, c)
 end
 
 function TTtoDA(name, parms)
-   parms = parms or {value = 1.0}
+   local tmp = parms or {value = 1.0}
    
-   loglocal('upload2 TTtoDA name: #'..name..'#')
+   loglocal('aeronautespit TTtoDA name: #'..name..'#'..net.lua2json(tmp))
    if type(ttlist[name]) == 'table' then
-
       for i, j in pairs(ttlist[name]) do
-	 local getval = loadstring("return " .. j)
-	 parms[i] = getval()
+         if not tmp[i] then 
+            local getval = loadstring("return " .. j)
+            tmp[i] = getval()
+         end
       end
-      return parms
+      return tmp
    end
 
-   loglocal('upload2 TTtoDA not found')
+   loglocal('aeronautespit TTtoDA not found')
    return nil
 end
 
-function tt(name, parms)
-   local parms = parms or {value = 1.0}
-   
-   parms = TTtoDA(name, parms)
-   if parms then
-      loglocal('tt table: '..net.lua2json(parms))
-      push_stop_command(0.1, parms)
+function tt(name, params)
+   local tmp = params or {value = 1.0}
+   tmp = TTtoDA(name, tmp)
+
+   if tmp then
+      loglocal('tt table: '..net.lua2json(tmp))
+      push_stop_command(0.1, tmp)
    end
 end
 
-function ttn(name)
-   tt(name, {value=1})
+function ttn(name, params)
+   local tmp = params or {}
+   tmp.value = 1
+   tt(name, tmp)
 end
-function ttf(name)
-   tt(name)
-   tt(name, {value=0})
+
+function ttf(name, params)
+   local tmp = params or {}
+   tmp.value = 0
+   tt(name, tmp)
 end
-function ttt(name)
-   ttn(name)
-   ttf(name)
+
+function ttt(name, params)
+   local tmp = params or {}
+   ttn(name, params)
+   ttf(name, params)
 end
 
 function delay(seconds)
@@ -547,7 +692,8 @@ function midwp(wpstr)
    if LT[unittype].midwp then
       return LT[unittype].midwp(wpstr)
    end
-   loglocal('midwp 2: ')
+   loglocal('midwp 2: no midwp defined')
+   return wpstr
 end
 
 function postwp()
@@ -556,6 +702,26 @@ function postwp()
       LT[unittype].postwp()
    end
    loglocal('postwp 2: ')
+end
+
+function wpseq(param)
+   loglocal('wpseq: '..net.lua2json(param))
+   for i, j in pairs(param) do
+      if type(wps[i]) ~= nil then
+         if type(wps[i]) == type(param[i]) then
+            loglocal('wpseq set: '..i, 5)
+            wps[i] = param[i]
+         else
+            loglocal('wpseq type mismatch: '..i..'-'..type(wps[i])..'-'..type(param[i]))
+         end
+      else
+         loglocal('wpseq wps key not found: '..i)
+      end
+   end
+   if wps.initialize then
+      wps = copytable(wpsdefaults)
+   end
+   loglocal('wpseq end: '..net.lua2json(wps))
 end
 
 function wp(LLA)
@@ -567,7 +733,13 @@ function loadDTCBuffer(text)
    loglocal('loaddtcbuffer text len:'..string.len(text))
    local inf = loadstring(text)
    if not inf then
-      loglocal('MAC loadstring failed: ' .. string.sub(text, 1, 40))
+      loglocal('loadDTCBuffer loadstring failed: first 40 chars:' .. string.sub(text, 1, 40))
+      loglocal('loadDTCBuffer loadstring failed: ret: ')
+      if inf == LUA_ERRRUN then loglocal('loadDTCBuffer: LUA_ERRRUN')
+      elseif inf == LUA_ERRMEM then loglocal('loadDTCBuffer: LUA_ERRMEM')
+      elseif inf == LUA_ERRERR then loglocal('loadDTCBuffer: LUA_ERRERR')
+      elseif inf == LUA_ERRGCMM then loglocal('loadDTCBuffer: LUA_ERRGCMM')
+      end
       return nil
    end
 
@@ -575,6 +747,7 @@ function loadDTCBuffer(text)
 	  push_start_command = push_stop_command,
 	  prewp = prewp,
 	  wp = wp,
+          wpseq = wpseq,
 	  press = press,
 	  tt = tt,
 	  ttn = ttn,
@@ -596,8 +769,6 @@ function loadDTCBuffer(text)
 end
 
 addButton(0, 00, 50, 30, "ULbuf", function(textarea)
-	     --	     local text = textarea:getText()
-	     --	     loadDTCBuffer(text)
 	     loadDTCBuffer(textarea:getText())
 end)
 
@@ -687,6 +858,7 @@ end)
 
 
 -- WP getting/setting section
+
 function convertformatCoords(result)
    if LT[unittype].llconvert then
       result = LT[unittype].llconvert(result)
@@ -703,7 +875,7 @@ function coordsType(unit)
       return LT[unit].coordsType
    end
 
-   loglocal('upload2 coordsType: not found in LT, '..unit)
+   loglocal('aeronautespit coordsType: not found in LT, '..unit)
 end
 
 function formatCoordConv(format, isLat, d, opts)
@@ -759,11 +931,11 @@ addButton(70, 30, 50, 30, "WPLL", function(text)
 end)
 
 addButton(130, 30, 50, 30, "RELOAD", function(text)
-	     loglocal('upload2: RELOAD click '..#LT)
+	     loglocal('aeronautespit: RELOAD click '..#LT)
 	     assignKP()
 end)
 
-addFrameListener(function()
+addFrameListener('aeronautes-pit', function()
       if domacro.flag == true then
 	 now = socket.gettime()
 	 if now < domacro.ctr then
@@ -778,19 +950,20 @@ addFrameListener(function()
 	 key = domacro.inp[i][1]
 	 val = domacro.inp[i][2]
 	 device = domacro.inp[i][4]
-	 loglocal('handler loop: '..i..":"..device..":" .. key ..":".. val..' '..socket.gettime())
+	 loglocal('addFrameListener loop: '..i..":"..device..":" .. key ..":".. val..' '..socket.gettime(), 6)
 	 assert(Export.GetDevice(device):performClickableAction(key, val))
 	 domacro.ctr = socket.gettime() + domacro.inp[i][3] 
-	 loglocal('BUGA: '..domacro.ctr)
+	 loglocal('BUGA: '..domacro.ctr, 6)
 	 i = i + 1
 	 if i > #domacro.inp then
 	    domacro.inp = {}
 	    domacro.idx = 1
 	    domacro.flag = false
+            loglocal('addFrameListener: finished macro ul')
 	 else
             domacro.idx = i
 	 end
-	 loglocal('handler loop2: i: '..i)
+	 loglocal('addFrameListener loop2: i: '..i, 6)
       end
 end)
 domacro.listeneradded = true    
