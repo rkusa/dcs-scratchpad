@@ -736,17 +736,17 @@ function loadDTCBuffer(text)
     end
 
     env = {push_stop_command = push_stop_command,
-           push_start_command = push_stop_command,
-           prewp = prewp,
-           wp = wp,
-           wpseq = wpseq,
-           press = press,
-           tt = tt,
-           ttn = ttn,
-           ttf = ttf,
-           ttt = ttt,
-           delay = delay,
-           loglocal = loglocal,
+        push_start_command = push_stop_command,
+        prewp = prewp,
+        wp = wp,
+        wpseq = wpseq,
+        press = press,
+        tt = tt,
+        ttn = ttn,
+        ttf = ttf,
+        ttt = ttt,
+        delay = delay,
+        loglocal = loglocal,
     }
     setmetatable(env, {__index = _G})
     setfenv(inf, env)
@@ -761,7 +761,7 @@ function loadDTCBuffer(text)
 end
 
 addButton(0, 00, 50, 30, "ULbuf", function(textarea)
-              loadDTCBuffer(textarea:getText())
+        loadDTCBuffer(textarea:getText())
 end)
 
 function getCurrentLineOffsets(text, cur)
@@ -791,61 +791,61 @@ function getCurrentLineOffsets(text, cur)
 end
 
 addButton(60, 00, 50, 30, "ULsel", function(textarea)
-              local text = textarea:getText()
-              local start, end_ = getSelection()
+        local text = textarea:getText()
+        local start, end_ = getSelection()
 
-              if start == end_ then
-                  start, end_ = getCurrentLineOffsets(text, end_)
-              end
-              
-              sel = string.sub(text, start, end_)
-              
-              loglocal('ULsel len '..string.len(sel)..': #'..sel..'#')
+        if start == end_ then
+            start, end_ = getCurrentLineOffsets(text, end_)
+        end
+        
+        sel = string.sub(text, start, end_)
+        
+        loglocal('ULsel len '..string.len(sel)..': #'..sel..'#')
 
-              local jtest = sel
-              jtest = string.gsub(jtest, "[']", '')
-              jtest = string.gsub(jtest, '°', ' ')
-              local lat, lon = string.match(jtest, '(%u %d%d +%d%d%.%d%d%d), (%u %d+ +%d%d%.%d%d%d)')
+        local jtest = sel
+        jtest = string.gsub(jtest, "[']", '')
+        jtest = string.gsub(jtest, '°', ' ')
+        local lat, lon = string.match(jtest, '(%u %d%d +%d%d%.%d%d%d), (%u %d+ +%d%d%.%d%d%d)')
 
-              --for jtac coords
-              if lon then
-                  loglocal('ULsel: jtac position detected')
-                  local cType = coordsType(unittype)
-                  if cType then
-                      if cType.precision then
-                          delta = 3 - cType.precision
-                          loglocal('ULsel jtac delta: '.. delta)
-                          if delta > 0 then
-                              loglocal('ULsel jtac precision: '..#lat)
-                              lat = string.sub(lat, 1, #lat - delta)
-                              lon = string.sub(lon, 1, #lon - delta)
-                              loglocal('ULsel jtac precision2: '..#lat..' lat: '..lat)
-                          end
-                      end
-                      if cType.lonDegreesWidth then
-                          local east, londeg, lonmin = string.match(lon, '(%u) (%d+).(%d+%.%d+)')
-                          local fmtstr = '%s %.'.. cType.lonDegreesWidth ..'d %s'
-                          local newlon = string.format(fmtstr, east, londeg, lonmin)
-                          loglocal(string.format('ULsel fmtstr: %s east: %s londeg: %s lonmin: %s, newlon: %s', fmtstr, east, londeg, lonmin, newlon))
-                          lon = newlon
-                      end
-                  end
-                  lat = string.gsub(lat, '[ .]', '')
-                  lon = string.gsub(lon, '[ .]', '')
+        --for jtac coords
+        if lon then
+            loglocal('ULsel: jtac position detected')
+            local cType = coordsType(unittype)
+            if cType then
+                if cType.precision then
+                    delta = 3 - cType.precision
+                    loglocal('ULsel jtac delta: '.. delta)
+                    if delta > 0 then
+                        loglocal('ULsel jtac precision: '..#lat)
+                        lat = string.sub(lat, 1, #lat - delta)
+                        lon = string.sub(lon, 1, #lon - delta)
+                        loglocal('ULsel jtac precision2: '..#lat..' lat: '..lat)
+                    end
+                end
+                if cType.lonDegreesWidth then
+                    local east, londeg, lonmin = string.match(lon, '(%u) (%d+).(%d+%.%d+)')
+                    local fmtstr = '%s %.'.. cType.lonDegreesWidth ..'d %s'
+                    local newlon = string.format(fmtstr, east, londeg, lonmin)
+                    loglocal(string.format('ULsel fmtstr: %s east: %s londeg: %s lonmin: %s, newlon: %s', fmtstr, east, londeg, lonmin, newlon))
+                    lon = newlon
+                end
+            end
+            lat = string.gsub(lat, '[ .]', '')
+            lon = string.gsub(lon, '[ .]', '')
 
-                  local newstr = "wp('"..LLtoAC(lat, lon, '0') .. "')"
-                  loglocal('ULsel jtac: '..lat ..' , '..lon..' , '..newstr)
-                  sel = newstr
-              end
-              
-              loglocal('glub2: '..sel)
-              loadDTCBuffer(sel)
+            local newstr = "wp('"..LLtoAC(lat, lon, '0') .. "')"
+            loglocal('ULsel jtac: '..lat ..' , '..lon..' , '..newstr)
+            sel = newstr
+        end
+        
+        loglocal('glub2: '..sel)
+        loadDTCBuffer(sel)
 end)
 
 addButton(120, 00, 50, 30, "CANCEL", function(textarea)
-              domacro.inp = {}
-              domacro.idx = 1
-              domacro.flag = false
+        domacro.inp = {}
+        domacro.idx = 1
+        domacro.flag = false
 end)
 
 
@@ -873,7 +873,6 @@ end
 function formatCoordConv(format, isLat, d, opts)
     local str = ''
     str = convertformatCoords(formatCoord(format, isLat, d, opts))
-    --TH commentd for hornet   str = string.gsub(str, '%s+', '')        
     loglocal('formatCoordConv: '..str)
     return str
 end
@@ -902,68 +901,68 @@ function getloc()
     local types = coordsType(ac)
     
     LLtoAC(formatCoordConv(types.format, true, lat, types),
-           formatCoordConv(types.format, false, lon, types),
-           string.format("%.0f", alt*3.28084))
+        formatCoordConv(types.format, false, lon, types),
+        string.format("%.0f", alt*3.28084))
     
     return str
 end
 
 --start second row button
 addButton(10, 30, 50, 30, "ULLL", function(text)
-              str = getloc()
-              loglocal('ULLL: '..str)
+        str = getloc()
+        loglocal('aeronautespit: ULLL: '..str)
 
-              prewp()
-              wp(str)
-              domacro.flag = true
+        prewp()
+        wp(str)
+        domacro.flag = true
 end)
 
 addButton(70, 30, 50, 30, "WPLL", function(text)
-              text:insertBelow("wp('" .. getloc() .. "')")
+        text:insertBelow("wp('" .. getloc() .. "')")
 end)
 
 addButton(130, 30, 50, 30, "RELOAD", function(text)
-              loglocal('aeronautespit: RELOAD click '..#LT)
-              assignKP()
+        loglocal('aeronautespit: RELOAD click '..#LT)
+        assignKP()
 end)
 
 addFrameListener('aeronautes-pit', function()
-                     if domacro.flag == true then
-                         now = socket.gettime()
-                         if now < domacro.ctr then
-                             return
-                         end
-                         if #domacro.inp == 0 then
-                             domacro.flag = false
-                             return
-                         end
+        if domacro.flag == true then
+            now = socket.gettime()
+            if now < domacro.ctr then
+                return
+            end
+            if #domacro.inp == 0 then
+                domacro.flag = false
+                return
+            end
 
-                         i = domacro.idx
-                         key = domacro.inp[i][1]
-                         val = domacro.inp[i][2]
-                         device = domacro.inp[i][4]
-                         loglocal('addFrameListener loop: '..i..":"..device..":" .. key ..":".. val..' '..socket.gettime(), 6)
-                         assert(Export.GetDevice(device):performClickableAction(key, val))
-                         domacro.ctr = socket.gettime() + domacro.inp[i][3] 
-                         loglocal('BUGA: '..domacro.ctr, 6)
-                         i = i + 1
-                         if i > #domacro.inp then
-                             domacro.inp = {}
-                             domacro.idx = 1
-                             domacro.flag = false
-                             loglocal('addFrameListener: finished macro ul')
-                         else
-                             domacro.idx = i
-                         end
-                         loglocal('addFrameListener loop2: i: '..i, 6)
-                     end
+            i = domacro.idx
+            key = domacro.inp[i][1]
+            val = domacro.inp[i][2]
+            device = domacro.inp[i][4]
+            loglocal('addFrameListener loop: '..i..":"..device..":" .. key ..":".. val..' '..socket.gettime(), 6)
+            assert(Export.GetDevice(device):performClickableAction(key, val))
+            domacro.ctr = socket.gettime() + domacro.inp[i][3] 
+            loglocal('addFrameListener: time tick '..domacro.ctr, 6)
+            i = i + 1
+            if i > #domacro.inp then
+                domacro.inp = {}
+                domacro.idx = 1
+                domacro.flag = false
+                loglocal('addFrameListener: finished macro ul')
+            else
+                domacro.idx = i
+            end
+            loglocal('addFrameListener loop2: i: '..i, 6)
+        end
 end)
 domacro.listeneradded = true    
 
 addmissionLoadEndListener(function()
-        loglocal('missionLoadEndListener start')
+        loglocal('missionLoadEndListener start', 3)
         if DCS.isMultiplayer() then
-            loglocal('MP')
+            loglocal('missionLoadEndListener MP', 3)
             local myid = net.get_my_player_id()
             local handler = {}
             function handler.onPlayerChangeSlot(id)
@@ -973,7 +972,7 @@ addmissionLoadEndListener(function()
             end
             DCS.setUserCallbacks(handler)
         else
-            loglocal('SP')
+            loglocal('missionLoadEndListener SP', 3)
             if not uploadinit() then
                 local handler = {}
                 function handler.onSimulationResume()
