@@ -535,13 +535,13 @@ local function loadScratchpad()
         keyboardLocked = true
     end
 
-        local function runListeners(list)
-            for _, listener in pairs(list) do
-                if type(listener) == "function" then
-                        listener()
-                end
-            end
-        end
+    local function runListeners(list)
+	for _, listener in pairs(list) do
+	    if type(listener) == "function" then
+		listener()
+	    end
+	end
+    end
 
     function formatCoord(format, isLat, d, opts)
         local function showNegative(d, h)
