@@ -21,6 +21,7 @@ end
 
 local delay = 0.1               -- default input delay
 local unittype = ''
+local unittab = {} --table of module specific functions
 local kp = {}   -- keypad table for wp(), press() api
 local ttlist = {} --tool tips from clicabledata.lua
 
@@ -66,7 +67,8 @@ local LT = {    -- per module customization for convenience api
                 loglocal('F15 prewp(): cur press() '..tmp, 3)
                 press(tmp)
             end
-            return end,
+            return
+        end,
         midwp = function(result) return result end,
         postwp = function()
             if wps.enable and wps.cur ~= -1 then
@@ -76,7 +78,7 @@ local LT = {    -- per module customization for convenience api
                 return 
             end
         end,
-        llconvert =function(result)
+        llconvert = function(result)
             result = string.gsub(result, "[°'\".]", "")
             result = string.gsub(result, "([NEWS]) ", "%1")
             return result
@@ -85,9 +87,28 @@ local LT = {    -- per module customization for convenience api
     ["F-16C_50"] = {
         ['coordsType'] = {format = 'DDM', lonDegreesWidth = 3},
         ['wpentry'] = 'LATedLONedALT',
-        prewp = function() press('r4dd') end,
+        prewp = function()
+	    if wps.enable then
+		if wps.cur then
+		    local tmp = tostring(wps.cur)
+		    press('r4'..tmp..'edd')
+		else -- cur nil but diff is incremental, hit up/down
+		    if wps.diff > 0 then
+			press('u')
+		    elseif wps.diff < 0 then
+			press('d')
+		    end
+		end
+	    end
+	end,
+
         midwp = function(result) return result end,
-        postwp = function() press('euum') end,
+        postwp = function() --press('euum') end,
+	    if wps.enable and wps.cur ~= -1 then
+                wps.cur = wps.cur + wps.diff
+                return 
+            end
+	end,
     },
     ["FA-18C_hornet"] = {
         ['coordsType'] = {format = 'DDM', precision = 4},
@@ -430,140 +451,6 @@ for i,j in pairs(modname2dir) do
     loglocal('aeronautespit cycle LT.dirname: '..i..' = '..LT[i].dirname)
 end
 
-function uploadinit()
-    loglocal('init: begin')
-    wps = copytable(wpsdefaults)
-    local newunittype = DCS.getPlayerUnitType()
-    if newunittype == unittype then
-        if not unittype then
-            loglocal('uploadinit: unittype already nil')
-        else
-            loglocal('uploadinit: unittype already same, '..unittype)
-        end
-        return 
-    end
-
-    if unittype then
-        loglocal('uploadinit type '..unittype)
-    else
-        loglocal('uploadinit nil')
-    end
-    if newunittype then
-        loglocal('newunittype '..newunittype)
-    else
-        loglocal('newunittype nil')
-    end
-    unittype = newunittype
-    if not unittype then
-        loglocal('upload getPlayerUnitType nil, ')
-        return
-    end
-
-    loglocal('cycle thru modules,')
-    for i,j in pairs(LT) do
-        if LT[i].dirname then
-            loglocal('cycle dir: '..LT[i].dirname)
-        else
-            loglocal('cycle missing dir: '..i)
-        end
-    end
-
-    if not unittype then
-        loglocal('aeronautespit init unittype nil')
-        return
-    end
-    
-    if not LT[unittype].dirname then
-        loglocal('aeronautespit init LT[].dirname undefined for '..unittype)
-        return
-    end
-    local dirname = LT[unittype].dirname
-    
-    function checkfile(fn)
-        atr = lfs.attributes(fn)
-        if not atr then
-            loglocal('aeronautespit checkfile attributes nil, '..fn)
-            return
-        end     
-        return true
-    end
-
-    --[[ 
-        sources for macro defined variables: devices table in devices.lua
-        _commands tables in command_defs.lua
-        association of device and _commands in clickabledata.lua
-    --]]
-
-    --[[
-        checkcockpitfile() is a workaround because the second arg to make_flyable() in
-        entry.lua, should be parsed and the device files are not always defined to be in
-        Cockpit/Scripts dir.
-    --]]
-    function checkcockpitfile(moddir, fn)
-        local infn = moddir .."\\Cockpit\\Scripts\\" .. fn
-        if not checkfile(infn) then
-            infn = moddir .."\\Cockpit\\" .. fn
-            if not checkfile(infn) then
-                return nil
-            else
-                return infn
-            end
-        end
-        return infn
-    end
-    
-    local infn = dirname .."\\Cockpit\\Scripts\\command_defs.lua"
-    local infn = checkcockpitfile(dirname, 'command_defs.lua')
-    if not infn then
-        loglocal('aeronautespit init file not available, '.. infn)
-        return
-    end
-    dofile(infn)
-    
-    infn = checkcockpitfile(dirname, 'devices.lua')
-    if not infn then
-        loglocal('aeronautespit init file not available, '.. infn)
-        return
-    end
-    dofile(infn)
-
-    infn = checkcockpitfile(dirname, 'clickabledata.lua')
-    if not infn then
-        loglocal('aeronautespit init file not available, '.. infn)
-        return
-    end
-
-    local infile = io.open(infn)
-    if not infile then
-        loglocal('aeronautespit: open file fail; ' .. infn)
-        return(nil)
-    end
-
-    local line = infile:read('*line')
-    if not line then
-        loglocal('aeronautespit: read file fail; ' .. infn)
-        return(nil)
-    end
-
-    local tt, dev, butn
-    while line do
-        tt, dev, butn = string.match(line, '^elements%[".+"%]%s*=.+%("(.+)"%)%s*,%s*([^,]+),%s*([^,]+)')
-        if tt then
-            ttlist[tt] = {device = dev, action = butn}
-        end
-        line = infile:read('*line')
-    end
-    infile:close()
-
-    local ctr = 1
-    for i,j in pairs(ttlist) do
-        ctr = ctr + 1
-    end
-    
-    assignKP()
-
-    return unittype
-end
 
 function press(inp)
     loglocal('press(): '..inp, 5)
@@ -594,16 +481,7 @@ function press(inp)
 end
 
 function waypointUFCMacro(result)
-    prewp()
 
-    result = convertformatCoords(result)
-    --result = string.gsub(result, " ", "ed")
-    result = midwp(result)
-    --result = string.gsub(result, "[0123456789ed]", press)
-    result = string.gsub(result, ".", press)
-
-    postwp()
-    return result .. "\n"
 end
 
 domacro.idx = 1
@@ -718,8 +596,21 @@ end
 
 function wp(LLA)
     loglocal('wp: '..LLA)
-    waypointUFCMacro(LLA)
+--        waypointUFCMacro(LLA)
+    prewp()
+
+    local result = convertformatCoords(LLA)
+    result = midwp(result)
+    result = string.gsub(result, ".", press)
+
+    postwp()
+
+    return result .. "\n"
 end
+
+function apcall(chunk, env)     -- common pcall() for loadDTCBuffer and assignCustom
+    return nil
+end                         -- end apcall
 
 function loadDTCBuffer(text)
     loglocal('loaddtcbuffer text len:'..string.len(text))
@@ -736,17 +627,18 @@ function loadDTCBuffer(text)
     end
 
     env = {push_stop_command = push_stop_command,
-        push_start_command = push_stop_command,
-        prewp = prewp,
-        wp = wp,
-        wpseq = wpseq,
-        press = press,
-        tt = tt,
-        ttn = ttn,
-        ttf = ttf,
-        ttt = ttt,
-        delay = delay,
-        loglocal = loglocal,
+           push_start_command = push_stop_command,
+           prewp = prewp,
+           wp = wp,
+           wpseq = wpseq,
+           press = press,
+           tt = tt,
+           ttn = ttn,
+           ttf = ttf,
+           ttt = ttt,
+           delay = delay,
+           loglocal = loglocal,
+           unittab = unittab,
     }
     setmetatable(env, {__index = _G})
     setfenv(inf, env)
@@ -754,10 +646,180 @@ function loadDTCBuffer(text)
     local ok, res = pcall(inf)
     if not ok then
         loglocal("Error executing mac: " .. string.sub(text, 1, 40))
+        loglocal(res)
         return nil
     end
 
     domacro.flag = true
+end
+
+function assignCustom()
+    local infn = lfs.writedir() .. 'Scripts\\Scratchpad\\Extensions\\lib\\'..unittype..'.lua'
+    loglocal('aeronautespit: using customfile '..infn)
+    local atr = lfs.attributes(infn)
+    if atr and atr.mode == 'file' then
+        local customfn = loadfile(infn)
+
+        env = {push_stop_command = push_stop_command,
+               push_start_command = push_stop_command,
+               prewp = prewp,
+               wp = wp,
+               wpseq = wpseq,
+               press = press,
+               tt = tt,
+               ttn = ttn,
+               ttf = ttf,
+               ttt = ttt,
+               delay = delay,
+               loglocal = loglocal,
+        }
+        setmetatable(env, {__index = _G}) --needed to pickup all the module macro definitions like devices
+        setfenv(customfn, env)
+
+        local ok, res = pcall(customfn)
+        if not ok then
+            loglocal('Error '..res)
+            return nil
+        end
+        unittab = res
+        loglocal('assignCustom unittab: '..unittab)
+    end
+end
+
+function uploadinit()
+    loglocal('init: begin')
+    wps = copytable(wpsdefaults)
+    local newunittype = DCS.getPlayerUnitType()
+    if newunittype == unittype then
+        if not unittype then
+            loglocal('uploadinit: unittype already nil')
+        else
+            loglocal('uploadinit: unittype already same, '..unittype)
+        end
+        return
+    end
+
+    if unittype then
+        loglocal('uploadinit type '..unittype)
+    else
+        loglocal('uploadinit nil')
+    end
+    if newunittype then
+        loglocal('newunittype '..newunittype)
+    else
+        loglocal('newunittype nil')
+    end
+    unittype = newunittype
+    if not unittype then
+        loglocal('upload getPlayerUnitType nil, ')
+        return
+    end
+
+    loglocal('cycle thru modules,')
+    for i,j in pairs(LT) do
+        if LT[i].dirname then
+            loglocal('cycle dir: '..LT[i].dirname)
+        else
+            loglocal('cycle missing dir: '..i)
+        end
+    end
+
+    if not unittype then
+        loglocal('aeronautespit init unittype nil')
+        return
+    end
+
+    if not LT[unittype].dirname then
+        loglocal('aeronautespit init LT[].dirname undefined for '..unittype)
+        return
+    end
+    local dirname = LT[unittype].dirname
+
+    function checkfile(fn)
+        atr = lfs.attributes(fn)
+        if not atr then
+            loglocal('aeronautespit checkfile attributes nil, '..fn)
+            return
+        end
+        return true
+    end
+
+    --[[
+        sources for macro defined variables: devices table in devices.lua
+        _commands tables in command_defs.lua
+        association of device and _commands in clickabledata.lua
+    --]]
+
+    --[[
+        checkcockpitfile() is a workaround because the second arg to make_flyable() in
+        entry.lua, should be parsed and the device files are not always defined to be in
+        Cockpit/Scripts dir.
+    --]]
+    function checkcockpitfile(moddir, fn)
+        local infn = moddir .."\\Cockpit\\Scripts\\" .. fn
+        if not checkfile(infn) then
+            infn = moddir .."\\Cockpit\\" .. fn
+            if not checkfile(infn) then
+                return nil
+            else
+                return infn
+            end
+        end
+        return infn
+    end
+
+    local infn = dirname .."\\Cockpit\\Scripts\\command_defs.lua"
+    local infn = checkcockpitfile(dirname, 'command_defs.lua')
+    if not infn then
+        loglocal('aeronautespit init file not available, '.. infn)
+        return
+    end
+    dofile(infn)
+
+    infn = checkcockpitfile(dirname, 'devices.lua')
+    if not infn then
+        loglocal('aeronautespit init file not available, '.. infn)
+        return
+    end
+    dofile(infn)
+
+    infn = checkcockpitfile(dirname, 'clickabledata.lua')
+    if not infn then
+        loglocal('aeronautespit init file not available, '.. infn)
+        return
+    end
+
+    local infile = io.open(infn)
+    if not infile then
+        loglocal('aeronautespit: open file fail; ' .. infn)
+        return(nil)
+    end
+
+    local line = infile:read('*line')
+    if not line then
+        loglocal('aeronautespit: read file fail; ' .. infn)
+        return(nil)
+    end
+
+    local tt, dev, butn
+    while line do
+        tt, dev, butn = string.match(line, '^elements%[".+"%]%s*=.+%("(.+)"%)%s*,%s*([^,]+),%s*([^,]+)')
+        if tt then
+            ttlist[tt] = {device = dev, action = butn}
+        end
+        line = infile:read('*line')
+    end
+    infile:close()
+
+    local ctr = 1
+    for i,j in pairs(ttlist) do
+        ctr = ctr + 1
+    end
+
+    assignKP()
+    assignCustom()
+
+    return unittype
 end
 
 addButton(0, 00, 50, 30, "ULbuf", function(textarea)
@@ -838,7 +900,7 @@ addButton(60, 00, 50, 30, "ULsel", function(textarea)
             sel = newstr
         end
         
-        loglocal('glub2: '..sel)
+        loglocal('addButton ULsel: '..sel)
         loadDTCBuffer(sel)
 end)
 
@@ -912,7 +974,6 @@ addButton(10, 30, 50, 30, "ULLL", function(text)
         str = getloc()
         loglocal('aeronautespit: ULLL: '..str)
 
-        prewp()
         wp(str)
         domacro.flag = true
 end)
@@ -924,6 +985,7 @@ end)
 addButton(130, 30, 50, 30, "RELOAD", function(text)
         loglocal('aeronautespit: RELOAD click '..#LT)
         assignKP()
+        assignCustom()
 end)
 
 addFrameListener('aeronautes-pit', function()
