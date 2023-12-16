@@ -1,3 +1,158 @@
+--[[
+local readme = "\
+# aeronautes-pit
+
+This is an extension to github.com/rkusa/scratchpad for DCS. At a high
+level it provides the ability to configure your aircraft, assist with
+mission planning and other automation tasks. There are some features
+for specific capabilities, such as single button latlong input, as
+well as a generalized environment for cockpit customization. At a low
+level this extension provides a system to create, modify and execute
+Lua code and access DCS's Lua client API. Some convenience features
+provided on top of DCS's macro system let's you interact with all the
+buttons, dials, switches and control in the cockpit without having to
+look up the macro details. You can use this without any knowledge of
+Lua or typing in any commands using it's base functionality available
+as button clicks. If you want to do more, then modifying or creating
+Lua code is an option.
+
+## Installation
+
+Unzip the github download into your Windows user `Saved Game`
+directory. In order to enable an extension in scratchpad, the
+extensions Lua file must be present in `Saved
+Game\DCS.openbeta\Scripts\Scratchpad\Extensions\`. Copy the
+aeronautes-pit.lua file from `Scratchpad\Extensions\Disabled\`
+directory to the parent `Scratchpad\Extensions\' directory.
+
+- Prerequisite - scratchpad-hook.lua rel XX or higher should be
+  installed under the Saved Game directory structure.
+
+- Required file - aeronautes-pit.lua is necessary for base
+  functionality. This needs copied from
+  Scripts\Scratchpad\Extensions\Disabled\ to the parent Extensions\
+  directory. On the next start of DCS you should see the apit menu
+  buttons when scratchpad window is open.
+
+- Optional files - For each DCS module an optional customization file,
+  such as F-16C_50.lua, is searched for when slotting into the
+  aircraft. Generally these are input commands that are grouped into
+  functions. Examples of functions include 'start' to start the
+  aircraft or 'mfd' to configure MFD pages. If no file is found the,
+  base apit functionality is still available.
+
+## Feature/Module matrix
+
+This matrix shows apit features and the amount of DCS modules
+supported by each.
+
+|    Feature    | All | Subset | Note |
+|---------------|-----|--------|------|
+| DCS macros    | X   |        |    1 |
+| Convenience   | X   |        |    2 |
+| DCS API       | X   |        |    3 |
+| Waypoint      |     | X      |    4 |
+| Customization |     | X      |    5 |
+
+- 1 Automatic detection and configuration of devices[] and
+  device.actions[] defined in the modules Cockpit\Scripts
+  directory. Specifically API calls push_start_command() and
+  push_stop_command() and their necessary arguments. These are
+  automatically handled for any full fidelity module installed without
+  need for user configuration.
+
+- 2 Convenience functions allow access to the cockpit devices without
+  having to look up the codes in Lua. Instead you can use the tool
+  tips to refer to the buttons and switches. These API calls include
+  tt(), ttt(), etc. It's automatically configured based on the
+  module's Cockpit\Scripts\clickabledata.lua.
+
+- 3 DCS APIs as defined in DCS World OpenBeta\API\DCS_ControlAPI.html
+  are available. The level of functionality and support is entirely up
+  to ED.
+
+- 4 Waypoint functions provide the ability input latlong and certain
+  other input without having to know or program which specific buttons
+  to press. These have been adapted for specific aircraft as each one
+  has it's own particular sequence of input. The API for this includes
+  wp(), wpseq(), press() and UI buttons `ULLL` and `WPLL`. These are
+  currently supported for Harrier, F-15E, F-16C, FA-18C, Blackshark
+  2&3.
+
+- 5 Customizations are higher level capabilities that utilize any
+  combination of the above features. These are separated per module in
+  the Extensions\lib\ directory. The level of support and functions
+  vary by module as updates are made. You can modify these yourself to
+  make your own customizations for your aircraft. They can be
+  initiated by executing the function name in a scratchpad page with
+  `ULbuf` or `ULsel` buttons. The currently supported modules include
+  Harrier, F-15E, F-16C, FA-18C, Mi-8.
+
+## Installed File - Functionality map
+
+'''
+\Saved Game\DCS.openbeta\
+        \Scratchpad\
+        \Scripts\
+                \Hooks\
+                |        |(scratchpad-hook.lua)
+                |
+                \Scratchpad\
+                        \Extensions\
+                                |       |[aeronautes-pit.lua] - File copy from Disabled\
+                                |
+                                \Disabled\
+                                |       |[aeronautes-pit.lua] - Core macro and convenience functionality
+                                |
+                                \lib\   - Optional module files for custom functions
+                                        |[AV8NA.lua]
+                                        |[F-15ESE.lua]
+                                        |[F-16C_50.lua]
+                                        |[FA-18C_hornet.lua]
+                                        |[Mi-8MT.lua]
+                                        |...
+'''
+
+## UI buttons:
+
+- ULbuf - This will attempt to execute everything in the current
+  scratchpad page as a Lua script.
+
+- `ULsel` - This will take the current text selection as Lua. If no
+  text is selected, then the current line the cursor is on is
+  executed. This is a convenience feature to handle single line
+  commands without the need to carefully highlight the line. This
+  also has an added feature of detecting if the line matchs a JTAC
+  provided coordinate and will automatically enter the latlong into
+  the aircrafts input panel if available. The format of the coordinate
+  must be ***
+
+- `ULLL` - Using the camera's current location, the latlong is entered
+  into the aircrafts coordinate input system. In F10 map view this is
+  the location at center of the screen. In any other view cockpit or
+  external view it is the 3d location of the camera view.
+
+- `WPLL` - This works similarly to ULLL, but instead of directly
+  entering the latlong, instead it will print the equivalent wp()
+  command at the current cursor location in scratchpad. This is useful
+  for building a mission plan that can be reused or passed along.
+
+- `CANCEL` - If the system is processing a series of cockpit inputs,
+  this will stop and cancel any outstanding inputs remaining.
+
+- `RELOAD` - Convenience and customization code for the current
+  aircraft are immediately reloaded and made available. This is only
+  useful if you are modifying or adding apit code.
+
+## apit API
+
+## Supported API
+
+## Howto
+
+"
+--]]
+
 local socket = require('socket')
 lfs = require('lfs')
 
@@ -12,7 +167,7 @@ local domacro = {
 local debug = 1
 local function loglocal(str, lvl)
     if not lvl then
-        lvl = 2
+        lvl = 0
     end
     if debug > lvl then
         log(str)
@@ -21,9 +176,17 @@ end
 
 local delay = 0.1               -- default input delay
 local unittype = ''
-local unittab = {} --table of module specific functions
-local kp = {}   -- keypad table for wp(), press() api
-local ttlist = {} --tool tips from clicabledata.lua
+local unittab = {}              --table of module specific functions
+local kp = {}                   -- keypad table for wp(), press() api
+local ttlist = {}               --tool tips from clicabledata.lua
+
+-- butt vars control the scratchpad buttons created by this extension
+local butts = {}
+local buttfn = {} -- indirection funcs to bind to onClick by vary with assignCustom()
+local buttfnamt = 6
+local buttw = 50
+local butth = 30
+
 
 local function copytable(src)
     dst = {}
@@ -34,16 +197,16 @@ local function copytable(src)
 end
 
 local wpsdefaults = { 
-    initialize = false,  --reset all values to defaults
-    enable = true,       --disable STR number assignment
-    diff = 1,            --next value of STR number relative to cur
-    cur = 2,            --STR number to switch to before entering LL
-    route = 'A',         --optional route can be one of ''.ABC
-    menus = '',          --optional menu keys to press() before any data entry
+    initialize = false,   --reset all values to defaults
+    enable = true,        --disable STR number assignment
+    diff = 1,             --next value of STR number relative to cur
+    cur = 2,              --STR number to switch to before entering LL
+    route = 'A',          --optional route can be one of ''.ABC
+    menus = '',  --optional menu keys to press() before any data entry
 }
-local wps = copytable(wpsdefaults)   --waypoint sequence used by wp(); also initialized in uploadinit()
+local wps = copytable(wpsdefaults) --waypoint sequence used by wp(); also initialized in uploadinit()
 
-local LT = {    -- per module customization for convenience api
+local LT = {           -- per module customization for convenience api
     ['AV8BNA'] = {
         ['coordsType'] = {format = 'DMS', lonDegreesWidth = 3},
         ['wpentry'] = 'LATe$LONe',
@@ -133,7 +296,7 @@ local LT = {    -- per module customization for convenience api
     ['Ka-50'] = {
         ['coordsType'] = {format = 'DDM', precision = 1, lonDegreesWidth = 3},
         ['wpentry'] = 'LATeLONe',
-        prewp = function() press('nw1') end,
+        prewp = function() return end, -- press('nw1') end,
         midwp = function(result) return result end,
         postwp = function() press('o') end,
     },
@@ -480,10 +643,6 @@ function press(inp)
     loglocal('press(): exit', 5)
 end
 
-function waypointUFCMacro(result)
-
-end
-
 domacro.idx = 1
 domacro.inp = {}
 
@@ -498,6 +657,7 @@ function push_stop_command(delay, c)
     end
 end
 
+-- TTtoDA() tool tip to device action lookup
 function TTtoDA(name, parms)
     local tmp = parms or {value = 1.0}
     
@@ -516,6 +676,7 @@ function TTtoDA(name, parms)
     return nil
 end
 
+-- tt() tool tip instantiation
 function tt(name, params)
     local tmp = params or {value = 1.0}
     tmp = TTtoDA(name, tmp)
@@ -526,29 +687,34 @@ function tt(name, params)
     end
 end
 
+-- ttn() tool tip on, equivalent to tt(,{value=1})
 function ttn(name, params)
     local tmp = params or {}
     tmp.value = 1
     tt(name, tmp)
 end
 
+-- ttf() tool tip off, equivalent to tt(,{value=0})
 function ttf(name, params)
     local tmp = params or {}
     tmp.value = 0
     tt(name, tmp)
 end
 
+--ttt() tool tip toggle, equivalent to ttn() ttf()
 function ttt(name, params)
     local tmp = params or {}
     ttn(name, params)
     ttf(name, params)
 end
 
+-- delay() delay in input for the scheduled sequence
 function delay(seconds)
     loglocal('delay: '..seconds)
     push_stop_command(0, {device = 0, action = 0, value = 0, len = seconds})
 end
 
+-- prewp() input sequence before entering latlong
 function prewp(num)
     loglocal('prewp: ')
     if LT[unittype].prewp then
@@ -557,6 +723,7 @@ function prewp(num)
     loglocal('prewp 2: ')
 end
 
+-- midwp() input sequence during middle of latlong
 function midwp(wpstr)
     loglocal('midwp: ')
     if LT[unittype].midwp then
@@ -566,6 +733,7 @@ function midwp(wpstr)
     return wpstr
 end
 
+--postwp() input sequence after latlong entered
 function postwp()
     loglocal('postwp: ')
     if LT[unittype].postwp then
@@ -574,6 +742,7 @@ function postwp()
     loglocal('postwp 2: ')
 end
 
+-- wpseq() interface for setting the next steerpoint number
 function wpseq(param)
     loglocal('wpseq: '..net.lua2json(param))
     for i, j in pairs(param) do
@@ -594,6 +763,7 @@ function wpseq(param)
     loglocal('wpseq end: '..net.lua2json(wps))
 end
 
+-- wp() interface for entering in a latlong for a particular aircraft
 function wp(LLA)
     loglocal('wp: '..LLA)
 --        waypointUFCMacro(LLA)
@@ -682,7 +852,18 @@ function assignCustom()
             return nil
         end
         unittab = res
-        loglocal('assignCustom unittab: '..unittab)
+        for i,j in pairs(buttfn) do
+            buttfn[i] = nil
+        end
+        local x = 0
+        for i,j in pairs(unittab) do
+            if type(j) == 'function' then
+                x = x + 1
+                buttfn[x] = j
+                loglocal('assignCustom add function: '..i)
+            end
+        end
+        loglocal('assignCustom end x: '..x)
     end
 end
 
@@ -822,10 +1003,6 @@ function uploadinit()
     return unittype
 end
 
-addButton(0, 00, 50, 30, "ULbuf", function(textarea)
-        loadDTCBuffer(textarea:getText())
-end)
-
 function getCurrentLineOffsets(text, cur)
 
     local linestart = cur
@@ -852,15 +1029,17 @@ function getCurrentLineOffsets(text, cur)
     return linestart, lineend
 end
 
-addButton(60, 00, 50, 30, "ULsel", function(textarea)
+local function handleSelection(textarea)
         local text = textarea:getText()
-        local start, end_ = getSelection()
+        local start, eos = getSelection()
 
-        if start == end_ then
-            start, end_ = getCurrentLineOffsets(text, end_)
+        if start == eos then    -- if nothing is highlighted use the current line of cursor
+            start, eos = getCurrentLineOffsets(text, eos)
+        else
+            start = start + 1
         end
-        
-        sel = string.sub(text, start, end_)
+
+        sel = string.sub(text, start, eos)
         
         loglocal('ULsel len '..string.len(sel)..': #'..sel..'#')
 
@@ -902,14 +1081,7 @@ addButton(60, 00, 50, 30, "ULsel", function(textarea)
         
         loglocal('addButton ULsel: '..sel)
         loadDTCBuffer(sel)
-end)
-
-addButton(120, 00, 50, 30, "CANCEL", function(textarea)
-        domacro.inp = {}
-        domacro.idx = 1
-        domacro.flag = false
-end)
-
+end
 
 -- WP getting/setting section
 
@@ -969,24 +1141,70 @@ function getloc()
     return str
 end
 
---start second row button
-addButton(10, 30, 50, 30, "ULLL", function(text)
-        str = getloc()
-        loglocal('aeronautespit: ULLL: '..str)
+-- first row buttons
+for i=1,6 do
+    butts[i] = {((i-1)*buttw), 0, buttw, butth}
+end
 
-        wp(str)
-        domacro.flag = true
-end)
+butts[1][5] = "LL"
+butts[1][6] = function(text)
+    str = getloc()
+    loglocal('aeronautespit: button LL: '..str)
+    wp(str)
+    domacro.flag = true
+end
 
-addButton(70, 30, 50, 30, "WPLL", function(text)
-        text:insertBelow("wp('" .. getloc() .. "')")
-end)
+butts[2][5] = "WP"
+butts[2][6] = function(text)
+    text:insertBelow("wp('" .. getloc() .. "')")
+end
 
-addButton(130, 30, 50, 30, "RELOAD", function(text)
+butts[3][5] = "Sel"
+butts[3][6] = handleSelection
+
+butts[4][5] = "Buf"
+butts[4][6] = function(textarea)
+    loadDTCBuffer(textarea:getText())
+end
+
+butts[5][5] = "CANCEL"
+butts[5][6] = function(textarea)
+        domacro.inp = {}
+        domacro.idx = 1
+        domacro.flag = false
+end
+
+butts[6][5] = "RELOAD"
+butts[6][6] = function(text)
         loglocal('aeronautespit: RELOAD click '..#LT)
         assignKP()
         assignCustom()
-end)
+end
+
+--start second row buttons
+for i=1,buttfnamt do
+    --[[ attempt at runtime generation of indirection func table for dynamic buttons
+    local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
+    local fn
+    local res
+    fn, res = loadstring(str)
+    if not fn then
+        loglocal('aeronautes button butts fns : '..res)
+        end
+    --]]
+    butts[i+6] = {((i-1)*buttw)+10, butth, buttw, butth, tostring(i)}
+end
+
+butts[7][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
+butts[8][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
+butts[9][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
+butts[10][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
+butts[11][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
+butts[12][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
+
+for i,j in pairs(butts) do
+    addButton(j[1], j[2], j[3], j[4], j[5], j[6])
+end
 
 addFrameListener('aeronautes-pit', function()
         if domacro.flag == true then
