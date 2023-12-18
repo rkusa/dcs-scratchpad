@@ -1,4 +1,4 @@
-# DCS Scratchpad
+# DCS Scratchpad - Draken35s with UH-60L support
 
 This release is being worked on to provide support for the awesome UH-60L mod (not its sub-mods at the moment, so just the UH-60L and its armed version).
 Based on Draken35's version of DCS Scratchpad (this version here https://forum.dcs.world/topic/195700-in-game-scratchpad-mod-available-works-great-in-vr/page/28/#comment-5307076 )
