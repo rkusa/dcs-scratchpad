@@ -158,7 +158,7 @@ addCoordinateListener(
 	elseif ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R" then
       -- Format the coordinates in DDM for these H-60 variations
       insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."||"
-	  log('H 60 Coord found are ' .. lat .. ' ' .. lon)
+	  --log('H 60 Coord found are ' .. lat .. ' ' .. lon)
 	elseif ac == "F-16C_50"  then
       insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."|"..string.format("%.0f", alt*3.28084).."|" 
     elseif ac == "M-2000C"  then
@@ -277,7 +277,7 @@ function loadCoordinates(StartWaypoint,Waypoints)--, ExtraDelay)
         -- Add a conditional branch for H-60 variants
     elseif ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R" then
         -- Call the loadInH60 function for H-60 aircraft variants
-		log('loadCoordinates found H60')
+		--log('loadCoordinates found H60')
         loadInH60(StartWaypoint, Waypoints)
     elseif ac == "F-15ESE"  then
       local device = 57
@@ -349,12 +349,15 @@ function ProcessInputBuffer()
   end
 
 end -- function
-
+--================================================================================================================
+--  H-60 logic
+--================================================================================================================
 function loadInH60(start, waypoints)
 	inputbuffer = {}
 	log('called LoadinH60')
     local device = 23
 	local delay = 50
+	local wp_name
     local keys = {
 		['1']=			{LTR= nil,  KEY='3242'},-- AN/ASN-128B Btn 1
 		['2']=			{LTR= nil,  KEY='3243'},-- AN/ASN-128B Btn 2
@@ -414,9 +417,9 @@ function loadInH60(start, waypoints)
 	clicOn(device, 3235, delay, 0.04) -- set Mode Sel to LAT LON	
 	--clicOn(device, keys['DispSel'].KEY, delay, "0.05") -- set Display Sel to WP/TGT
 	--clicOn(device, keys['ModeSel'], delay, "0.04") -- set Mode Sel to LAT LON
-	clicOn(device, keys['INC'].KEY, delay)
-	clicOn(device, keys['KYBD'].KEY, delay)
-	clicOn(device, keys['ENT'].KEY, delay)
+	--clicOn(device, keys['INC'].KEY, delay)
+	--clicOn(device, keys['KYBD'].KEY, delay)
+	--clicOn(device, keys['ENT'].KEY, delay)
 
 	-- press INC
 	-- Press KYBD
@@ -439,7 +442,50 @@ function loadInH60(start, waypoints)
 			-- press ENT
 		-- end
 	-- end
-	
+	for _,v in pairs(waypoints) do
+		clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
+   		if v.name ~='' then
+			if string.len(v.name) >= 10 then
+				wp_name = string.sub(string.upper(v.name),1,10) --cut the waypoint name to 10 char
+					for i = 1,string.len(wp_name) do
+      					local K = string.sub(ident,i,i)
+      					if K.LTR ~='' then
+							clicOn(device, keys[K].LTR, delay)
+							clicOn(device, keys[K].KEY, delay)
+						else
+							clicOn(device, keys[K].KEY, delay)
+						end
+    				end
+			else
+				wp_name=''
+			end
+
+    clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for ident
+    log('v.free:<'..v.free..'>')
+    if v.free ~='' then
+      for i = 1,string.len(v.free ) do
+        local K = string.upper(string.sub(v.free,i,i))
+        if keys[K] then
+          clicOn(devices[KU],keys[K].code ,keys[K].delay)    
+        else
+          log('Apache key:"'..K..'" ignored')
+        end
+      end
+    end
+    clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for free
+    clicOn(devices[KU],keys['CLR'].code ,keys['CLR'].delay) -- clear UTM
+    for i = 1,string.len(v.mgrs) do
+      local K = string.upper(string.sub(v.mgrs,i,i))
+      clicOn(devices[KU],keys[K].code ,keys[K].delay)    
+    end
+    clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for UTM
+    clicOn(devices[KU],keys['CLR'].code ,keys['CLR'].delay) -- clear ALT 
+    for i = 1,string.len(v.alt) do
+      local K = string.upper(string.sub(v.alt,i,i))
+      clicOn(devices[KU],keys[K].code ,keys[K].delay)    
+    end   
+     clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for ALT   
+  end --for i,v in pairs(waypoints) do
   doLoadCoords = true
 end
 
