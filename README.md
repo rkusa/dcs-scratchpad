@@ -1,5 +1,9 @@
 # DCS Scratchpad
 
+# This release is being worked on to provide support for the awesome UH-60L mod (not its sub-mods at the moment, so just the UH-60L and its armed version).
+# Find the UH-60L mod here https://discord.gg/rP4sss5c
+
+
 Resizable and movable DCS World in-game Scratchpad for quick persistent notes - especially useful in VR.
 
 ## Installation
