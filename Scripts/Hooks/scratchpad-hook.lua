@@ -1,3 +1,4 @@
+-- Draken35's fork 07/13/23 of  v0.07
 local function loadScratchpad()
     package.path = package.path .. ";.\\Scripts\\?.lua;.\\Scripts\\UI\\?.lua;"
 
@@ -445,6 +446,42 @@ local function loadScratchpad()
             }
             saveConfiguration()
         end
+
+        -- scan scratchpad dir for pages
+        for name in lfs.dir(dirPath) do
+            local path = dirPath .. name
+            if lfs.attributes(path, "mode") == "file" then
+                if name:sub(-4) ~= ".txt" then
+                    log("Ignoring file " .. name .. ", because of it doesn't seem to be a text file (.txt)")
+                elseif lfs.attributes(path, "size") > 1024 * 1024 then
+                    log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
+                else
+                    log("found page " .. path)
+                    table.insert(
+                        pages,
+                        {
+                            name = name:sub(1, -5),
+                            path = path
+                        }
+                    )
+                    pagesCount = pagesCount + 1
+                end
+            end
+        end
+
+        -- there are no pages yet, create one
+        if pagesCount == 0 then
+            path = dirPath .. [[0000.txt]]
+            log("creating page " .. path)
+            table.insert(
+                pages,
+                {
+                    name = "0000",
+                    path = path
+                }
+            )
+            pagesCount = pagesCount + 1
+        end
     end
 
     local function saveConfiguration()
@@ -544,50 +581,80 @@ local function loadScratchpad()
         if type(opts) ~= "table" then
             opts = {}
         end
+        if format ~= 'MGRS' then
+          local h
+          if isLat then
+              if d < 0 then
+                  h = 'S'
+                  d = -d
+              else
+                  h = 'N'
+              end
+          else
+              if d < 0 then
+                  h = 'W'
+                  d = -d
+              else
+                  h = 'E'
+              end
+          end
 
-        local h
-        if isLat then
-            if d < 0 then
-                h = 'S'
-                d = -d
-            else
-                h = 'N'
-            end
-        else
-            if d < 0 then
-                h = 'W'
-                d = -d
-            else
-                h = 'E'
-            end
-        end
+          local g = math.floor(d)
+          local m = d * 60 - g * 60
 
-        local g = math.floor(d)
-        local m = d * 60 - g * 60
-
-        if format == "DMS" then -- Degree Minutes Seconds
-            m = math.floor(m)
-            local s = d * 3600 - g * 3600 - m * 60
-            s = math.floor(s * 100) / 100
-            return string.format('%s %2d°%.2d\'%05.2f"', h, g, m, s)
-        elseif format == "DDM" then -- Degree Decimal Minutes
-            local precision = 3
-            if opts.precision ~= nil then
+          if format == "DMS" then -- Degree Minutes Seconds
+              m = math.floor(m)
+              local s = d * 3600 - g * 3600 - m * 60
+              s = math.floor(s * 100) / 100
+              local precision = 2
+              if opts.precision ~= nil then
                 precision = opts.precision
-            end
-            if opts.showNegative ~= nil then
-                g, h = showNegative(g, h)
-            end
-            local degreesWidth = 2
-            if opts.lonDegreesWidth ~= nil and not isLat then
-                degreesWidth = opts.lonDegreesWidth
-                if opts.showNegative ~= nil and g < 0 then
-                    degreesWidth = degreesWidth + 1
+              end
+              if not isLat then
+                return string.format("%s %03d°%02d'"..'%0'..(precision+2)..'.'..precision..'f"', h, g, m, s)
+              else
+                return string.format("%s %02d°%02d'"..'%0'..(precision+2)..'.'..precision..'f"', h, g, m, s)
+              end
+          elseif format == "DDM" then -- Degree Decimal Minutes
+              local precision = 3
+              if opts.precision ~= nil then
+                  precision = opts.precision
+              end
+              if opts.showNegative ~= nil then
+                  g, h = showNegative(g, h)
+              end
+              local degreesWidth = 2
+              if opts.lonDegreesWidth ~= nil and not isLat then
+                  degreesWidth = opts.lonDegreesWidth
+                  if opts.showNegative ~= nil and g < 0 then
+                      degreesWidth = degreesWidth + 1
+                  end
+              end
+              return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
+          else -- Decimal Degrees
+              return  string.format('%f', showNegative(d, h))
+          end
+        else
+          local l = string.len(d)
+          local r = ''
+          local t = ''
+          local ti = 0
+          for i =1,l do
+            local c = string.sub(d,i,i)
+            if c == ' ' or i == l then
+              ti = ti + 1
+              if ti >=4 then
+                if opts.precision ~= nil then
+                  t = string.sub(t,1,opts.precision)
                 end
+              end
+              r = r .. t
+              t = ''
+            else
+              t = t .. c
             end
-            return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
-        else -- Decimal Degrees
-            return  string.format('%f', showNegative(d, h))
+          end
+          return r
         end
     end
 
@@ -598,27 +665,27 @@ local function loadScratchpad()
 
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
-            return {DMS = true, DDM = {precision = 4}, MGRS = true}
-        elseif string.sub(ac, 1, 5) == "A-10C" or ac == "AV-8B" then
-            return {DDM = true, MGRS = true}
-        elseif string.sub(ac, 1, 4) == "F-14" then
-            return {DDM = {precision = 1}}
-        elseif string.sub(ac, 2, 5) == "H-60" then
-            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
+            return {DDM = {precision = 4, lonDegreesWidth = 3}, MGRS = true, DMS = true}
+        elseif ac == "A-10C_2" or ac == "A-10C" then
+            return {DMS = false, DDM = {precision = 3, lonDegreesWidth = 3}, MGRS = true}
+        elseif ac == "AV8BNA" then
+            return {DDM = {precision = 3, lonDegreesWidth = 3}, DMS = {precision = 3, lonDegreesWidth = 3},  MGRS = true}            
+        elseif ac == "F-14B" or ac == "F-14A-135-GR" then
+            return {DMS = true}  
+		elseif ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R" then
+            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true, DMS = true}
+		elseif ac == "M-2000C" then
+            return {DDM = {precision = 3, lonDegreesWidth = 3}}            
         elseif ac == "F-15ESE" then
-            return {DDM = {precision = 3, lonDegreesWidth = 3}, MGRS = true}
-        elseif ac == "M-2000C" then
-            return {DDM = {precision = 1, lonDegreesWidth = 3}}
+            return {DDM = {precision = 3, lonDegreesWidth = 3}}
         elseif ac == "F-16C_50" then
             return {DDM = {lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "AH-64D_BLK_II" then
-            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
-        elseif string.sub(ac, 1, 5) == "Ka-50" then
+            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = {precision = 4}}
+        elseif ac == "Ka-50" then
             return {DDM = {precision = 1, lonDegreesWidth = 3, showNegative = true}}
-        elseif string.sub(ac, 1, 5) == "SA342" then
+        elseif ac == "SA342M" or ac == "SA342L" or ac == "SA342Mistral" or ac == "SA342Minigun" then
             return {DDM = {precision = 1}}
-        elseif ac == "Hercules" then
-            return {DDM = {precision = 3, lonDegreesWidth = 3}}
         else
             return {DMS = true, DDM = true, MGRS = true}
         end
@@ -630,7 +697,7 @@ local function loadScratchpad()
         local lat, lon = Terrain.convertMetersToLatLon(pos.x, pos.z)
         local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
         local types = coordsType()
-
+--[[
         local result = "\n\n"
         if types.DMS then
             result = result .. formatCoord("DMS", true, lat, types.DMS) .. ", " .. formatCoord("DMS", false, lon, types.DMS) .. "\n"
@@ -643,12 +710,13 @@ local function loadScratchpad()
         end
         result = result .. string.format("%.0f", alt) .. "m, ".. string.format("%.0f", alt*3.28084) .. "ft\n\n"
 
-        local text = Text.new()
-        text:insertBelow(result)
 
+--]]
+        local text = Text.new()
+        --text:insertBelow(result)
         for _, listener in pairs(coordListeners) do
             if type(listener) == "function" then
-                listener(text, lat, lon, alt)
+                listener(text, lat, lon, alt, mgrs, types)
             end
         end
     end
@@ -815,6 +883,7 @@ local function loadScratchpad()
         local extensionsPath = lfs.writedir() .. [[Scripts\Scratchpad\Extensions\]]
         for name in lfs.dir(extensionsPath) do
             local path = extensionsPath .. name
+            log(path)
             if lfs.attributes(path, "mode") == "file" then
                 if name:sub(-4) ~= ".lua" then
                     log("Ignoring file " .. name .. ", because of it doesn't seem to be an extension (.lua)")
