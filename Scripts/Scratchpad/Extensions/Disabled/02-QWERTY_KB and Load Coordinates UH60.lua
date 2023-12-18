@@ -423,23 +423,23 @@ function loadInH60(start, waypoints)
 	-- if 
 		-- name, insert name
 		-- else press kybd
-	-- end
-	-- if 
-		-- N press 5
-		-- S press 7
-		-- input numbers
-		-- press KYBD
+		-- read lat
+		-- if
+			-- N press 5
+			-- S press 7
+			-- input numbers
+			-- if find space then 
+				-- press KYBD
+			-- end
+		-- read lon
+		--if
+			-- E press 2
+			-- W press 8
+			-- input numbers
+			-- press ENT
+		-- end
 	-- end
 	
-	-- if 
-		-- E press 2
-		-- W press 8
-		-- input numbers
-		-- press ENT
-	-- if 
-	
-
-
   doLoadCoords = true
 end
 
