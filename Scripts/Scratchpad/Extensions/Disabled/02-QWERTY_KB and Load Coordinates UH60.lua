@@ -158,7 +158,7 @@ addCoordinateListener(
 	elseif ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R" then
       -- Format the coordinates in DDM for these H-60 variations
       insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."||"
-	  --log('H 60 Coord found are ' .. lat .. ' ' .. lon)
+	  log('H 60 Coord found are ' .. lat .. ' ' .. lon)
 	elseif ac == "F-16C_50"  then
       insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."|"..string.format("%.0f", alt*3.28084).."|" 
     elseif ac == "M-2000C"  then
@@ -229,13 +229,13 @@ function insertCoords(text)
       if lineType == 'WP' and (#tokens == 3 or #tokens == 4) and (ac == 'UH-60L' or ac == 'SH60B' or ac == 'MH-60R') then
         wpi = wpi + 1
         -- Extracting waypoint data for H60
-		if #tokens == 4 then
-			Waypoints[wpi] = {des = tokens[1], lat = tokens[2], lon = tokens[3], name = tokens[4]}
-		else
-			Waypoints[wpi] = {des = tokens[1], lat = tokens[2], lon = tokens[3], name = ''}
-		end
+		    if #tokens == 4 then
+			    Waypoints[wpi] = {des = tokens[1], lat = tokens[2], lon = tokens[3], name = tokens[4]}
+		    else
+			    Waypoints[wpi] = {des = tokens[1], lat = tokens[2], lon = tokens[3], name = ''}
+		    end
       end
-      if lineType == 'WP' and #tokens == 4 and ac ~= 'AH-64D_BLK_II' and  ac ~= "A-10C_2" and ac ~= "A-10C" then
+      if lineType == 'WP' and #tokens == 4 and ac ~= 'AH-64D_BLK_II' and  ac ~= "A-10C_2" and ac ~= "A-10C" and (ac ~= "UH-60L" or ac == 'SH60B' or ac == 'MH-60R') then
         wpi = wpi + 1
         Waypoints[wpi] = {des = tokens[1], lat = tokens[2], lon = tokens[3], alt = tokens[4] }
       end
@@ -355,9 +355,22 @@ end -- function
 function loadInH60(start, waypoints)
 	inputbuffer = {}
 	log('called LoadinH60')
-    local device = 23
-	local delay = 50
-	local wp_name
+  local device = 23
+	local delay = 25
+	local compliantName = ''
+
+  local function Typevalue(keytopress)
+    if keys[keytopress].LTR ~='' then
+      clicOn(device, keys[keytopress].LTR, delay)
+      log('clicked key '.. keys[keytopress].LTR)
+      clicOn(device, keys[keytopress].KEY, delay)
+      log('clicked key '.. keys[keytopress].KEY)
+    else
+      clicOn(device, keys[keytopress].KEY, delay)
+      og('clicked key '.. keys[keytopress].KEY .. ' only')
+    end
+  end
+
     local keys = {
 		['1']=			{LTR= nil,  KEY='3242'},-- AN/ASN-128B Btn 1
 		['2']=			{LTR= nil,  KEY='3243'},-- AN/ASN-128B Btn 2
@@ -414,78 +427,56 @@ function loadInH60(start, waypoints)
 		['#']=			{LTR='3240', KEY='3252'}, --9 LTR R Keys
     }
 	clicOn(device, 3236, delay, 0.05) -- set Display Sel to WP/TGT
-	clicOn(device, 3235, delay, 0.04) -- set Mode Sel to LAT LON	
-	--clicOn(device, keys['DispSel'].KEY, delay, "0.05") -- set Display Sel to WP/TGT
-	--clicOn(device, keys['ModeSel'], delay, "0.04") -- set Mode Sel to LAT LON
-	--clicOn(device, keys['INC'].KEY, delay)
-	--clicOn(device, keys['KYBD'].KEY, delay)
-	--clicOn(device, keys['ENT'].KEY, delay)
+	clicOn(device, 3235, delay, 0.04) -- set Mode Sel to LAT LON
+  log('   initial DISP SEL and MODE SEL presses')
+  --clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
+  --log('   initial INC press')
 
-	-- press INC
-	-- Press KYBD
-	-- if 
-		-- name, insert name
-		-- else press kybd
-		-- read lat
-		-- if
-			-- N press 5
-			-- S press 7
-			-- input numbers
-			-- if find space then 
-				-- press KYBD
-			-- end
-		-- read lon
-		--if
-			-- E press 2
-			-- W press 8
-			-- input numbers
-			-- press ENT
-		-- end
-	-- end
-	for _,v in pairs(waypoints) do
-		clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
-   		if v.name ~='' then
-			if string.len(v.name) >= 10 then
-				wp_name = string.sub(string.upper(v.name),1,10) --cut the waypoint name to 10 char
-					for i = 1,string.len(wp_name) do
-      					local K = string.sub(ident,i,i)
-      					if K.LTR ~='' then
-							clicOn(device, keys[K].LTR, delay)
-							clicOn(device, keys[K].KEY, delay)
-						else
-							clicOn(device, keys[K].KEY, delay)
-						end
-    				end
-			else
-				wp_name=''
-			end
+	for _,v in pairs(waypoints) do -- log the whole waypoint as read
+    clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
+    log('   initial INC press')
+    for i,iv in pairs(v) do
+      log('   ' .. tostring(i) .. ": " .. tostring(iv))
+    end
 
-    clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for ident
-    log('v.free:<'..v.free..'>')
-    if v.free ~='' then
-      for i = 1,string.len(v.free ) do
-        local K = string.upper(string.sub(v.free,i,i))
-        if keys[K] then
-          clicOn(devices[KU],keys[K].code ,keys[K].delay)    
-        else
-          log('Apache key:"'..K..'" ignored')
-        end
+    -- WAYPOINT NAME - don't even know why I included this. 
+    if v.name:len() > 0 then -- check if a name exists
+      if (v.name:len() > 0 and v.name:len() <= 13) then compliantName=v.name
+      elseif v.name:len() > 13 then -- check if the name is more than 13 digits
+        compliantName=v.name:sub(1, 13) --shortens it to 13
       end
+      log('   v.name: '..v.name)
+      log('   13char name: '..compliantName)
+      clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Name
+      log('   clicked KYBD for name')
+      for i = 1, compliantName:len() do --types the whole name
+        vv = compliantName:sub(i,i)
+        log('   vv '.. vv)
+        local k = string.upper(vv)
+        log('   K ' .. k)
+        if keys[k].LTR ~='' then
+          log('   Doing the letter thing')
+          clicOn(device, keys[k].LTR, delay)
+          log('   DTLT clicked key '.. keys[k].LTR)
+          clicOn(device, keys[k].KEY, delay)
+          log('   DTLT clicked key '.. keys[k].KEY)
+        else
+          log('   Doing the NUMBER thing')
+          clicOn(device, keys[k].KEY, delay)
+          log('   ONLY clicked key '.. keys[k].KEY)
+        end
+    	end
+      clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Northing
+      log('   clicked KYBD for northing')
+      -- LAT (N/S) handling
+      clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Easting
+      log('   clicked KYBD for easting')
+      -- LON (E/W) handling
+      clicOn(device, keys['ENT'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Out to the next
+      log('   clicked ENT for saving pvt Ryan')
     end
-    clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for free
-    clicOn(devices[KU],keys['CLR'].code ,keys['CLR'].delay) -- clear UTM
-    for i = 1,string.len(v.mgrs) do
-      local K = string.upper(string.sub(v.mgrs,i,i))
-      clicOn(devices[KU],keys[K].code ,keys[K].delay)    
-    end
-    clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for UTM
-    clicOn(devices[KU],keys['CLR'].code ,keys['CLR'].delay) -- clear ALT 
-    for i = 1,string.len(v.alt) do
-      local K = string.upper(string.sub(v.alt,i,i))
-      clicOn(devices[KU],keys[K].code ,keys[K].delay)    
-    end   
-     clicOn(devices[KU],keys['ENTER'].code ,keys['ENTER'].delay) -- for ALT   
-  end --for i,v in pairs(waypoints) do
+  end
+
   doLoadCoords = true
 end
 
