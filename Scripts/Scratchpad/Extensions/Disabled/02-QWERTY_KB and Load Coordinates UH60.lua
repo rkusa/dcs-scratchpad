@@ -294,7 +294,7 @@ function loadCoordinates(StartWaypoint,Waypoints)--, ExtraDelay)
     end
   end -- function
 --==================================================================================
--- the new version takes into account delay in ms, not in frames
+--[[ -- the new version takes into account delay in ms, not in frames
 function clicOn(device, code, delay, position )
   delay = delay or 250
   position = position or 1
@@ -303,17 +303,17 @@ function clicOn(device, code, delay, position )
   local datas ={device, code, delayInFrames, position} --this should make it so the delay is in milliseconds, not frames, to make the duration of a keypress more predictable
   table.insert(inputBuffer,datas)
   log('clicOn('..device..','.. code..','.. delay..','.. position..')')
-end -- function
+end -- function ]]
 
---[[ function clicOn(device, code, delay, position ) --commented out until tested, will need to be removed once the new function is proven
+function clicOn(device, code, delay, position ) --commented out until tested, will need to be removed once the new function is proven
   delay = delay or 0 --delay here is expressed in frames
   position = position or 1
   local datas ={device, code, delay, position}
   table.insert(inputBuffer,datas)
   log('clicOn('..device..','.. code..','.. delay..','.. position..')')
-end -- function ]]
+end -- function 
 --==================================================================================
-function ProcessInputBuffer()  
+--[[ function ProcessInputBuffer()  
   for i = dataIndex, #inputBuffer do
       if not doDepress then 
           Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],inputBuffer[i][4])
@@ -342,14 +342,15 @@ function ProcessInputBuffer()
       break
   end
 
-  if dataIndex == table.getn(inputBuffer)+1 then
+  if dataIndex == #inputBuffer + 1 then
       doLoadCoords = false
       dataIndex=1
       counterFrame =0
       doDepress =false
-  en
+  end
+end ]]
 
---[[ function ProcessInputBuffer()  
+function ProcessInputBuffer()  
   for i = dataIndex, #inputBuffer do
       if not doDepress then 
           Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],inputBuffer[i][4])
@@ -386,7 +387,7 @@ function ProcessInputBuffer()
       doDepress =false
   end
 
-end -- function ]]
+end -- function
 --================================================================================================================
 --  H-60 logic
 --================================================================================================================

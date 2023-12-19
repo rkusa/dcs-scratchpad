@@ -1,4 +1,4 @@
--- v 231016A
+-- v Mr.S 231220
 local TICKS = 1 -- To slow down processing, increase this number
 --==================================================================================
 do -- A QUERTY'ish Keyboard by Draken35
@@ -16,6 +16,7 @@ do -- A QUERTY'ish Keyboard by Draken35
   local height = 30
   local capsOn = false
   local shift = false
+  local sixtydebug = false
 
   addButton(0, 0, 50, 30, "CLR", function(text)
     text:setText("")
@@ -294,7 +295,7 @@ function loadCoordinates(StartWaypoint,Waypoints)--, ExtraDelay)
     end
   end -- function
 --==================================================================================
--- the new version takes into account delay in ms, not in frames
+--[[ -- the new version takes into account delay in ms, not in frames
 function clicOn(device, code, delay, position )
   delay = delay or 250
   position = position or 1
@@ -303,17 +304,17 @@ function clicOn(device, code, delay, position )
   local datas ={device, code, delayInFrames, position} --this should make it so the delay is in milliseconds, not frames, to make the duration of a keypress more predictable
   table.insert(inputBuffer,datas)
   log('clicOn('..device..','.. code..','.. delay..','.. position..')')
-end -- function
+end -- function ]]
 
---[[ function clicOn(device, code, delay, position ) --commented out until tested, will need to be removed once the new function is proven
-  delay = delay or 0 --delay here is expressed in frames
+function clicOn(device, code, delay, position ) --commented out until tested, will need to be removed once the new function is proven
+  delay = delay or 15 --delay here is expressed in frames
   position = position or 1
   local datas ={device, code, delay, position}
   table.insert(inputBuffer,datas)
   log('clicOn('..device..','.. code..','.. delay..','.. position..')')
-end -- function ]]
+end -- function 
 --==================================================================================
-function ProcessInputBuffer()  
+--[[ function ProcessInputBuffer()  
   for i = dataIndex, #inputBuffer do
       if not doDepress then 
           Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],inputBuffer[i][4])
@@ -342,14 +343,15 @@ function ProcessInputBuffer()
       break
   end
 
-  if dataIndex == table.getn(inputBuffer)+1 then
+  if dataIndex == #inputBuffer + 1 then
       doLoadCoords = false
       dataIndex=1
       counterFrame =0
       doDepress =false
-  en
+  end
+end ]]
 
---[[ function ProcessInputBuffer()  
+function ProcessInputBuffer()  
   for i = dataIndex, #inputBuffer do
       if not doDepress then 
           Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],inputBuffer[i][4])
@@ -386,16 +388,16 @@ function ProcessInputBuffer()
       doDepress =false
   end
 
-end -- function ]]
+end -- function
 --================================================================================================================
 --  H-60 logic
 --================================================================================================================
 function loadInH60(waypoints)
-  local status, err = pcall(function()
+  --local status, err = pcall(function()
     inputbuffer = {}
-    log('called LoadinH60')
+    if sixtydebug == true then log('called LoadinH60') end
     local device = 23
-    local delay = 350
+    local delay = 20
     local compliantName = ''
 
       local keys = {
@@ -430,7 +432,7 @@ function loadInH60(waypoints)
       ['M']=			{LTR='3238', KEY='3247'}, --5 LTR L Keys
       ['P']=			{LTR='3238', KEY='3248'}, --6 LTR L Keys
       ['S']=			{LTR='3238', KEY='3250'}, --7 LTR L Keys
-      ['W']=			{LTR='3238', KEY='3251'}, --8 LTR L Keys
+      ['V']=			{LTR='3238', KEY='3251'}, --8 LTR L Keys
       ['Z']=			{LTR='3238', KEY='3252'}, --9 LTR L Keys
       
       ['B']=			{LTR='3239', KEY='3242'}, --1 LTR M keys
@@ -440,7 +442,7 @@ function loadInH60(waypoints)
       ['N']=			{LTR='3239', KEY='3247'}, --5 LTR M keys
       ['Q']=			{LTR='3239', KEY='3248'}, --6 LTR M keys
       ['T']=			{LTR='3239', KEY='3250'}, --7 LTR M keys
-      ['V']=			{LTR='3239', KEY='3251'}, --8 LTR M keys
+      ['W']=			{LTR='3239', KEY='3251'}, --8 LTR M keys
       ['*']=			{LTR='3239', KEY='3252'}, --9 LTR M keys
       
       ['C']=			{LTR='3240', KEY='3242'}, --1 LTR R Keys
@@ -456,73 +458,95 @@ function loadInH60(waypoints)
 
       local function Typevalue(keytopress)
         if keys[keytopress] then
-          if keys[keytopress].LTR ~='' then  --checks if the pressed key has a .LTR attribute. This works
-            log('   Doing the letter thing') --tells me that it is typing a letter (so it will use both .LTR and .KEY attributes to do two keypresses, LTR_R/M/L first and the corresponding number key code after)
+          if keys[keytopress].LTR ~= nil then  --checks if the pressed key has a .LTR attribute. This works
+            if sixtydebug == true then log('   Doing the letter thing') end --tells me that it is typing a letter (so it will use both .LTR and .KEY attributes to do two keypresses, LTR_R/M/L first and the corresponding number key code after)
             clicOn(device, keys[keytopress].LTR, delay) --actually press the LTR_R/M/L button
-            log('   DTLT clicked key '.. keys[keytopress].LTR) --tell me which one you've pressed
+            if sixtydebug == true then log('   DTLT clicked key '.. keys[keytopress].LTR .. ' equals to ' .. keytopress) end --tell me which one you've pressed
             clicOn(device, keys[keytopress].KEY, delay) --actually press the number button onthe keypad
-            log('   DTLT clicked key '.. keys[keytopress].KEY) --tell me which you have pressed
+            if sixtydebug == true then log('   DTLT clicked key '.. keys[keytopress].KEY .. ' equals to ' .. keytopress) end --tell me which you have pressed
           elseif (keys[keytopress].LTR =='' or keys[keytopress].LTR == nil) then --this did not work and caused the script to break (but resume happily). Changed to elseif to see if anything changes
-            log('   Doing the NUMBER thing') 
+            if sixtydebug == true then log('   Doing the NUMBER thing') end
             clicOn(device, keys[keytopress].KEY, delay)
-            log('   ONLY clicked key '.. keys[keytopress].KEY)
+            if sixtydebug == true then log('   ONLY clicked key '.. keys[keytopress].KEY .. ' equals to ' .. keytopress) end
           else
-            log('   ...no joy, boss')
+            if sixtydebug == true then log('   ...no joy, boss') end
           end
         else
-          log('Key ' .. keytopress .. ' does not exist in keys table')
+          if sixtydebug == true then log('Key ' .. keytopress .. ' does not exist in keys table') end
         end
       end
   
     clicOn(device, 3236, delay, 0.05) -- set Display Sel to WP/TGT
     clicOn(device, 3235, delay, 0.04) -- set Mode Sel to LAT LON
-    log('   initial DISP SEL and MODE SEL presses')
-    --clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
-    --log('   initial INC press')
+    if sixtydebug == true then log('   initial DISP SEL and MODE SEL presses') end
 
     for _,v in pairs(waypoints) do -- log the whole waypoint as read
       for i,iv in pairs(v) do
-        log('   ' .. tostring(i) .. ": " .. tostring(iv))
+        if sixtydebug == true then log('   ' .. tostring(i) .. ": " .. tostring(iv)) end
       end
 
       clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
-      log('   initial INC press')
+      if sixtydebug == true then log('   initial INC press') end
 
       -- WAYPOINT NAME - don't even know why I included this. 
-      if v.name:len() > 0 then -- check if a name exists
-        if (v.name:len() > 0 and v.name:len() <= 13) then compliantName=v.name
+      if v.name:len() >= 0 then -- check if a name exists
+        if (v.name:len() == 0 or v.name:len() == nil) then compliantName=' ' -- if not, set it to a space
+        elseif(v.name:len() > 0 and v.name:len() <= 13) then compliantName=v.name
         elseif v.name:len() > 13 then -- check if the name is more than 13 digits
           compliantName=v.name:sub(1, 13) --shortens it to 13
         end
-        log('   v.name: '..v.name) -- log the full name as taken from the scratchpad
-        log('   13char name: '..compliantName) -- log the shortened stirng (so it fits on the display, I have a feeling the -60 would accept it anyways)
+        if sixtydebug == true then log('   v.name: '..v.name) end-- log the full name as taken from the scratchpad
+        if sixtydebug == true then log('   13char name: '..compliantName) end-- log the shortened stirng (so it fits on the display, I have a feeling the -60 would accept it anyways)
         clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Name
-        log('   clicked KYBD for name') --yeah please tell me wht you're doing
+        if sixtydebug == true then log('   clicked KYBD for name') end--yeah please tell me wht you're doing
         for i = 1, compliantName:len() do --types the whole name, starting by iterating the string
           vv = compliantName:sub(i,i)   --iterates compliantName-s characters, one by one
-          log('   vv '.. vv)  --tell me what are you reading?
+          if sixtydebug == true then log('   vv '.. vv)  end --tell me what are you reading?
           local k = string.upper(vv)  --converts what has been read to uppercase, otherwise it won't have a correspondence in the keys{} table
-          log('   K ' .. k)   --shows the uppercase converted letter in the log
+          if sixtydebug == true then log('   K ' .. k) end  --shows the uppercase converted letter in the log
           Typevalue(k)  --calls the Typevalue function, which will press the corresponding key on the AN/ASN 128B
         end
+
         
-        clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Northing
-        log('   clicked KYBD for northing')
-        -- LAT (N/S) handling - refactor from A10 (maybe MGRS would be easier?)
+        clicOn(device, keys['KYBD'].KEY, delay) -- Select the next field on the AN/ASN 128B -- Should be Northing
+        if sixtydebug == true then log('   clicked KYBD for no(r)thing') end
+        if sixtydebug == true then log('   v.lat: '..v.lat) end -- log the full lat as taken from the scratchpad
+        for i = 1, v.lat:len() do --types the whole name, starting by iterating the string
+          vv = v.lat:sub(i,i)   --iterates compliantName-s characters, one by one
+          if sixtydebug == true then log('   vv_N '.. vv) end --tell me what are you reading?
+          if (vv == '"' or vv == "°"  or vv == " " or vv == "." or vv == "'" or vv == nil) then vv = ' '
+          else
+            local k = tostring(string.upper(vv))  --converts what has been read to uppercase, otherwise it won't have a correspondence in the keys{} table
+            if sixtydebug == true then log('   K_N ' .. k) end  --shows the uppercase converted letter in the log
+            Typevalue(k)  --calls the Typevalue function, which will press the corresponding key on the AN/ASN 128B
+          end
+        end
+
         clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Easting
-        log('   clicked KYBD for easting')
-        -- LON (E/W) handling refactor from A10 (maybe MGRS would be easier?)
+        if sixtydebug == true then log('   clicked KYBD for easting') end
+        if sixtydebug == true then log('   v.lon: '..v.lon) end -- log the full lon as taken from the scratchpad
+        for i = 1, v.lon:len() do --types the whole name, starting by iterating the string
+          vv = v.lon:sub(i,i)   --iterates compliantName-s characters, one by one
+          if sixtydebug == true then log('   vv_N '.. vv) end --tell me what are you reading?
+          if (vv == '"' or vv == "°"  or vv == " " or vv == "." or vv == "'" or vv == nil) then vv = ' '
+            else
+              local k = tostring(string.upper(vv))  --converts what has been read to uppercase, otherwise it won't have a correspondence in the keys{} table
+              if sixtydebug == true then log('   K_N ' .. k) end  --shows the uppercase converted letter in the log
+              Typevalue(k)  --calls the Typevalue function, which will press the corresponding key on the AN/ASN 128B
+            end
+        end
+
         clicOn(device, keys['ENT'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Out to the next
-        log('   clicked ENT for saving pvt Ryan')
+        if sixtydebug == true then log('   clicked ENT for saving dear lyf') end
 
       end
     end
     doLoadCoords = true
-  end)
+  end--[[ )
   if not status then
       log("An error occurred: " .. err)
   end
-end
+end ]]
 
 --==================================================================================
 function loadInAV8B(start,waypoints)
@@ -530,7 +554,7 @@ function loadInAV8B(start,waypoints)
     local isWP = true
     --                        0      1      2       3      4     5       6      7      8      9 
     local correspondance = {'3315','3302','3303','3304','3306','3307','3308','3310','3311','3312'}
-    local delay = 350
+    local delay = 20
     --[[
         L18 main menu
         L2 EHSD
@@ -1136,56 +1160,56 @@ function loadInApache(StartWaypoint,Waypoints,Seat)
     devices['PLT_KU'] = 29
     devices['CPG_KU'] = 30
 
-    keys['TSD'] = {code = '3029', delay = 500}
-    keys['B6'] 	= {code = '3013', delay = 500}
-    keys['L1'] 	= {code = '3024', delay = 500}
-    keys['L2'] 	= {code = '3023', delay = 500}
-    keys['L3'] 	= {code = '3022', delay = 500}
-    keys['L4'] 	= {code = '3021', delay = 500}
-    keys['L5'] 	= {code = '3020', delay = 500}
-    keys['L6'] 	= {code = '3019', delay = 500}
+    keys['TSD'] = {code = '3029', delay = 15}
+    keys['B6'] 	= {code = '3013', delay = 15}
+    keys['L1'] 	= {code = '3024', delay = 15}
+    keys['L2'] 	= {code = '3023', delay = 15}
+    keys['L3'] 	= {code = '3022', delay = 15}
+    keys['L4'] 	= {code = '3021', delay = 15}
+    keys['L5'] 	= {code = '3020', delay = 15}
+    keys['L6'] 	= {code = '3019', delay = 15}
 
-    keys['A'] 		= {code = '3007', delay = 500}
-    keys['B'] 		= {code = '3008', delay = 500}
-    keys['C'] 		= {code = '3009', delay = 500}
-    keys['D'] 		= {code = '3010', delay = 500}
-    keys['E'] 		= {code = '3011', delay = 500}
-    keys['F'] 		= {code = '3012', delay = 500}
-    keys['G'] 		= {code = '3013', delay = 500}
-    keys['H'] 		= {code = '3014', delay = 500}
-    keys['I'] 		= {code = '3015', delay = 500}
-    keys['J'] 		= {code = '3016', delay = 500}
-    keys['K'] 		= {code = '3017', delay = 500}
-    keys['L'] 		= {code = '3018', delay = 500}
-    keys['M'] 		= {code = '3019', delay = 500}
-    keys['N'] 		= {code = '3020', delay = 500}
-    keys['O'] 		= {code = '3021', delay = 500}
-    keys['P'] 		= {code = '3022', delay = 500}
-    keys['Q'] 		= {code = '3023', delay = 500}
-    keys['R'] 		= {code = '3024', delay = 500}
-    keys['S'] 		= {code = '3025', delay = 500}
-    keys['T'] 		= {code = '3026', delay = 500}
-    keys['U'] 		= {code = '3027', delay = 500}
-    keys['V'] 		= {code = '3028', delay = 500}
-    keys['W'] 		= {code = '3029', delay = 500}
-    keys['X'] 		= {code = '3030', delay = 500}
-    keys['Y'] 		= {code = '3031', delay = 500}
-    keys['Z'] 		= {code = '3032', delay = 500}
-    keys['0'] 		= {code = '3043', delay = 500}
-    keys['1'] 		= {code = '3033', delay = 500}
-    keys['2'] 		= {code = '3034', delay = 500}
-    keys['3'] 		= {code = '3035', delay = 500}
-    keys['4'] 		= {code = '3036', delay = 500}
-    keys['5'] 		= {code = '3037', delay = 500}
-    keys['6'] 		= {code = '3038', delay = 500}
-    keys['7'] 		= {code = '3039', delay = 500}
-    keys['8'] 		= {code = '3040', delay = 500}
-    keys['9'] 		= {code = '3041', delay = 500}
-    keys['-'] 		= {code = '3047', delay = 500}   
-    keys['CLR'] 	= {code = '3001', delay = 500}
-    keys['ENTER'] = {code = '3006', delay = 500}  
-    keys[' ']     = {code = '3003', delay = 500} 
-    keys['.'] 		= {code = '3042', delay = 500}         
+    keys['A'] 		= {code = '3007', delay = 15}
+    keys['B'] 		= {code = '3008', delay = 15}
+    keys['C'] 		= {code = '3009', delay = 15}
+    keys['D'] 		= {code = '3010', delay = 15}
+    keys['E'] 		= {code = '3011', delay = 15}
+    keys['F'] 		= {code = '3012', delay = 15}
+    keys['G'] 		= {code = '3013', delay = 15}
+    keys['H'] 		= {code = '3014', delay = 15}
+    keys['I'] 		= {code = '3015', delay = 15}
+    keys['J'] 		= {code = '3016', delay = 15}
+    keys['K'] 		= {code = '3017', delay = 15}
+    keys['L'] 		= {code = '3018', delay = 15}
+    keys['M'] 		= {code = '3019', delay = 15}
+    keys['N'] 		= {code = '3020', delay = 15}
+    keys['O'] 		= {code = '3021', delay = 15}
+    keys['P'] 		= {code = '3022', delay = 15}
+    keys['Q'] 		= {code = '3023', delay = 15}
+    keys['R'] 		= {code = '3024', delay = 15}
+    keys['S'] 		= {code = '3025', delay = 15}
+    keys['T'] 		= {code = '3026', delay = 15}
+    keys['U'] 		= {code = '3027', delay = 15}
+    keys['V'] 		= {code = '3028', delay = 15}
+    keys['W'] 		= {code = '3029', delay = 15}
+    keys['X'] 		= {code = '3030', delay = 15}
+    keys['Y'] 		= {code = '3031', delay = 15}
+    keys['Z'] 		= {code = '3032', delay = 15}
+    keys['0'] 		= {code = '3043', delay = 15}
+    keys['1'] 		= {code = '3033', delay = 15}
+    keys['2'] 		= {code = '3034', delay = 15}
+    keys['3'] 		= {code = '3035', delay = 15}
+    keys['4'] 		= {code = '3036', delay = 15}
+    keys['5'] 		= {code = '3037', delay = 15}
+    keys['6'] 		= {code = '3038', delay = 15}
+    keys['7'] 		= {code = '3039', delay = 15}
+    keys['8'] 		= {code = '3040', delay = 15}
+    keys['9'] 		= {code = '3041', delay = 15}
+    keys['-'] 		= {code = '3047', delay = 15}   
+    keys['CLR'] 	= {code = '3001', delay = 15}
+    keys['ENTER'] = {code = '3006', delay = 15}  
+    keys[' ']     = {code = '3003', delay = 15} 
+    keys['.'] 		= {code = '3042', delay = 15}         
   end -- maping
   
   --set Right MPD
