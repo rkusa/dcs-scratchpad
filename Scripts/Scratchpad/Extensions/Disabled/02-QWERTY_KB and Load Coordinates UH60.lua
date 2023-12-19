@@ -130,8 +130,6 @@ local dataIndex = 1
 local counterFrame = 0
 local doDepress = false
 local debugOn = true
-local debugPiOn = false
-
 
 local handler = {}
 function handler.onSimulationFrame()
@@ -154,11 +152,9 @@ addCoordinateListener(
     log('Adding coordinates for '..ac) 
     if ac == "FA-18C_hornet" then
       insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."|"..string.format("%.0f", alt*3.28084).."|"
-	-- Add new branches for UH-60L, SH60B, and MH-60R aircraft with DDM format
-	elseif ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R" then
-      -- Format the coordinates in DDM for these H-60 variations
-      insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."||"
-	  log('H 60 Coord found are ' .. lat .. ' ' .. lon)
+		elseif (ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R") then -- Add new branches for UH-60L, SH60B, and MH-60R aircraft with DDM format
+      insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."||" -- Format the coordinates in DDM for these H-60 variations
+      log('H 60 Coord found are ' .. lat .. ' ' .. lon)
 	elseif ac == "F-16C_50"  then
       insert = "@|#|"..formatCoord("DDM", true, lat, types.DDM) .. "|" .. formatCoord("DDM", false, lon, types.DDM).."|"..string.format("%.0f", alt*3.28084).."|" 
     elseif ac == "M-2000C"  then
@@ -225,11 +221,9 @@ function insertCoords(text)
       if lineType == 'SWP' and #tokens == 1 then
         StartWaypoint = tokens[1]
       end
-	  -- Additional branch for H-60 aircraft variants 
-      if lineType == 'WP' and (#tokens == 3 or #tokens == 4) and (ac == 'UH-60L' or ac == 'SH60B' or ac == 'MH-60R') then
+	    if lineType == 'WP' and (#tokens == 3 or #tokens == 4) and (ac == 'UH-60L' or ac == 'SH60B' or ac == 'MH-60R') then -- Additional branch for H-60 aircraft variants 
         wpi = wpi + 1
-        -- Extracting waypoint data for H60
-		    if #tokens == 4 then
+        if #tokens == 4 then -- Extracting waypoint data for H60
 			    Waypoints[wpi] = {des = tokens[1], lat = tokens[2], lon = tokens[3], name = tokens[4]}
 		    else
 			    Waypoints[wpi] = {des = tokens[1], lat = tokens[2], lon = tokens[3], name = ''}
@@ -274,13 +268,11 @@ function loadCoordinates(StartWaypoint,Waypoints)--, ExtraDelay)
   
     if ac == "AV8BNA" then
       loadInAV8B(StartWaypoint,Waypoints)
-        -- Add a conditional branch for H-60 variants
-    elseif ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R" then
-        -- Call the loadInH60 function for H-60 aircraft variants
-		--log('loadCoordinates found H60')
-        loadInH60(StartWaypoint, Waypoints)
+    elseif (ac == "UH-60L" or ac == "SH60B" or ac == "MH-60R") then -- Add a conditional branch for H-60 variants
+      log('loadCoordinates found H60')
+      loadInH60(Waypoints) -- Call the loadInH60 function for H-60 aircraft variants
     elseif ac == "F-15ESE"  then
-      local device = 57
+        local device = 57
       if role == 'pilot' then
         device = 56
       end
@@ -294,7 +286,7 @@ function loadCoordinates(StartWaypoint,Waypoints)--, ExtraDelay)
     elseif ac == "F-16C_50" then
       loadInF16(StartWaypoint,Waypoints)
     elseif  ac == 'AH-64D_BLK_II' then
-      local seat = 'CPG'
+        local seat = 'CPG'
       if role == 'pilot' then
         seat = 'PLT'
       end
@@ -302,16 +294,62 @@ function loadCoordinates(StartWaypoint,Waypoints)--, ExtraDelay)
     end
   end -- function
 --==================================================================================
+-- the new version takes into account delay in ms, not in frames
 function clicOn(device, code, delay, position )
-  delay = delay or 0
+  delay = delay or 250
+  position = position or 1
+  -- Convert delay from milliseconds to frames
+  local delayInFrames = delay / (LoGetFrameTime() * 1000)
+  local datas ={device, code, delayInFrames, position} --this should make it so the delay is in milliseconds, not frames, to make the duration of a keypress more predictable
+  table.insert(inputBuffer,datas)
+  log('clicOn('..device..','.. code..','.. delay..','.. position..')')
+end -- function
+
+--[[ function clicOn(device, code, delay, position ) --commented out until tested, will need to be removed once the new function is proven
+  delay = delay or 0 --delay here is expressed in frames
   position = position or 1
   local datas ={device, code, delay, position}
   table.insert(inputBuffer,datas)
   log('clicOn('..device..','.. code..','.. delay..','.. position..')')
-end -- function
+end -- function ]]
 --==================================================================================
 function ProcessInputBuffer()  
-  --if debugPiOn == true then log("running ProcessInputBuffer with "..#inputBuffer .." entries.") end
+  for i = dataIndex, #inputBuffer do
+      if not doDepress then 
+          Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],inputBuffer[i][4])
+          if inputBuffer[i][3] > 0 then 
+              doDepress = true
+          else 
+              if inputBuffer[i][4] == 1 or inputBuffer[i][4] == -1 then 
+                  Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],0)
+              end
+              dataIndex = dataIndex+1
+          end
+      else
+          -- Compare counterFrame to the frame-based delay
+          if counterFrame >= tonumber(inputBuffer[i][3]) then 
+              dataIndex = dataIndex+1
+              counterFrame = 0
+              if inputBuffer[i][4] == 1 or inputBuffer[i][4] == -1 then 
+                  Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],0)
+              end
+              doDepress = false
+          else 
+              counterFrame = counterFrame+1
+          end
+      end
+
+      break
+  end
+
+  if dataIndex == table.getn(inputBuffer)+1 then
+      doLoadCoords = false
+      dataIndex=1
+      counterFrame =0
+      doDepress =false
+  en
+
+--[[ function ProcessInputBuffer()  
   for i = dataIndex, #inputBuffer do
       if not doDepress then 
           Export.GetDevice(inputBuffer[i][1]):performClickableAction(inputBuffer[i][2],inputBuffer[i][4])
@@ -348,136 +386,142 @@ function ProcessInputBuffer()
       doDepress =false
   end
 
-end -- function
+end -- function ]]
 --================================================================================================================
 --  H-60 logic
 --================================================================================================================
-function loadInH60(start, waypoints)
-	inputbuffer = {}
-	log('called LoadinH60')
-  local device = 23
-	local delay = 25
-	local compliantName = ''
+function loadInH60(waypoints)
+  local status, err = pcall(function()
+    inputbuffer = {}
+    log('called LoadinH60')
+    local device = 23
+    local delay = 350
+    local compliantName = ''
 
-  local function Typevalue(keytopress)
-    if keys[keytopress].LTR ~='' then
-      clicOn(device, keys[keytopress].LTR, delay)
-      log('clicked key '.. keys[keytopress].LTR)
-      clicOn(device, keys[keytopress].KEY, delay)
-      log('clicked key '.. keys[keytopress].KEY)
-    else
-      clicOn(device, keys[keytopress].KEY, delay)
-      og('clicked key '.. keys[keytopress].KEY .. ' only')
-    end
-  end
+      local keys = {
+      ['1']=			{LTR= nil,  KEY='3242'},-- AN/ASN-128B Btn 1
+      ['2']=			{LTR= nil,  KEY='3243'},-- AN/ASN-128B Btn 2
+      ['3']=			{LTR= nil,  KEY='3244'},-- AN/ASN-128B Btn 3
+      ['4']=			{LTR= nil,  KEY='3246'},-- AN/ASN-128B Btn 4
+      ['5']=			{LTR= nil,  KEY='3247'},-- AN/ASN-128B Btn 5
+      ['6']=			{LTR= nil,  KEY='3248'},-- AN/ASN-128B Btn 6
+      ['7']=			{LTR= nil,  KEY='3250'},-- AN/ASN-128B Btn 7
+      ['8']=			{LTR= nil,  KEY='3251'},-- AN/ASN-128B Btn 8
+      ['9']=			{LTR= nil,  KEY='3252'},-- AN/ASN-128B Btn 9
+      ['0']=			{LTR= nil,  KEY='3255'},-- AN/ASN-128B Btn 0
+      
+      ['DispSel']={LTR= nil,  KEY='3236'}, -- AN/ASN-128B Display Selector
+      ['ModSel']=	{LTR= nil,  KEY='3235'}, -- AN/ASN-128B Mode Selector
+      ['KYBD']=		{LTR= nil,  KEY='3237'}, -- AN/ASN-128B Btn KYBD
+      ['LTR_L']=	{LTR= nil,  KEY='3238'}, -- AN/ASN-128B Btn LTR LEFT
+      ['LTR_M']=	{LTR= nil,  KEY='3239'}, -- AN/ASN-128B Btn LTR MID
+      ['LTR_R']=	{LTR= nil,  KEY='3240'}, -- AN/ASN-128B Btn LTR RIGHT
+      ['F1']=			{LTR= nil,  KEY='506'}, -- AN/ASN-128B Btn F1
+      ['TGT_S']=	{LTR= nil,  KEY='510'}, -- AN/ASN-128B Btn TGT STR
+      ['INC']=		{LTR= nil,  KEY='3249'}, -- AN/ASN-128B Btn INC
+      ['DEC']=		{LTR= nil,  KEY='3253'}, -- AN/ASN-128B Btn DEC
+      ['CLR']=		{LTR= nil,  KEY='3254'}, -- AN/ASN-128B Btn CLR
+      ['ENT']=		{LTR= nil,  KEY='3256'}, -- AN/ASN-128B Btn ENT
+      
+      ['A']=			{LTR='3238', KEY='3242'}, --1 LTR L Keys
+      ['D']=			{LTR='3238', KEY='3243'}, --2 LTR L Keys
+      ['G']=			{LTR='3238', KEY='3244'}, --3 LTR L Keys
+      ['J']=			{LTR='3238', KEY='3246'}, --4 LTR L Keys
+      ['M']=			{LTR='3238', KEY='3247'}, --5 LTR L Keys
+      ['P']=			{LTR='3238', KEY='3248'}, --6 LTR L Keys
+      ['S']=			{LTR='3238', KEY='3250'}, --7 LTR L Keys
+      ['W']=			{LTR='3238', KEY='3251'}, --8 LTR L Keys
+      ['Z']=			{LTR='3238', KEY='3252'}, --9 LTR L Keys
+      
+      ['B']=			{LTR='3239', KEY='3242'}, --1 LTR M keys
+      ['E']=			{LTR='3239', KEY='3243'}, --2 LTR M keys
+      ['H']=			{LTR='3239', KEY='3244'}, --3 LTR M keys
+      ['K']=			{LTR='3239', KEY='3246'}, --4 LTR M keys
+      ['N']=			{LTR='3239', KEY='3247'}, --5 LTR M keys
+      ['Q']=			{LTR='3239', KEY='3248'}, --6 LTR M keys
+      ['T']=			{LTR='3239', KEY='3250'}, --7 LTR M keys
+      ['V']=			{LTR='3239', KEY='3251'}, --8 LTR M keys
+      ['*']=			{LTR='3239', KEY='3252'}, --9 LTR M keys
+      
+      ['C']=			{LTR='3240', KEY='3242'}, --1 LTR R Keys
+      ['F']=			{LTR='3240', KEY='3243'}, --2 LTR R Keys
+      ['I']=			{LTR='3240', KEY='3244'}, --3 LTR R Keys
+      ['L']=			{LTR='3240', KEY='3246'}, --4 LTR R Keys
+      ['O']=			{LTR='3240', KEY='3247'}, --5 LTR R Keys
+      ['R']=			{LTR='3240', KEY='3248'}, --6 LTR R Keys
+      ['U']=			{LTR='3240', KEY='3250'}, --7 LTR R Keys
+      ['Y']=			{LTR='3240', KEY='3251'}, --8 LTR R Keys
+      ['#']=			{LTR='3240', KEY='3252'}, --9 LTR R Keys
+      }
 
-    local keys = {
-		['1']=			{LTR= nil,  KEY='3242'},-- AN/ASN-128B Btn 1
-		['2']=			{LTR= nil,  KEY='3243'},-- AN/ASN-128B Btn 2
-		['3']=			{LTR= nil,  KEY='3244'},-- AN/ASN-128B Btn 3
-		['4']=			{LTR= nil,  KEY='3246'},-- AN/ASN-128B Btn 4
-		['5']=			{LTR= nil,  KEY='3247'},-- AN/ASN-128B Btn 5
-		['6']=			{LTR= nil,  KEY='3248'},-- AN/ASN-128B Btn 6
-		['7']=			{LTR= nil,  KEY='3250'},-- AN/ASN-128B Btn 7
-		['8']=			{LTR= nil,  KEY='3251'},-- AN/ASN-128B Btn 8
-		['9']=			{LTR= nil,  KEY='3252'},-- AN/ASN-128B Btn 9
-		['0']=			{LTR= nil,  KEY='3255'},-- AN/ASN-128B Btn 0
-		
-		['DispSel']=	{LTR= nil,  KEY='3236'}, -- AN/ASN-128B Display Selector
-		['ModSel']	=	{LTR= nil,  KEY='3235'}, -- AN/ASN-128B Mode Selector
-		['KYBD']=		{LTR= nil,  KEY='3237'}, -- AN/ASN-128B Btn KYBD
-		['LTR_L']=		{LTR= nil,  KEY='3238'}, -- AN/ASN-128B Btn LTR LEFT
-		['LTR_M']=		{LTR= nil,  KEY='3239'}, -- AN/ASN-128B Btn LTR MID
-		['LTR_R']=		{LTR= nil,  KEY='3240'}, -- AN/ASN-128B Btn LTR RIGHT
-		['F1']=			{LTR= nil,  KEY='506'}, -- AN/ASN-128B Btn F1
-		['TGT_S']=		{LTR= nil,  KEY='510'}, -- AN/ASN-128B Btn TGT STR
-		['INC']=		{LTR= nil,  KEY='3249'}, -- AN/ASN-128B Btn INC
-		['DEC']=		{LTR= nil,  KEY='3253'}, -- AN/ASN-128B Btn DEC
-		['CLR']=		{LTR= nil,  KEY='3254'}, -- AN/ASN-128B Btn CLR
-		['ENT']=		{LTR= nil,  KEY='3256'}, -- AN/ASN-128B Btn ENT
-		
-		['A']=			{LTR='3238', KEY='3242'}, --1 LTR L Keys
-		['D']=			{LTR='3238', KEY='3243'}, --2 LTR L Keys
-		['G']=			{LTR='3238', KEY='3244'}, --3 LTR L Keys
-		['J']=			{LTR='3238', KEY='3246'}, --4 LTR L Keys
-		['M']=			{LTR='3238', KEY='3247'}, --5 LTR L Keys
-		['P']=			{LTR='3238', KEY='3248'}, --6 LTR L Keys
-		['S']=			{LTR='3238', KEY='3250'}, --7 LTR L Keys
-		['W']=			{LTR='3238', KEY='3251'}, --8 LTR L Keys
-		['Z']=			{LTR='3238', KEY='3252'}, --9 LTR L Keys
-		
-		['B']=			{LTR='3239', KEY='3242'}, --1 LTR M keys
-		['E']=			{LTR='3239', KEY='3243'}, --2 LTR M keys
-		['H']=			{LTR='3239', KEY='3244'}, --3 LTR M keys
-		['K']=			{LTR='3239', KEY='3246'}, --4 LTR M keys
-		['N']=			{LTR='3239', KEY='3247'}, --5 LTR M keys
-		['Q']=			{LTR='3239', KEY='3248'}, --6 LTR M keys
-		['T']=			{LTR='3239', KEY='3250'}, --7 LTR M keys
-		['V']=			{LTR='3239', KEY='3251'}, --8 LTR M keys
-		['*']=			{LTR='3239', KEY='3252'}, --9 LTR M keys
-		
-		['C']=			{LTR='3240', KEY='3242'}, --1 LTR R Keys
-		['F']=			{LTR='3240', KEY='3243'}, --2 LTR R Keys
-		['I']=			{LTR='3240', KEY='3244'}, --3 LTR R Keys
-		['L']=			{LTR='3240', KEY='3246'}, --4 LTR R Keys
-		['O']=			{LTR='3240', KEY='3247'}, --5 LTR R Keys
-		['R']=			{LTR='3240', KEY='3248'}, --6 LTR R Keys
-		['U']=			{LTR='3240', KEY='3250'}, --7 LTR R Keys
-		['Y']=			{LTR='3240', KEY='3251'}, --8 LTR R Keys
-		['#']=			{LTR='3240', KEY='3252'}, --9 LTR R Keys
-    }
-	clicOn(device, 3236, delay, 0.05) -- set Display Sel to WP/TGT
-	clicOn(device, 3235, delay, 0.04) -- set Mode Sel to LAT LON
-  log('   initial DISP SEL and MODE SEL presses')
-  --clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
-  --log('   initial INC press')
-
-	for _,v in pairs(waypoints) do -- log the whole waypoint as read
-    clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
-    log('   initial INC press')
-    for i,iv in pairs(v) do
-      log('   ' .. tostring(i) .. ": " .. tostring(iv))
-    end
-
-    -- WAYPOINT NAME - don't even know why I included this. 
-    if v.name:len() > 0 then -- check if a name exists
-      if (v.name:len() > 0 and v.name:len() <= 13) then compliantName=v.name
-      elseif v.name:len() > 13 then -- check if the name is more than 13 digits
-        compliantName=v.name:sub(1, 13) --shortens it to 13
-      end
-      log('   v.name: '..v.name)
-      log('   13char name: '..compliantName)
-      clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Name
-      log('   clicked KYBD for name')
-      for i = 1, compliantName:len() do --types the whole name
-        vv = compliantName:sub(i,i)
-        log('   vv '.. vv)
-        local k = string.upper(vv)
-        log('   K ' .. k)
-        if keys[k].LTR ~='' then
-          log('   Doing the letter thing')
-          clicOn(device, keys[k].LTR, delay)
-          log('   DTLT clicked key '.. keys[k].LTR)
-          clicOn(device, keys[k].KEY, delay)
-          log('   DTLT clicked key '.. keys[k].KEY)
+      local function Typevalue(keytopress)
+        if keys[keytopress] then
+          if keys[keytopress].LTR ~='' then  --checks if the pressed key has a .LTR attribute. This works
+            log('   Doing the letter thing') --tells me that it is typing a letter (so it will use both .LTR and .KEY attributes to do two keypresses, LTR_R/M/L first and the corresponding number key code after)
+            clicOn(device, keys[keytopress].LTR, delay) --actually press the LTR_R/M/L button
+            log('   DTLT clicked key '.. keys[keytopress].LTR) --tell me which one you've pressed
+            clicOn(device, keys[keytopress].KEY, delay) --actually press the number button onthe keypad
+            log('   DTLT clicked key '.. keys[keytopress].KEY) --tell me which you have pressed
+          elseif (keys[keytopress].LTR =='' or keys[keytopress].LTR == nil) then --this did not work and caused the script to break (but resume happily). Changed to elseif to see if anything changes
+            log('   Doing the NUMBER thing') 
+            clicOn(device, keys[keytopress].KEY, delay)
+            log('   ONLY clicked key '.. keys[keytopress].KEY)
+          else
+            log('   ...no joy, boss')
+          end
         else
-          log('   Doing the NUMBER thing')
-          clicOn(device, keys[k].KEY, delay)
-          log('   ONLY clicked key '.. keys[k].KEY)
+          log('Key ' .. keytopress .. ' does not exist in keys table')
         end
-    	end
-      clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Northing
-      log('   clicked KYBD for northing')
-      -- LAT (N/S) handling
-      clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Easting
-      log('   clicked KYBD for easting')
-      -- LON (E/W) handling
-      clicOn(device, keys['ENT'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Out to the next
-      log('   clicked ENT for saving pvt Ryan')
-    end
-  end
+      end
+  
+    clicOn(device, 3236, delay, 0.05) -- set Display Sel to WP/TGT
+    clicOn(device, 3235, delay, 0.04) -- set Mode Sel to LAT LON
+    log('   initial DISP SEL and MODE SEL presses')
+    --clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
+    --log('   initial INC press')
 
-  doLoadCoords = true
+    for _,v in pairs(waypoints) do -- log the whole waypoint as read
+      for i,iv in pairs(v) do
+        log('   ' .. tostring(i) .. ": " .. tostring(iv))
+      end
+
+      clicOn(device, keys['INC'].KEY, delay)  -- Select the next waypoint on the AN/ASN 128B
+      log('   initial INC press')
+
+      -- WAYPOINT NAME - don't even know why I included this. 
+      if v.name:len() > 0 then -- check if a name exists
+        if (v.name:len() > 0 and v.name:len() <= 13) then compliantName=v.name
+        elseif v.name:len() > 13 then -- check if the name is more than 13 digits
+          compliantName=v.name:sub(1, 13) --shortens it to 13
+        end
+        log('   v.name: '..v.name) -- log the full name as taken from the scratchpad
+        log('   13char name: '..compliantName) -- log the shortened stirng (so it fits on the display, I have a feeling the -60 would accept it anyways)
+        clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Name
+        log('   clicked KYBD for name') --yeah please tell me wht you're doing
+        for i = 1, compliantName:len() do --types the whole name, starting by iterating the string
+          vv = compliantName:sub(i,i)   --iterates compliantName-s characters, one by one
+          log('   vv '.. vv)  --tell me what are you reading?
+          local k = string.upper(vv)  --converts what has been read to uppercase, otherwise it won't have a correspondence in the keys{} table
+          log('   K ' .. k)   --shows the uppercase converted letter in the log
+          Typevalue(k)  --calls the Typevalue function, which will press the corresponding key on the AN/ASN 128B
+        end
+        
+        clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Northing
+        log('   clicked KYBD for northing')
+        -- LAT (N/S) handling - refactor from A10 (maybe MGRS would be easier?)
+        clicOn(device, keys['KYBD'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Easting
+        log('   clicked KYBD for easting')
+        -- LON (E/W) handling refactor from A10 (maybe MGRS would be easier?)
+        clicOn(device, keys['ENT'].KEY, delay)  -- Select the next field on the AN/ASN 128B -- Should be Out to the next
+        log('   clicked ENT for saving pvt Ryan')
+
+      end
+    end
+    doLoadCoords = true
+  end)
+  if not status then
+      log("An error occurred: " .. err)
+  end
 end
 
 --==================================================================================
@@ -486,7 +530,7 @@ function loadInAV8B(start,waypoints)
     local isWP = true
     --                        0      1      2       3      4     5       6      7      8      9 
     local correspondance = {'3315','3302','3303','3304','3306','3307','3308','3310','3311','3312'}
-    local delay = 10
+    local delay = 350
     --[[
         L18 main menu
         L2 EHSD
@@ -1092,56 +1136,56 @@ function loadInApache(StartWaypoint,Waypoints,Seat)
     devices['PLT_KU'] = 29
     devices['CPG_KU'] = 30
 
-    keys['TSD'] = {code = '3029', delay = 15}
-    keys['B6'] 	= {code = '3013', delay = 15}
-    keys['L1'] 	= {code = '3024', delay = 15}
-    keys['L2'] 	= {code = '3023', delay = 15}
-    keys['L3'] 	= {code = '3022', delay = 15}
-    keys['L4'] 	= {code = '3021', delay = 15}
-    keys['L5'] 	= {code = '3020', delay = 15}
-    keys['L6'] 	= {code = '3019', delay = 15}
+    keys['TSD'] = {code = '3029', delay = 500}
+    keys['B6'] 	= {code = '3013', delay = 500}
+    keys['L1'] 	= {code = '3024', delay = 500}
+    keys['L2'] 	= {code = '3023', delay = 500}
+    keys['L3'] 	= {code = '3022', delay = 500}
+    keys['L4'] 	= {code = '3021', delay = 500}
+    keys['L5'] 	= {code = '3020', delay = 500}
+    keys['L6'] 	= {code = '3019', delay = 500}
 
-    keys['A'] 		= {code = '3007', delay = 15}
-    keys['B'] 		= {code = '3008', delay = 15}
-    keys['C'] 		= {code = '3009', delay = 15}
-    keys['D'] 		= {code = '3010', delay = 15}
-    keys['E'] 		= {code = '3011', delay = 15}
-    keys['F'] 		= {code = '3012', delay = 15}
-    keys['G'] 		= {code = '3013', delay = 15}
-    keys['H'] 		= {code = '3014', delay = 15}
-    keys['I'] 		= {code = '3015', delay = 15}
-    keys['J'] 		= {code = '3016', delay = 15}
-    keys['K'] 		= {code = '3017', delay = 15}
-    keys['L'] 		= {code = '3018', delay = 15}
-    keys['M'] 		= {code = '3019', delay = 15}
-    keys['N'] 		= {code = '3020', delay = 15}
-    keys['O'] 		= {code = '3021', delay = 15}
-    keys['P'] 		= {code = '3022', delay = 15}
-    keys['Q'] 		= {code = '3023', delay = 15}
-    keys['R'] 		= {code = '3024', delay = 15}
-    keys['S'] 		= {code = '3025', delay = 15}
-    keys['T'] 		= {code = '3026', delay = 15}
-    keys['U'] 		= {code = '3027', delay = 15}
-    keys['V'] 		= {code = '3028', delay = 15}
-    keys['W'] 		= {code = '3029', delay = 15}
-    keys['X'] 		= {code = '3030', delay = 15}
-    keys['Y'] 		= {code = '3031', delay = 15}
-    keys['Z'] 		= {code = '3032', delay = 15}
-    keys['0'] 		= {code = '3043', delay = 15}
-    keys['1'] 		= {code = '3033', delay = 15}
-    keys['2'] 		= {code = '3034', delay = 15}
-    keys['3'] 		= {code = '3035', delay = 15}
-    keys['4'] 		= {code = '3036', delay = 15}
-    keys['5'] 		= {code = '3037', delay = 15}
-    keys['6'] 		= {code = '3038', delay = 15}
-    keys['7'] 		= {code = '3039', delay = 15}
-    keys['8'] 		= {code = '3040', delay = 15}
-    keys['9'] 		= {code = '3041', delay = 15}
-    keys['-'] 		= {code = '3047', delay = 15}   
-    keys['CLR'] 	= {code = '3001', delay = 15}
-    keys['ENTER'] = {code = '3006', delay = 15}  
-    keys[' ']     = {code = '3003', delay = 15} 
-    keys['.'] 		= {code = '3042', delay = 15}         
+    keys['A'] 		= {code = '3007', delay = 500}
+    keys['B'] 		= {code = '3008', delay = 500}
+    keys['C'] 		= {code = '3009', delay = 500}
+    keys['D'] 		= {code = '3010', delay = 500}
+    keys['E'] 		= {code = '3011', delay = 500}
+    keys['F'] 		= {code = '3012', delay = 500}
+    keys['G'] 		= {code = '3013', delay = 500}
+    keys['H'] 		= {code = '3014', delay = 500}
+    keys['I'] 		= {code = '3015', delay = 500}
+    keys['J'] 		= {code = '3016', delay = 500}
+    keys['K'] 		= {code = '3017', delay = 500}
+    keys['L'] 		= {code = '3018', delay = 500}
+    keys['M'] 		= {code = '3019', delay = 500}
+    keys['N'] 		= {code = '3020', delay = 500}
+    keys['O'] 		= {code = '3021', delay = 500}
+    keys['P'] 		= {code = '3022', delay = 500}
+    keys['Q'] 		= {code = '3023', delay = 500}
+    keys['R'] 		= {code = '3024', delay = 500}
+    keys['S'] 		= {code = '3025', delay = 500}
+    keys['T'] 		= {code = '3026', delay = 500}
+    keys['U'] 		= {code = '3027', delay = 500}
+    keys['V'] 		= {code = '3028', delay = 500}
+    keys['W'] 		= {code = '3029', delay = 500}
+    keys['X'] 		= {code = '3030', delay = 500}
+    keys['Y'] 		= {code = '3031', delay = 500}
+    keys['Z'] 		= {code = '3032', delay = 500}
+    keys['0'] 		= {code = '3043', delay = 500}
+    keys['1'] 		= {code = '3033', delay = 500}
+    keys['2'] 		= {code = '3034', delay = 500}
+    keys['3'] 		= {code = '3035', delay = 500}
+    keys['4'] 		= {code = '3036', delay = 500}
+    keys['5'] 		= {code = '3037', delay = 500}
+    keys['6'] 		= {code = '3038', delay = 500}
+    keys['7'] 		= {code = '3039', delay = 500}
+    keys['8'] 		= {code = '3040', delay = 500}
+    keys['9'] 		= {code = '3041', delay = 500}
+    keys['-'] 		= {code = '3047', delay = 500}   
+    keys['CLR'] 	= {code = '3001', delay = 500}
+    keys['ENTER'] = {code = '3006', delay = 500}  
+    keys[' ']     = {code = '3003', delay = 500} 
+    keys['.'] 		= {code = '3042', delay = 500}         
   end -- maping
   
   --set Right MPD
