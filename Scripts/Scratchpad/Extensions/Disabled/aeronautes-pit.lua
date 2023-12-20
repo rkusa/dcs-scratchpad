@@ -1,5 +1,6 @@
+local version=.6
 --[[
-local readme = "\
+local readme = "
 # aeronautes-pit
 
 This is an extension to github.com/rkusa/scratchpad for DCS. At a high
@@ -22,8 +23,8 @@ Unzip the github download into your Windows user `Saved Game`
 directory. In order to enable an extension in scratchpad, the
 extensions Lua file must be present in `Saved
 Game\DCS.openbeta\Scripts\Scratchpad\Extensions\`. Copy the
-aeronautes-pit.lua file from `Scratchpad\Extensions\Disabled\`
-directory to the parent `Scratchpad\Extensions\' directory.
+aeronautes-pit.lua file from `Scripts\Scratchpad\Extensions\Disabled\`
+directory to the parent `Scripts\Scratchpad\Extensions\' directory.
 
 - Prerequisite - scratchpad-hook.lua rel XX or higher should be
   installed under the Saved Game directory structure.
@@ -46,6 +47,8 @@ directory to the parent `Scratchpad\Extensions\' directory.
 This matrix shows apit features and the amount of DCS modules
 supported by each.
 
+                |    Module    |
+                |   support    |
 |    Feature    | All | Subset | Note |
 |---------------|-----|--------|------|
 | DCS macros    | X   |        |    1 |
@@ -54,39 +57,46 @@ supported by each.
 | Waypoint      |     | X      |    4 |
 | Customization |     | X      |    5 |
 
-- 1 Automatic detection and configuration of devices[] and
+- 1. Automatic detection and configuration of devices[] and
   device.actions[] defined in the modules Cockpit\Scripts
   directory. Specifically API calls push_start_command() and
   push_stop_command() and their necessary arguments. These are
   automatically handled for any full fidelity module installed without
   need for user configuration.
+  * All modules supported.
 
-- 2 Convenience functions allow access to the cockpit devices without
+- 2. Convenience functions allow access to the cockpit devices without
   having to look up the codes in Lua. Instead you can use the tool
   tips to refer to the buttons and switches. These API calls include
   tt(), ttt(), etc. It's automatically configured based on the
   module's Cockpit\Scripts\clickabledata.lua.
+  * All modules supported
 
-- 3 DCS APIs as defined in DCS World OpenBeta\API\DCS_ControlAPI.html
+- 3. DCS APIs as defined in DCS World OpenBeta\API\DCS_ControlAPI.html
   are available. The level of functionality and support is entirely up
   to ED.
+  * All modules supported
 
-- 4 Waypoint functions provide the ability input latlong and certain
+- 4. Waypoint functions provide the ability input latlong and certain
   other input without having to know or program which specific buttons
   to press. These have been adapted for specific aircraft as each one
   has it's own particular sequence of input. The API for this includes
-  wp(), wpseq(), press() and UI buttons `ULLL` and `WPLL`. These are
-  currently supported for Harrier, F-15E, F-16C, FA-18C, Blackshark
-  2&3.
+  wp(), wpseq(), press() and UI buttons `ULLL` and `WPLL`.
 
-- 5 Customizations are higher level capabilities that utilize any
+  * Waypoint input is currently supported for AV8, F-15E, F-16C, FA-18C,
+  Blackshark 2&3.
+
+- 5. Customizations are higher level capabilities that utilize any
   combination of the above features. These are separated per module in
-  the Extensions\lib\ directory. The level of support and functions
-  vary by module as updates are made. You can modify these yourself to
-  make your own customizations for your aircraft. They can be
-  initiated by executing the function name in a scratchpad page with
-  `ULbuf` or `ULsel` buttons. The currently supported modules include
-  Harrier, F-15E, F-16C, FA-18C, Mi-8.
+  the Scripts\Scratchpad\Extensions\lib\ directory. The level of
+  support and functions vary by module as apit updates are made. You
+  can modify these yourself to make your own customizations for your
+  aircraft. They can be utilized by clicking on the function buttons,
+  `1`, `2`, ...  or executing the function name in a scratchpad page
+  with `ULbuf` or `ULsel` buttons.
+
+  * Customizations are currently supported for AV8, F-15E, F-16C, FA-18C,
+  Mi-8.
 
 ## Installed File - Functionality map
 
@@ -110,6 +120,7 @@ supported by each.
                                         |[F-16C_50.lua]
                                         |[FA-18C_hornet.lua]
                                         |[Mi-8MT.lua]
+                                        |[kp.lua]
                                         |...
 '''
 
@@ -144,9 +155,55 @@ supported by each.
   aircraft are immediately reloaded and made available. This is only
   useful if you are modifying or adding apit code.
 
+- `1`, `2`,... - These dynamic function buttons provide one-click
+  access to functions defined in the per module customization files in
+  Scratchpad\Extensions\lib\. The particular function names associated
+  with each button are display on the title bar of the scratchpad
+  window just to the right of the page name. Each function is prefaced
+  with the corresponding button number.
+
+
+
 ## apit API
+    The Lua functions provided by apit are as follows:
+
+    - push_start_command(), push_stop_command()
+
+    - prewp()
+
+    - wp()
+
+    - wpseq()
+
+    - press()
+
+    - tt()
+
+    - ttn()
+
+    - ttf()
+
+    - ttt()
+
+    - delay()
+
+    - loglocal()
+
+    - setPageNotice()
+
+    - getcurrentPage()
+
+    - unittab[]()
+
 
 ## Supported API
+    Other APIs provided through apit:
+
+    - scratchpad
+
+    - DCS Lua environment
+
+
 
 ## Howto
 
@@ -168,19 +225,27 @@ local debug = 1
 local function loglocal(str, lvl)
     if not lvl then
         lvl = 0
+    else
+        if type(lvl) == 'table' then
+            if type(lvl.debug) == 'number' then
+                debug = lvl.debug
+            end
+        end
     end
+
     if debug > lvl then
         log(str)
     end
 end
 
+local scratchpadver = 0         --
 local delay = 0.1               -- default input delay
-local unittype = ''
-local unittab = {}              --table of module specific functions
+local unittype = ''             -- DCS name for current module
+local unittab = {}              -- table of module specific functions
 local kp = {}                   -- keypad table for wp(), press() api
-local ttlist = {}               --tool tips from clicabledata.lua
+local ttlist = {}               -- tool tips from clicabledata.lua
 
--- butt vars control the scratchpad buttons created by this extension
+-- butt vars below control the apit UI buttons created in scratchpad
 local butts = {}
 local buttfn = {} -- indirection funcs to bind to onClick by vary with assignCustom()
 local buttfnamt = 6
@@ -196,7 +261,8 @@ local function copytable(src)
     return dst
 end
 
-local wpsdefaults = { 
+-- wps vars control the waypoint input features
+local wpsdefaults = {
     initialize = false,   --reset all values to defaults
     enable = true,        --disable STR number assignment
     diff = 1,             --next value of STR number relative to cur
@@ -206,6 +272,7 @@ local wpsdefaults = {
 }
 local wps = copytable(wpsdefaults) --waypoint sequence used by wp(); also initialized in uploadinit()
 
+-- LT is the per module table for various configuration and wp specialization values/funcs
 local LT = {           -- per module customization for convenience api
     ['AV8BNA'] = {
         ['coordsType'] = {format = 'DMS', lonDegreesWidth = 3},
@@ -217,7 +284,7 @@ local LT = {           -- per module customization for convenience api
     ["F-15ESE"] = {
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
         ['wpentry'] = 'LATbLONcALTg',
-        prewp = function() 
+        prewp = function()
             if wps.enable then
                 if wps.menus ~= "" then
                     loglocal('F15 prewp(): menus press() '..tmp, 3)
@@ -238,7 +305,7 @@ local LT = {           -- per module customization for convenience api
                 wps.cur = wps.cur + wps.diff
                 if wps.cur < 1 then wps.cur = 99 end
                 if wps.cur > 99 then wps.cur = 1 end
-                return 
+                return
             end
         end,
         llconvert = function(result)
@@ -249,13 +316,13 @@ local LT = {           -- per module customization for convenience api
     },
     ["F-16C_50"] = {
         ['coordsType'] = {format = 'DDM', lonDegreesWidth = 3},
-        ['wpentry'] = 'LATedLONedALT',
+        ['wpentry'] = 'LATedLONedALTe',
         prewp = function()
 	    if wps.enable then
-		if wps.cur then
+		if wps.cur > 0 then
 		    local tmp = tostring(wps.cur)
 		    press('r4'..tmp..'edd')
-		else -- cur nil but diff is incremental, hit up/down
+		else -- cur==-1 but diff is incremental, hit up/down
 		    if wps.diff > 0 then
 			press('u')
 		    elseif wps.diff < 0 then
@@ -269,14 +336,25 @@ local LT = {           -- per module customization for convenience api
         postwp = function() --press('euum') end,
 	    if wps.enable and wps.cur ~= -1 then
                 wps.cur = wps.cur + wps.diff
-                return 
+                if wps.cur < 1 then wps.cur = 699 end
+                if wps.cur > 699 then wps.cur = 1 end
+                return
             end
 	end,
     },
     ["FA-18C_hornet"] = {
         ['coordsType'] = {format = 'DDM', precision = 4},
-        ['wpentry'] = 'faLAT LON caALT h',
-        prewp = function() return end,
+        ['wpentry'] = 'faLAT LON caALT ',
+        -- f18 can't select wpt by number, only cycle with arrows
+        prewp = function()
+            if wps.enable then
+                if wps.diff > 0 then
+                    press('u')
+                elseif wps.diff < 0 then
+                    press('d')
+                end
+            end
+        end,
         midwp = function(result) return result end,
         postwp = function() return end,
         llconvert =function(result)
@@ -301,15 +379,15 @@ local LT = {           -- per module customization for convenience api
         postwp = function() press('o') end,
     },
 } --end LT{}
-
 LT['Ka-50_3'] = LT['Ka-50']
 
-local function assignKP() 
+local function assignKP()
     loglocal('assignKP begin')
     local function getTypeKP(unit)
         loglocal('getTypeKP begin')
 
-        -- SNIP BEGIN for kp.lua ##############################################
+--########## SNIP BEGIN for Scripts\Scratchpad\Extensions\lib\kp.lua
+--function kpload(unit)
         local delay = 0.1
         if unit == 'AV8BNA' then
             return {
@@ -436,8 +514,8 @@ local function assignKP()
                 s = {ufc_commands.DCS_SEQ, -1, delay, devices.UFC},
                 u = {{ufc_commands.DCS_UP, 1, delay, devices.UFC},
                     {ufc_commands.DCS_UP, 0, 0, devices.UFC}},
-                d = {{ufc_commands.DCS_DOWN, -1, delay, devices.UFC}, 
-                    {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}}, 
+                d = {{ufc_commands.DCS_DOWN, -1, delay, devices.UFC},
+                    {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}},
             }
         elseif unit == 'FA-18C_hornet' then
             return {
@@ -535,13 +613,17 @@ local function assignKP()
                 h = {CNI_MU.pilot_CNI_MU_SelectKey_008, 1, delay, devices.General}, --SelectKey 8; dec
                 w = {CNI_MU.pilot_CNI_MU_NAV_CTRL, 1, delay, devices.General}, --NAV CTRL
             }
-            -- SNIP END for kp.lua ##############################################
+
+--    end
+--end
+--########## SNIP END for kp.lua
         else
             loglocal('assignKP unknown unit: '..unit)
-            return 
+            return
         end
     end --end getTypeKP()
 
+    -- support for optional kp.lua file used for adding or modifying wp for a DCS module
     local kpfile = lfs.writedir() .. 'Scripts\\Scratchpad\\Extensions\\lib\\kp.lua'
     local kpfun = ''
     local atr = lfs.attributes(kpfile)
@@ -571,14 +653,14 @@ function searchmodules()
         local total = 0
         for i,j in lfs.dir(dir) do
             atr = lfs.attributes(dir..i)
-            if atr and atr.mode == 'directory' and 
+            if atr and atr.mode == 'directory' and
                 i ~= '.' and i ~= '..' and i ~= 'Flaming Cliffs' then
                 moddir2name[i] = {['dir'] = dir..i}
                 total = total + 1
             end
         end
         return total
-    end
+    end                         -- end of scandir()
 
     local scandirtot = 0
     scandirtot = scandir(lfs.currentdir()..'Mods\\aircraft\\') --DCS install dir modules
@@ -589,7 +671,7 @@ function searchmodules()
         local fp = io.open(j.dir..'\\entry.lua')
         if fp then
             for l in fp:lines() do
-                ut = string.match(l, [[^%w+_flyable[(]['"]([^'"]+)]]) 
+                ut = string.match(l, [[^%w+_flyable[(]['"]([^'"]+)]])
                 if ut then
                     modname2dir[ut] = moddir2name[i]
                     modnametot = modnametot + 1
@@ -602,7 +684,11 @@ function searchmodules()
     end
 
     loglocal('aeronautespit searchmodules found: '..scandirtot..' named: '..modnametot)
-end
+end                             -- end of searchmodules()
+
+-- Begin main
+loglocal('aeronautes-pit extension version: '..version)
+loglocal('detected scratchpad version: '..scratchpadver)
 
 searchmodules()
 for i,j in pairs(modname2dir) do
@@ -615,13 +701,18 @@ for i,j in pairs(modname2dir) do
 end
 
 
-function press(inp)
+function press(inp, param)
     loglocal('press(): '..inp, 5)
     if type(inp) ~= 'string' then
         loglocal('aeronautespit press: non string type, '..type(inp))
         return
     end
-    
+
+    if param and param.fn then
+        loglocal('press() fn '..DCS.getRealTime())
+        table.insert(domacro.inp, {-1, -1, param.delay, -1, nil})
+        table.insert(domacro.inp, {-1, -1, param.delay, -1, param.fn})
+    end
     for key in string.gmatch(inp, '.') do
         if kp[key] == nil then
             loglocal("upload: press() nil " .. key, 0)
@@ -635,19 +726,19 @@ function press(inp)
                 table.insert(domacro.inp, a[i])
                 ctr = ctr + 1
             end
-        else    
+        else
             loglocal('press(): insert2 key '..key, 5)
             table.insert(domacro.inp, kp[key])
         end
     end
     loglocal('press(): exit', 5)
-end
+end                             -- end of press()
 
 domacro.idx = 1
 domacro.inp = {}
 
 function push_stop_command(delay, c)
-    loglocal('aeronautespit: push_stop_command() start '..type(c))
+    loglocal('aeronautespit: push_stop_command() start '..net.lua2json(c))
     if c.device and c.action and c.value then
         loglocal('push_stop_command: dev '..c.device ..', action '.. c.action ..', val '.. c.value)
         if not c.len then
@@ -655,16 +746,16 @@ function push_stop_command(delay, c)
         end
         table.insert(domacro.inp, {c.action, c.value, c.len, c.device})
     end
-end
+end                             -- end of push_stop_command()
 
 -- TTtoDA() tool tip to device action lookup
 function TTtoDA(name, parms)
     local tmp = parms or {value = 1.0}
-    
-    loglocal('aeronautespit TTtoDA name: #'..name..'#'..net.lua2json(tmp))
+
+    loglocal('aeronautespit TTtoDA name: #'..name..'#'..net.lua2json(tmp), 4)
     if type(ttlist[name]) == 'table' then
         for i, j in pairs(ttlist[name]) do
-            if not tmp[i] then 
+            if not tmp[i] then
                 local getval = loadstring("return " .. j)
                 tmp[i] = getval()
             end
@@ -674,7 +765,7 @@ function TTtoDA(name, parms)
 
     loglocal('aeronautespit TTtoDA not found')
     return nil
-end
+end                             -- end of TTtoDA()
 
 -- tt() tool tip instantiation
 function tt(name, params)
@@ -704,8 +795,12 @@ end
 --ttt() tool tip toggle, equivalent to ttn() ttf()
 function ttt(name, params)
     local tmp = params or {}
-    ttn(name, params)
-    ttf(name, params)
+
+    tmp.value = tmp.onvalue or 1
+    tt(name, tmp)
+
+    tmp.value =  tmp.offvalue or 0
+    tt(name, tmp)
 end
 
 -- delay() delay in input for the scheduled sequence
@@ -780,7 +875,7 @@ end
 
 function apcall(chunk, env)     -- common pcall() for loadDTCBuffer and assignCustom
     return nil
-end                         -- end apcall
+end                             -- end apcall
 
 function loadDTCBuffer(text)
     loglocal('loaddtcbuffer text len:'..string.len(text))
@@ -809,6 +904,8 @@ function loadDTCBuffer(text)
            delay = delay,
            loglocal = loglocal,
            unittab = unittab,
+           setPageNotice = setPageNotice,
+           getcurrentPage = getcurrentPage,
     }
     setmetatable(env, {__index = _G})
     setfenv(inf, env)
@@ -821,7 +918,7 @@ function loadDTCBuffer(text)
     end
 
     domacro.flag = true
-end
+end                             -- end of loadDTCBuffer()
 
 function assignCustom()
     local infn = lfs.writedir() .. 'Scripts\\Scratchpad\\Extensions\\lib\\'..unittype..'.lua'
@@ -829,6 +926,15 @@ function assignCustom()
     local atr = lfs.attributes(infn)
     if atr and atr.mode == 'file' then
         local customfn = loadfile(infn)
+        if not customfn then
+            loglocal('assignCustom loadstring failed: ret: ')
+            if inf == LUA_ERRRUN then loglocal('assignCustom: LUA_ERRRUN')
+            elseif inf == LUA_ERRMEM then loglocal('assignCustom: LUA_ERRMEM')
+            elseif inf == LUA_ERRERR then loglocal('assignCustom: LUA_ERRERR')
+            elseif inf == LUA_ERRGCMM then loglocal('assignCustom: LUA_ERRGCMM')
+            end
+            return nil
+        end
 
         env = {push_stop_command = push_stop_command,
                push_start_command = push_stop_command,
@@ -856,16 +962,17 @@ function assignCustom()
             buttfn[i] = nil
         end
         local x = 0
+        local noticestr = ''
         for i,j in pairs(unittab) do
             if type(j) == 'function' then
                 x = x + 1
                 buttfn[x] = j
-                loglocal('assignCustom add function: '..i)
+                noticestr = noticestr ..' '..x..':'..i..'  '
             end
         end
-        loglocal('assignCustom end x: '..x)
+        setPageNotice(noticestr)
     end
-end
+end                             -- end of assignCustom()
 
 function uploadinit()
     loglocal('init: begin')
@@ -880,6 +987,7 @@ function uploadinit()
         return
     end
 
+    setPageNotice('')
     if unittype then
         loglocal('uploadinit type '..unittype)
     else
@@ -992,6 +1100,7 @@ function uploadinit()
     end
     infile:close()
 
+    --???
     local ctr = 1
     for i,j in pairs(ttlist) do
         ctr = ctr + 1
@@ -1001,7 +1110,7 @@ function uploadinit()
     assignCustom()
 
     return unittype
-end
+end                             -- end of uploadinit()
 
 function getCurrentLineOffsets(text, cur)
 
@@ -1018,7 +1127,7 @@ function getCurrentLineOffsets(text, cur)
             break
         end
     end
-    
+
     for i = cur + 1, #text do
         if text:byte(i) == nl then
             break
@@ -1027,7 +1136,7 @@ function getCurrentLineOffsets(text, cur)
     end
 
     return linestart, lineend
-end
+end                             -- end of getCurrentLineOffsets()
 
 local function handleSelection(textarea)
         local text = textarea:getText()
@@ -1036,11 +1145,11 @@ local function handleSelection(textarea)
         if start == eos then    -- if nothing is highlighted use the current line of cursor
             start, eos = getCurrentLineOffsets(text, eos)
         else
-            start = start + 1
+            start = start
         end
 
         sel = string.sub(text, start, eos)
-        
+
         loglocal('ULsel len '..string.len(sel)..': #'..sel..'#')
 
         local jtest = sel
@@ -1078,10 +1187,10 @@ local function handleSelection(textarea)
             loglocal('ULsel jtac: '..lat ..' , '..lon..' , '..newstr)
             sel = newstr
         end
-        
+
         loglocal('addButton ULsel: '..sel)
         loadDTCBuffer(sel)
-end
+end                             -- end of handleSelection()
 
 -- WP getting/setting section
 
@@ -1133,16 +1242,16 @@ function getloc()
     --local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
     local ac = DCS.getPlayerUnitType()
     local types = coordsType(ac)
-    
+
     LLtoAC(formatCoordConv(types.format, true, lat, types),
         formatCoordConv(types.format, false, lon, types),
         string.format("%.0f", alt*3.28084))
-    
+
     return str
 end
 
 -- first row buttons
-for i=1,6 do
+for i=1,6 do                    -- initialize locations and size
     butts[i] = {((i-1)*buttw), 0, buttw, butth}
 end
 
@@ -1154,7 +1263,7 @@ butts[1][6] = function(text)
     domacro.flag = true
 end
 
-butts[2][5] = "WP"
+butts[2][5] = "wp"
 butts[2][6] = function(text)
     text:insertBelow("wp('" .. getloc() .. "')")
 end
@@ -1167,14 +1276,14 @@ butts[4][6] = function(textarea)
     loadDTCBuffer(textarea:getText())
 end
 
-butts[5][5] = "CANCEL"
+butts[5][5] = "Cancel"
 butts[5][6] = function(textarea)
         domacro.inp = {}
         domacro.idx = 1
         domacro.flag = false
 end
 
-butts[6][5] = "RELOAD"
+butts[6][5] = "Reload"
 butts[6][6] = function(text)
         loglocal('aeronautespit: RELOAD click '..#LT)
         assignKP()
@@ -1183,7 +1292,7 @@ end
 
 --start second row buttons
 for i=1,buttfnamt do
-    --[[ attempt at runtime generation of indirection func table for dynamic buttons
+    --[[ attempt at runtime generation of indirection func table for dynamic function buttons
     local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
     local fn
     local res
@@ -1202,10 +1311,11 @@ butts[10][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = 
 butts[11][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
 butts[12][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
 
-for i,j in pairs(butts) do
+for i,j in pairs(butts) do      -- create all buttons
     addButton(j[1], j[2], j[3], j[4], j[5], j[6])
 end
 
+-- addFrameListener is used for scheduling and inputing of cockpit commands
 addFrameListener('aeronautes-pit', function()
         if domacro.flag == true then
             now = socket.gettime()
@@ -1218,12 +1328,23 @@ addFrameListener('aeronautes-pit', function()
             end
 
             i = domacro.idx
-            key = domacro.inp[i][1]
+            command = domacro.inp[i][1]
             val = domacro.inp[i][2]
             device = domacro.inp[i][4]
-            loglocal('addFrameListener loop: '..i..":"..device..":" .. key ..":".. val..' '..socket.gettime(), 6)
-            assert(Export.GetDevice(device):performClickableAction(key, val))
-            domacro.ctr = socket.gettime() + domacro.inp[i][3] 
+            loglocal('addFrameListener loop: '..i..":"..device..":" .. command ..":".. val..' '..socket.gettime(), 6)
+            if command == -1 and device == -1 then
+                loglocal('addFrameListener potential fn '..DCS.getRealTime()..' '..net.lua2json(domacro.inp[i]))
+                if domacro.inp[i][5] then
+                    loglocal('addFrameListener [5] ' ..DCS.getRealTime())
+                    if type(domacro.inp[i][5]) == 'function' then
+                        loglocal('addFrameListener [5] fn '..type(domacro.inp[i][5])..' '..DCS.getRealTime())
+                        domacro.inp[i][5]()
+                    end
+                end
+            else
+                assert(Export.GetDevice(device):performClickableAction(command, val))
+            end
+            domacro.ctr = socket.gettime() + domacro.inp[i][3]
             loglocal('addFrameListener: time tick '..domacro.ctr, 6)
             i = i + 1
             if i > #domacro.inp then
@@ -1236,9 +1357,10 @@ addFrameListener('aeronautes-pit', function()
             end
             loglocal('addFrameListener loop2: i: '..i, 6)
         end
-end)
-domacro.listeneradded = true    
+end)                            -- end of addFrameListener()
+domacro.listeneradded = true
 
+-- addmissionLoadEndListener is to handle initializing when slotting into an aircraft
 addmissionLoadEndListener(function()
         loglocal('missionLoadEndListener start', 3)
         if DCS.isMultiplayer() then
@@ -1261,4 +1383,4 @@ addmissionLoadEndListener(function()
                 DCS.setUserCallbacks(handler)
             end
         end
-end)
+end)                            -- end of addmissionLoadEndListener()

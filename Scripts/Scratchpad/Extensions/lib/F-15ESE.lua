@@ -3,7 +3,7 @@
 
 ft ={}
 ft.run={'start'}
-ft['test'] = function () loglocal('my test') end
+--ft['test'] = function () loglocal('my test') end
 
 --#################################
 -- mpd v0.1
@@ -63,7 +63,7 @@ ft['mpd'] = function ()
     menu['DATA FRAME'] = {6,11,5,6}; menu.JTIDS = {6,11,13,6}; menu['SMRT WPNS'] = {11,14}
     menu['HUD PROG'] = {6,11,17,6}; menu['MC DTM'] = {6,11,19,6}; menu['SNSR MGMT'] = {6,11,11,1,6}
     menu['HMD-P'] = {6,11,11,8,6}; menu['HMD-W'] = {6,11,11,9,6}; menu['SP ENTRY'] = {6,11,11,13,6}
-    menu['WDL COMM'] = {6,11,11,14,6}; menu['VID 8'] = {6,11,11,16,6} 
+    menu['WDL COMM'] = {6,11,11,14,6}; menu['VID 8'] = {6,11,11,16,6}
     menu['VID RC'] = {6,11,11,17,6}; menu['VID 5'] = {6,6,11,11,18,6}
     menu['VID LC'] = {6,11,11,19,6}; menu['VID 2'] = {6,11,11,20,6}
 
@@ -89,7 +89,7 @@ ft['mpd'] = function ()
                         else ttt('Power Switch',{device=dev, action=button[menu2[y[2]][k]]}) end
                     end
                     if debug then loglocal('MM SET: '..menu[y[1]][#menu[y[1]]])
-                    else ttt('Power Switch',{device=dev, action=button[menu[y[1]][#menu[y[1]]]]}) end 
+                    else ttt('Power Switch',{device=dev, action=button[menu[y[1]][#menu[y[1]]]]}) end
                     if debug then loglocal('MM3 finalize:2x 6')
                     else ttt('Power Switch',{device=dev, action=button[6]}) end
                 end  -- if type
@@ -102,10 +102,44 @@ ft['mpd'] = function ()
 end --end of mpd()
 
 --#################################
--- start v0.1
--- You will need to idle throttles at 20% rpm; and set INS to NAV when OK
+-- start v0.5
+-- You will need to set INS knob to NAV when OK
+ft['firstspool'] = true
+ft['engspool'] = function()
+    rpm = Export.LoGetEngineInfo().RPM
+    loglocal('engspool rpm: '..rpm.left..' : '..rpm.right)
+
+    if rpm.right < 21 then
+        loglocal('engspool 1 true '..DCS.getRealTime(), 4)
+        press('',{delay=1,fn=ft['engspool']})
+    else
+        if rpm.right < 50 then
+            loglocal('engspool 2 true ', 4)
+            if ft['firstspool'] then
+                Export.LoSetCommand(2006, -1)
+                ft['firstspool'] = false
+            else
+                Export.LoSetCommand(2006, 1)
+            end
+            press('',{delay=1,fn=ft['engspool']})
+        else
+            if rpm.left == 0 then
+                ttt('Left Throttle Finger Lift')
+                press('',{delay=1,fn=ft['engspool']})
+                ft['firstspool'] = true
+            else
+                if rpm.left < 21 then
+                    press('',{delay=1,fn=ft['engspool']})
+                else
+                    Export.LoSetCommand(2005, -1)
+                end
+            end
+        end
+    end
+end
+
 ft['start'] = function ()
-    
+
 tt('Oxygen Supply/Mode Control Switch',{action=oxyctrl_commands.oxy_pbg_on_off_sw,value=.5})
 tt('Left Generator')
 tt('Right Generator')
@@ -181,7 +215,7 @@ tt('Radar Mode Selector',{value=.25})
 tt('Nav FLIR Switch',{value=.5})
 tt('Fuel Totalizer Selector')
 
-for i=1, 20 do 
+for i=1, 20 do                  -- bingo at 2k lb
   ttn('Bingo Selection')
 end
 
@@ -190,12 +224,8 @@ ttt('T/O Trim Button')
 ttn('Canopy Handle')
 
 ttt('Right Throttle Finger Lift') --idle at 21%
-delay(50)
---Export.LoSetCommand(2006, 0)
+ft['engspool']()
 
-ttt('Left Throttle Finger Lift')
---Export.LoSetCommand(2005, 0)
-
-end --end of start()
+end                             -- end of start1()
 
 return ft
