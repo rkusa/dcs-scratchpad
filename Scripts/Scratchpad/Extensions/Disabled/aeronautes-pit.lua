@@ -1,4 +1,4 @@
-local version=.6
+local version=.61
 --[[
 local readme = "
 # aeronautes-pit
@@ -81,7 +81,7 @@ supported by each.
   other input without having to know or program which specific buttons
   to press. These have been adapted for specific aircraft as each one
   has it's own particular sequence of input. The API for this includes
-  wp(), wpseq(), press() and UI buttons `ULLL` and `WPLL`.
+  wp(), wpseq(), press() and UI buttons `LL` and `wp`.
 
   * Waypoint input is currently supported for AV8, F-15E, F-16C, FA-18C,
   Blackshark 2&3.
@@ -93,7 +93,7 @@ supported by each.
   can modify these yourself to make your own customizations for your
   aircraft. They can be utilized by clicking on the function buttons,
   `1`, `2`, ...  or executing the function name in a scratchpad page
-  with `ULbuf` or `ULsel` buttons.
+  with `Buf` or `Sel` buttons.
 
   * Customizations are currently supported for AV8, F-15E, F-16C, FA-18C,
   Mi-8.
@@ -124,12 +124,36 @@ supported by each.
                                         |...
 '''
 
-## UI buttons:
+## UI:
 
-- ULbuf - This will attempt to execute everything in the current
-  scratchpad page as a Lua script.
+    The scratchpad title bar will show from left to right the name of
+    the current page, a static vertical separator, a progress spinner
+    and a list of available customization functions if available. The
+    numbers of the functions correspond to the numbered buttons below
+    the scratchpad window. The progress spinner will indicate the
+    current state of system input with the following symbols:
 
-- `ULsel` - This will take the current text selection as Lua. If no
+    `0000 | * 1.start 2.`
+
+    - `*` astericks indicates the system is ready
+
+    - `-\|/` any instance of the lines to represent a rotating bar
+      indicates the system is processing some input
+
+    - `D` capital D indicates delay() was called. Once the amount of
+      time requested for delay has passed the spinner should change to
+      one of the previous indicators.
+
+    Button labels that are capitalized will cause some type of input
+    to the cockpit, such as `LL` or `Sel`. Those without
+    capitalization do not cause input.
+
+- `LL` - Using the camera's current location, the latlong is entered
+  into the aircrafts coordinate input system. In F10 map view this is
+  the location at center of the screen. In any other view, cockpit or
+  external, it is the 3d location of the camera position.
+
+- `Sel` - This will take the current text selection as Lua. If no
   text is selected, then the current line the cursor is on is
   executed. This is a convenience feature to handle single line
   commands without the need to carefully highlight the line. This
@@ -138,22 +162,23 @@ supported by each.
   the aircrafts input panel if available. The format of the coordinate
   must be ***
 
-- `ULLL` - Using the camera's current location, the latlong is entered
-  into the aircrafts coordinate input system. In F10 map view this is
-  the location at center of the screen. In any other view cockpit or
-  external view it is the 3d location of the camera view.
+- Buf - This will attempt to execute everything in the current
+  scratchpad page as a Lua script.
 
-- `WPLL` - This works similarly to ULLL, but instead of directly
+- `Cancel` - If the system is processing a series of cockpit inputs,
+  this will stop and cancel any outstanding inputs remaining.
+
+- `wp` - This works similarly to LL, but instead of directly
   entering the latlong, instead it will print the equivalent wp()
   command at the current cursor location in scratchpad. This is useful
   for building a mission plan that can be reused or passed along.
 
-- `CANCEL` - If the system is processing a series of cockpit inputs,
-  this will stop and cancel any outstanding inputs remaining.
-
-- `RELOAD` - Convenience and customization code for the current
+- `reload` - Convenience and customization code for the current
   aircraft are immediately reloaded and made available. This is only
   useful if you are modifying or adding apit code.
+
+- `dbglog` - This is used to increase the debug level of apit
+  logging. It is equivalent to `loglocal('',{debug=6})
 
 - `1`, `2`,... - These dynamic function buttons provide one-click
   access to functions defined in the per module customization files in
@@ -162,32 +187,28 @@ supported by each.
   window just to the right of the page name. Each function is prefaced
   with the corresponding button number.
 
-
-
 ## apit API
     The Lua functions provided by apit are as follows:
 
     - push_start_command(), push_stop_command()
 
-    - prewp()
+    - wp() enters a latlong into the modules keypad interface if available
 
-    - wp()
+    - wpseq() interface for setting the next steerpoint number
 
-    - wpseq()
+    - press() lets you press an arbitrary sequence of buttons as defined in the kp table
 
-    - press()
+    - tt() interface to cockpit interface associated with a tool tip
 
-    - tt()
+    - ttn() tool tip on, equivalent to tt(,{value=1})
 
-    - ttn()
+    - ttf() tool tip off, equivalent to tt(,{value=0})
 
-    - ttf()
+    - ttt() tool tip toggle, equivalent to ttn() ttf()
 
-    - ttt()
+    - delay() delay in input for the scheduled sequence
 
-    - delay()
-
-    - loglocal()
+    - loglocal() log message to the Logs\Scratchpad.log file
 
     - setPageNotice()
 
@@ -202,8 +223,6 @@ supported by each.
     - scratchpad
 
     - DCS Lua environment
-
-
 
 ## Howto
 
@@ -229,6 +248,7 @@ local function loglocal(str, lvl)
         if type(lvl) == 'table' then
             if type(lvl.debug) == 'number' then
                 debug = lvl.debug
+                return
             end
         end
     end
@@ -252,6 +272,23 @@ local buttfnamt = 6
 local buttw = 50
 local butth = 30
 
+local noticestr = ''
+Spinr = {
+    frames = {'/','|','\\','-'},
+    idx = 1,
+    run = function(self)
+        if self.idx <= 1 then
+            self.idx = #self.frames
+        else
+            self.idx = self.idx - 1
+        end
+        return self.frames[self.idx]
+    end,
+    rest = function(self)
+        idx = 1
+        return '*'
+    end,
+}
 
 local function copytable(src)
     dst = {}
@@ -741,10 +778,9 @@ function push_stop_command(delay, c)
     loglocal('aeronautespit: push_stop_command() start '..net.lua2json(c))
     if c.device and c.action and c.value then
         loglocal('push_stop_command: dev '..c.device ..', action '.. c.action ..', val '.. c.value)
-        if not c.len then
-            c.len = delay               -- default switch delay
-        end
-        table.insert(domacro.inp, {c.action, c.value, c.len, c.device})
+        if not c.len then c.len = delay end -- default to switch delay
+        if not c.fn then c.fn = nil end
+        table.insert(domacro.inp, {c.action, c.value, c.len, c.device, c.fn})
     end
 end                             -- end of push_stop_command()
 
@@ -767,7 +803,7 @@ function TTtoDA(name, parms)
     return nil
 end                             -- end of TTtoDA()
 
--- tt() tool tip instantiation
+-- tt() interface to cockpit interface associated with a tool tip
 function tt(name, params)
     local tmp = params or {value = 1.0}
     tmp = TTtoDA(name, tmp)
@@ -806,7 +842,9 @@ end
 -- delay() delay in input for the scheduled sequence
 function delay(seconds)
     loglocal('delay: '..seconds)
-    push_stop_command(0, {device = 0, action = 0, value = 0, len = seconds})
+    push_stop_command(0, {device = -1, action = -1, value = 0, len = seconds,
+                          fn = function() setPageNotice('D'..noticestr) end
+    })
 end
 
 -- prewp() input sequence before entering latlong
@@ -924,7 +962,9 @@ function assignCustom()
     local infn = lfs.writedir() .. 'Scripts\\Scratchpad\\Extensions\\lib\\'..unittype..'.lua'
     loglocal('aeronautespit: using customfile '..infn)
     local atr = lfs.attributes(infn)
+
     if atr and atr.mode == 'file' then
+
         local customfn = loadfile(infn)
         if not customfn then
             loglocal('assignCustom loadstring failed: ret: ')
@@ -962,7 +1002,8 @@ function assignCustom()
             buttfn[i] = nil
         end
         local x = 0
-        local noticestr = ''
+
+        noticestr = ''
         for i,j in pairs(unittab) do
             if type(j) == 'function' then
                 x = x + 1
@@ -970,7 +1011,10 @@ function assignCustom()
                 noticestr = noticestr ..' '..x..':'..i..'  '
             end
         end
-        setPageNotice(noticestr)
+        loglocal('assignCustom #unttab: '..#unittab)
+        setPageNotice(Spinr:rest()..noticestr)
+    else
+        loglocal('assignCustom file not found')
     end
 end                             -- end of assignCustom()
 
@@ -1150,7 +1194,7 @@ local function handleSelection(textarea)
 
         sel = string.sub(text, start, eos)
 
-        loglocal('ULsel len '..string.len(sel)..': #'..sel..'#')
+        loglocal('Sel len '..string.len(sel)..': #'..sel..'#')
 
         local jtest = sel
         jtest = string.gsub(jtest, "[']", '')
@@ -1159,24 +1203,24 @@ local function handleSelection(textarea)
 
         --for jtac coords
         if lon then
-            loglocal('ULsel: jtac position detected')
+            loglocal('Sel: jtac position detected')
             local cType = coordsType(unittype)
             if cType then
                 if cType.precision then
                     delta = 3 - cType.precision
-                    loglocal('ULsel jtac delta: '.. delta)
+                    loglocal('Sel jtac delta: '.. delta)
                     if delta > 0 then
-                        loglocal('ULsel jtac precision: '..#lat)
+                        loglocal('Sel jtac precision: '..#lat)
                         lat = string.sub(lat, 1, #lat - delta)
                         lon = string.sub(lon, 1, #lon - delta)
-                        loglocal('ULsel jtac precision2: '..#lat..' lat: '..lat)
+                        loglocal('Sel jtac precision2: '..#lat..' lat: '..lat)
                     end
                 end
                 if cType.lonDegreesWidth then
                     local east, londeg, lonmin = string.match(lon, '(%u) (%d+).(%d+%.%d+)')
                     local fmtstr = '%s %.'.. cType.lonDegreesWidth ..'d %s'
                     local newlon = string.format(fmtstr, east, londeg, lonmin)
-                    loglocal(string.format('ULsel fmtstr: %s east: %s londeg: %s lonmin: %s, newlon: %s', fmtstr, east, londeg, lonmin, newlon))
+                    loglocal(string.format('Sel fmtstr: %s east: %s londeg: %s lonmin: %s, newlon: %s', fmtstr, east, londeg, lonmin, newlon))
                     lon = newlon
                 end
             end
@@ -1184,11 +1228,11 @@ local function handleSelection(textarea)
             lon = string.gsub(lon, '[ .]', '')
 
             local newstr = "wp('"..LLtoAC(lat, lon, '0') .. "')"
-            loglocal('ULsel jtac: '..lat ..' , '..lon..' , '..newstr)
+            loglocal('Sel jtac: '..lat ..' , '..lon..' , '..newstr)
             sel = newstr
         end
 
-        loglocal('addButton ULsel: '..sel)
+        loglocal('addButton Sel: '..sel)
         loadDTCBuffer(sel)
 end                             -- end of handleSelection()
 
@@ -1251,7 +1295,7 @@ function getloc()
 end
 
 -- first row buttons
-for i=1,6 do                    -- initialize locations and size
+for i=1,7 do                    -- initialize locations and size
     butts[i] = {((i-1)*buttw), 0, buttw, butth}
 end
 
@@ -1263,35 +1307,43 @@ butts[1][6] = function(text)
     domacro.flag = true
 end
 
-butts[2][5] = "wp"
-butts[2][6] = function(text)
-    text:insertBelow("wp('" .. getloc() .. "')")
-end
+butts[2][5] = "Sel"
+butts[2][6] = handleSelection
 
-butts[3][5] = "Sel"
-butts[3][6] = handleSelection
-
-butts[4][5] = "Buf"
-butts[4][6] = function(textarea)
+butts[3][5] = "Buf"
+butts[3][6] = function(textarea)
     loadDTCBuffer(textarea:getText())
 end
 
-butts[5][5] = "Cancel"
-butts[5][6] = function(textarea)
+butts[4][5] = "Cancel"
+butts[4][6] = function(textarea)
         domacro.inp = {}
         domacro.idx = 1
         domacro.flag = false
+        setPageNotice(Spinr:rest()..noticestr)
 end
 
-butts[6][5] = "Reload"
+butts[5][5] = "wp"
+butts[5][6] = function(text)
+    text:insertBelow("wp('" .. getloc() .. "')")
+end
+
+butts[6][5] = "reload"
 butts[6][6] = function(text)
-        loglocal('aeronautespit: RELOAD click '..#LT)
+        loglocal('aeronautespit: reload click '..#LT)
         assignKP()
         assignCustom()
 end
 
+butts[7][5] = "dbglog"
+butts[7][6] = function(text)
+        loglocal('aeronautespit: debug level set 9')
+        loglocal('',{debug=9})
+end
+
 --start second row buttons
 for i=1,buttfnamt do
+    butts[i+7] = {((i-1)*buttw)+10, butth, buttw, butth, tostring(i)}
     --[[ attempt at runtime generation of indirection func table for dynamic function buttons
     local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
     local fn
@@ -1301,15 +1353,14 @@ for i=1,buttfnamt do
         loglocal('aeronautes button butts fns : '..res)
         end
     --]]
-    butts[i+6] = {((i-1)*buttw)+10, butth, buttw, butth, tostring(i)}
 end
 
-butts[7][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
-butts[8][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
-butts[9][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
-butts[10][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
-butts[11][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
-butts[12][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
+butts[8][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
+butts[9][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
+butts[10][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
+butts[11][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
+butts[12][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
+butts[13][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
 
 for i,j in pairs(butts) do      -- create all buttons
     addButton(j[1], j[2], j[3], j[4], j[5], j[6])
@@ -1332,6 +1383,7 @@ addFrameListener('aeronautes-pit', function()
             val = domacro.inp[i][2]
             device = domacro.inp[i][4]
             loglocal('addFrameListener loop: '..i..":"..device..":" .. command ..":".. val..' '..socket.gettime(), 6)
+            setPageNotice(Spinr:run()..noticestr)
             if command == -1 and device == -1 then
                 loglocal('addFrameListener potential fn '..DCS.getRealTime()..' '..net.lua2json(domacro.inp[i]))
                 if domacro.inp[i][5] then
@@ -1344,6 +1396,7 @@ addFrameListener('aeronautes-pit', function()
             else
                 assert(Export.GetDevice(device):performClickableAction(command, val))
             end
+
             domacro.ctr = socket.gettime() + domacro.inp[i][3]
             loglocal('addFrameListener: time tick '..domacro.ctr, 6)
             i = i + 1
@@ -1351,6 +1404,7 @@ addFrameListener('aeronautes-pit', function()
                 domacro.inp = {}
                 domacro.idx = 1
                 domacro.flag = false
+                setPageNotice(Spinr:rest()..noticestr)
                 loglocal('addFrameListener: finished macro ul')
             else
                 domacro.idx = i
