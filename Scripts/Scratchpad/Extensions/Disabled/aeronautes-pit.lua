@@ -1,6 +1,5 @@
 local version=.61
---[[
-local readme = "
+local readme = [=[
 # aeronautes-pit
 
 This is an extension to github.com/rkusa/scratchpad for DCS. At a high
@@ -151,7 +150,9 @@ supported by each.
 - `LL` - Using the camera's current location, the latlong is entered
   into the aircrafts coordinate input system. In F10 map view this is
   the location at center of the screen. In any other view, cockpit or
-  external, it is the 3d location of the camera position.
+  external, it is the 3d location of the camera position. Some
+  aircraft may have prerequisites before using `LL`. For example, F-18
+  currently requires Precise coordinates enabled.
 
 - `Sel` - This will take the current text selection as Lua. If no
   text is selected, then the current line the cursor is on is
@@ -175,10 +176,20 @@ supported by each.
 
 - `reload` - Convenience and customization code for the current
   aircraft are immediately reloaded and made available. This is only
-  useful if you are modifying or adding apit code.
+  useful if you are modifying or adding apit Customization
+  files(Extensions\lib).
 
 - `dbglog` - This is used to increase the debug level of apit
   logging. It is equivalent to `loglocal('',{debug=6})
+
+- `help` - This will create a file called help-apit.txt in the
+  scratchpad directory if it doesn't exist. If one already exists it
+  will overwrite it. If you change your help file and don't want to
+  lose the it, rename it to some other file name. After clicking on
+  the help button, you'll need to refresh the pages with the Reload
+  Page hotkey to see it immediately. See scratchpad instruction on how
+  to assign the hotkey if you have not already. Otherwise scratchpad
+  will not recognize it until the next time you start DCS.
 
 - `1`, `2`,... - These dynamic function buttons provide one-click
   access to functions defined in the per module customization files in
@@ -216,7 +227,6 @@ supported by each.
 
     - unittab[]()
 
-
 ## Supported API
     Other APIs provided through apit:
 
@@ -225,9 +235,7 @@ supported by each.
     - DCS Lua environment
 
 ## Howto
-
-"
---]]
+]=]
 
 local socket = require('socket')
 lfs = require('lfs')
@@ -705,7 +713,8 @@ function searchmodules()
 
     local modnametot = 0
     for i,j in pairs(moddir2name) do
-        local fp = io.open(j.dir..'\\entry.lua')
+        local fp, res
+        fp, res = io.open(j.dir..'\\entry.lua')
         if fp then
             for l in fp:lines() do
                 ut = string.match(l, [[^%w+_flyable[(]['"]([^'"]+)]])
@@ -716,7 +725,7 @@ function searchmodules()
                 end
             end
         else
-            loglocal('entry.lua not found, '.. j.dir)
+            loglocal('aeronautes-pit searchmodules open error: '.. res)
         end
     end
 
@@ -748,7 +757,7 @@ function press(inp, param)
     if param and param.fn then
         loglocal('press() fn '..DCS.getRealTime())
         table.insert(domacro.inp, {-1, -1, param.delay, -1, nil})
-        table.insert(domacro.inp, {-1, -1, param.delay, -1, param.fn})
+        table.insert(domacro.inp, {-1, -1, param.delay, -1, param.fn, param.arg})
     end
     for key in string.gmatch(inp, '.') do
         if kp[key] == nil then
@@ -777,10 +786,10 @@ domacro.inp = {}
 function push_stop_command(delay, c)
     loglocal('aeronautespit: push_stop_command() start '..net.lua2json(c))
     if c.device and c.action and c.value then
-        loglocal('push_stop_command: dev '..c.device ..', action '.. c.action ..', val '.. c.value)
+        loglocal('push_stop_command: dev '..c.device ..', action '.. c.action ..', val '.. c.value..' fn '..type(c.fn)..' arg: '..type(c.arg))
         if not c.len then c.len = delay end -- default to switch delay
         if not c.fn then c.fn = nil end
-        table.insert(domacro.inp, {c.action, c.value, c.len, c.device, c.fn})
+        table.insert(domacro.inp, {c.action, c.value, c.len, c.device, c.fn, c.arg})
     end
 end                             -- end of push_stop_command()
 
@@ -1014,7 +1023,7 @@ function assignCustom()
         loglocal('assignCustom #unttab: '..#unittab)
         setPageNotice(Spinr:rest()..noticestr)
     else
-        loglocal('assignCustom file not found')
+        loglocal('assignCustom file not found, '..infn)
     end
 end                             -- end of assignCustom()
 
@@ -1122,9 +1131,10 @@ function uploadinit()
         return
     end
 
-    local infile = io.open(infn)
+    local infile, res
+    infile, res = io.open(infn)
     if not infile then
-        loglocal('aeronautespit: open file fail; ' .. infn)
+        loglocal('aeronautespit: open file fail; ' .. res)
         return(nil)
     end
 
@@ -1295,7 +1305,8 @@ function getloc()
 end
 
 -- first row buttons
-for i=1,7 do                    -- initialize locations and size
+local rown = 8
+for i=1,rown do                 -- initialize locations and size
     butts[i] = {((i-1)*buttw), 0, buttw, butth}
 end
 
@@ -1317,10 +1328,10 @@ end
 
 butts[4][5] = "Cancel"
 butts[4][6] = function(textarea)
-        domacro.inp = {}
-        domacro.idx = 1
-        domacro.flag = false
-        setPageNotice(Spinr:rest()..noticestr)
+    domacro.inp = {}
+    domacro.idx = 1
+    domacro.flag = false
+    setPageNotice(Spinr:rest()..noticestr)
 end
 
 butts[5][5] = "wp"
@@ -1330,20 +1341,33 @@ end
 
 butts[6][5] = "reload"
 butts[6][6] = function(text)
-        loglocal('aeronautespit: reload click '..#LT)
-        assignKP()
-        assignCustom()
+    loglocal('aeronautespit: reload click '..#LT)
+    assignKP()
+    assignCustom()
 end
 
 butts[7][5] = "dbglog"
 butts[7][6] = function(text)
-        loglocal('aeronautespit: debug level set 9')
-        loglocal('',{debug=9})
+    loglocal('aeronautespit: debug level set 9')
+    loglocal('',{debug=9})
+end
+
+butts[8][5] = "help"
+butts[8][6] = function(text)
+    local helpfn = lfs.writedir()..'Scratchpad\\help-apit.txt'
+    loglocal('aeronautespit: help click '..helpfn)
+    local fp, res
+    fp, res = io.open(helpfn, 'w+')
+    if not fp then
+        loglocal('aeronautespit: help click error open: '..res)
+    end
+    fp:write('version: '..version..readme)
+    fp:close()
 end
 
 --start second row buttons
 for i=1,buttfnamt do
-    butts[i+7] = {((i-1)*buttw)+10, butth, buttw, butth, tostring(i)}
+    butts[i+rown] = {((i-1)*buttw)+10, butth, buttw, butth, tostring(i)}
     --[[ attempt at runtime generation of indirection func table for dynamic function buttons
     local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
     local fn
@@ -1355,12 +1379,12 @@ for i=1,buttfnamt do
     --]]
 end
 
-butts[8][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
-butts[9][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
-butts[10][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
-butts[11][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
-butts[12][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
-butts[13][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
+butts[rown+1][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
+butts[rown+2][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
+butts[rown+3][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
+butts[rown+4][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
+butts[rown+5][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
+butts[rown+6][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
 
 for i,j in pairs(butts) do      -- create all buttons
     addButton(j[1], j[2], j[3], j[4], j[5], j[6])
@@ -1385,12 +1409,12 @@ addFrameListener('aeronautes-pit', function()
             loglocal('addFrameListener loop: '..i..":"..device..":" .. command ..":".. val..' '..socket.gettime(), 6)
             setPageNotice(Spinr:run()..noticestr)
             if command == -1 and device == -1 then
-                loglocal('addFrameListener potential fn '..DCS.getRealTime()..' '..net.lua2json(domacro.inp[i]))
+                loglocal('addFrameListener potential fn '..DCS.getRealTime()..' '..net.lua2json(domacro.inp[i]), 6)
                 if domacro.inp[i][5] then
-                    loglocal('addFrameListener [5] ' ..DCS.getRealTime())
+                    loglocal('addFrameListener [5] ' ..DCS.getRealTime(), 6)
                     if type(domacro.inp[i][5]) == 'function' then
-                        loglocal('addFrameListener [5] fn '..type(domacro.inp[i][5])..' '..DCS.getRealTime())
-                        domacro.inp[i][5]()
+                        loglocal('addFrameListener [5] fn '..type(domacro.inp[i][5])..' '..type(domacro.inp[i][6]), 6)
+                        domacro.inp[i][5](domacro.inp[i][6])
                     end
                 end
             else

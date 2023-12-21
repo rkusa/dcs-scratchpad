@@ -1,9 +1,10 @@
---[[ working functions: start, mpd
+--[[ working functions:
+    start - starts jet and engines
+    mpd - configures pages and modes. Modify screens{} table to configure values
 --]]
 
 ft ={}
 ft.run={'start'}
---ft['test'] = function () loglocal('my test') end
 
 --#################################
 -- mpd v0.1
@@ -21,8 +22,7 @@ screens[devices.MPD_FRIGHT] = {
     {'TPOD','NAV'},
     {'HSI' ,'A/A'}
 }
-
----[[
+---[[convert this line to block comment to avoid setting WSO MPCDs
 screens[devices.MPCD_RLEFT] = {
     {'ADI' ,'NAV'},
     {'ARMT','A/G'},
@@ -102,43 +102,13 @@ ft['mpd'] = function ()
 end --end of mpd()
 
 --#################################
--- start v0.5
+-- start v0.6
 -- You will need to set INS knob to NAV when OK
 ft['firstspool'] = true
-ft['engspool'] = function()
-    rpm = Export.LoGetEngineInfo().RPM
-    loglocal('engspool rpm: '..rpm.left..' : '..rpm.right)
+ft['start'] = function (action)
+    if type(action) == 'table' then
 
-    if rpm.right < 21 then
-        loglocal('engspool 1 true '..DCS.getRealTime(), 4)
-        press('',{delay=1,fn=ft['engspool']})
-    else
-        if rpm.right < 50 then
-            loglocal('engspool 2 true ', 4)
-            if ft['firstspool'] then
-                Export.LoSetCommand(2006, -1)
-                ft['firstspool'] = false
-            else
-                Export.LoSetCommand(2006, 1)
-            end
-            press('',{delay=1,fn=ft['engspool']})
-        else
-            if rpm.left == 0 then
-                ttt('Left Throttle Finger Lift')
-                press('',{delay=1,fn=ft['engspool']})
-                ft['firstspool'] = true
-            else
-                if rpm.left < 21 then
-                    press('',{delay=1,fn=ft['engspool']})
-                else
-                    Export.LoSetCommand(2005, -1)
-                end
-            end
-        end
-    end
-end
-
-ft['start'] = function ()
+        -- Beginning of start procedure
 
 tt('Oxygen Supply/Mode Control Switch',{action=oxyctrl_commands.oxy_pbg_on_off_sw,value=.5})
 tt('Left Generator')
@@ -224,8 +194,40 @@ ttt('T/O Trim Button')
 ttn('Canopy Handle')
 
 ttt('Right Throttle Finger Lift') --idle at 21%
-ft['engspool']()
 
-end                             -- end of start1()
+    ft['start']('engspool')
+    elseif action == 'engspool' then
+        rpm = Export.LoGetEngineInfo().RPM
+        loglocal('engspool rpm: '..rpm.left..' : '..rpm.right)
+
+        if rpm.right < 21 then
+            loglocal('engspool 1 true '..DCS.getRealTime(), 4)
+            press('',{delay=1,fn=ft['start'],arg='engspool'})
+        else
+            if rpm.right < 50 then
+                loglocal('engspool 2 true ', 4)
+                if ft['firstspool'] then
+                    Export.LoSetCommand(2006, -1)
+                    ft['firstspool'] = false
+                else
+                    Export.LoSetCommand(2006, 1)
+                end
+                press('',{delay=1,fn=ft['start'],arg='engspool'})
+            else
+                if rpm.left == 0 then
+                    ttt('Left Throttle Finger Lift')
+                    press('',{delay=1,fn=ft['start'],arg='engspool'})
+                    ft['firstspool'] = true
+                else
+                    if rpm.left < 21 then
+                        press('',{delay=1,fn=ft['start'],arg='engspool'})
+                    else
+                        Export.LoSetCommand(2005, -1)
+                    end
+                end
+            end
+        end
+    end                         -- end of elseif action
+end                             -- end of start()
 
 return ft

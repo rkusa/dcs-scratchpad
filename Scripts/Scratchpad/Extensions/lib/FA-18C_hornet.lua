@@ -1,10 +1,18 @@
---[[ working functions: start, mpd, toopylon
+--[[ working functions:
+
+    start - start systems and engines, INS in alignment but you need
+    to press 'STD HDG' on AMPCD for shorter stored heading then IFA on
+    INS knob when it's done
+
+    toopylon - steps thru 4 pylons and sets TOO mode, then sets QTY
+    all 4 pylons
+
 --]]
 
 local ft ={}
 
 --#################################
--- toopylon
+-- toopylon v.5
 ft['toopylon'] = function ()
   tt('Left MDI PB 5')
 delay(.2)
@@ -40,38 +48,73 @@ delay(.2)
 tt('Left MDI PB 6')
 end
 
+--[[
 --#################################
 --fence
 ft['fence'] = function ()
 
-
 end  --end of fence()
-
-
+--]]
 
 --#################################
---start v.5
+--start v.6
+ft['start'] = function (action)
+    if type(action) == 'table' then
 
-ft['lengspool'] = function()
-    rpm = Export.LoGetEngineInfo().RPM
-    loglocal('lengspool rpm: '..rpm.left..' : '..rpm.right)
-    local dbl = 0
+-- Beginning of start procedure
 
-    if rpm.left == 0 then
-        tt('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankLSw, value=-1})
-        delay(5)
-        ttf('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankLSw})
-        press('',{delay=1,fn=ft['lengspool']})
-    else
-        if rpm.left < 15 then
-            press('',{delay=1,fn=ft['lengspool']})
+tt('Ejection Seat SAFE/ARMED Handle, SAFE/ARMED',{value=-1})
+tt('Battery Switch, ON/OFF/ORIDE')
+ttn('APU Control Switch, ON/OFF')
+--delay(1)
+--ttf('APU Control Switch, ON/OFF')
+
+tt('Canopy Control Switch, OPEN/HOLD/CLOSE',{value=-1})
+delay(10)
+
+tt('Left MDI Brightness Selector Knob, OFF/NIGHT/DAY')
+tt('Right MDI Brightness Selector Knob, OFF/NIGHT/DAY')
+tt('UFC Brightness Control Knob',{value=.9})
+tt('HUD Symbology Brightness Control Knob',{value=.9})
+tt('AMPCD Off/Brightness Control Knob',{value=.9})
+tt('UFC COMM 1 Volume Control Knob',{value=.9})
+tt('UFC COMM 2 Volume Control Knob',{value=.9})
+tt('HMD OFF/BRT Knob',{value=.9})
+
+delay(3)
+
+    ft['start']('reng')
+    elseif action == 'reng' then
+
+        rpm = Export.LoGetEngineInfo().RPM
+        loglocal('engspool rpm: '..rpm.left..' : '..rpm.right)
+        local dbl = 0
+
+        if rpm.right == 0 then
+            tt('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankRSw, value=1})
+            delay(5)
+            ttf('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankRSw})
+            press('',{delay=1,fn=ft['start'], arg='reng'})
+            return
         else
-            Export.LoSetCommand(311)
+            if rpm.right < 15 then
+                loglocal('rengspool 1 true '..DCS.getRealTime(), dbl)
+                press('',{delay=1,fn=ft['start'], arg='reng'})
+                return
+            else
+                if rpm.right < 50 then
+                    loglocal('rengspool 2 true ', dbl)
+                    Export.LoSetCommand(312)
+                    press('',{delay=1,fn=ft['start'], arg='reng'})
+                    return
+                else
+                    loglocal('rengspool 3 true ', dbl)
+                end
+            end
         end
-    end
-end                             -- end of lengspool()
 
-ft['start-1'] = function()
+    ft['start']('postreng')
+    elseif action == 'postreng' then
 
 tt('Bleed Air Knob, R OFF/NORM/L OFF/OFF',{value=.3})
 tt('Bleed Air Knob, R OFF/NORM/L OFF/OFF',{value=0})
@@ -126,66 +169,26 @@ tt('AMPCD PB 19')
 --delay(100)
 --push_start_command(0, {device=devices.INS, action=INS_commands.INS_SwitchChange, value = 0.4})
 
+    ft['start']('leng')
+    elseif action == 'leng' then
 
-ft['lengspool']()
+        rpm = Export.LoGetEngineInfo().RPM
+        loglocal('lengspool rpm: '..rpm.left..' : '..rpm.right)
+        local dbl = 0
 
-end                             --end of start-1()
-
-ft['rengspool'] = function()
-    rpm = Export.LoGetEngineInfo().RPM
-    loglocal('engspool rpm: '..rpm.left..' : '..rpm.right)
-    local dbl = 0
-
-    if rpm.right == 0 then
-        tt('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankRSw, value=1})
-        delay(5)
-        ttf('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankRSw})
-        press('',{delay=1,fn=ft['rengspool']})
-        return
-    else
-        if rpm.right < 15 then
-            loglocal('rengspool 1 true '..DCS.getRealTime(), dbl)
-            press('',{delay=1,fn=ft['rengspool']})
-            return
+        if rpm.left == 0 then
+            tt('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankLSw, value=-1})
+            delay(5)
+            ttf('Engine Crank Switch, LEFT/OFF/RIGHT',{action=engines_commands.EngineCrankLSw})
+            press('',{delay=1,fn=ft['start'], arg='leng'})
         else
-            if rpm.right < 50 then
-                loglocal('rengspool 2 true ', dbl)
-                Export.LoSetCommand(312)
-                press('',{delay=1,fn=ft['rengspool']})
-                return
+            if rpm.left < 15 then
+                press('',{delay=1,fn=ft['start'], arg='leng'})
             else
-                loglocal('rengspool 3 true ', dbl)
+                Export.LoSetCommand(311)
             end
         end
-    end
-
-    ft['start-1']()
-end                             -- end of rengspool()
-
-ft['start'] = function ()
-
-tt('Ejection Seat SAFE/ARMED Handle, SAFE/ARMED',{value=-1})
-tt('Battery Switch, ON/OFF/ORIDE')
-ttn('APU Control Switch, ON/OFF')
---delay(1)
---ttf('APU Control Switch, ON/OFF')
-
-tt('Canopy Control Switch, OPEN/HOLD/CLOSE',{value=-1})
-delay(10)
-
-tt('Left MDI Brightness Selector Knob, OFF/NIGHT/DAY')
-tt('Right MDI Brightness Selector Knob, OFF/NIGHT/DAY')
-tt('UFC Brightness Control Knob',{value=.9})
-tt('HUD Symbology Brightness Control Knob',{value=.9})
-tt('AMPCD Off/Brightness Control Knob',{value=.9})
-tt('UFC COMM 1 Volume Control Knob',{value=.9})
-tt('UFC COMM 2 Volume Control Knob',{value=.9})
-tt('HMD OFF/BRT Knob',{value=.9})
-
-delay(3)
-
-ft['rengspool']()
-end                             -- end of start
-
+    end                         -- end elseif action
+end                             -- end of start()
 
 return ft
