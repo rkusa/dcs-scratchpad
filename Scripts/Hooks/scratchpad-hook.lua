@@ -33,6 +33,7 @@ local function loadScratchpad()
     local currentPage = nil
     local pagesCount = 0
     local pages = {}
+    local pagesnotice = ''
 
     -- Crosshair resources
     local crosshairWindow = nil
@@ -330,6 +331,30 @@ local function loadScratchpad()
         self:insert("")
     end
 
+    local function setTitleBar(page)
+        window:setText(page.name .. ' | '..pagesnotice)
+    end
+
+    local function setPageNotice(str)
+        pagesnotice = str
+        setTitleBar(pages[1])
+        return
+        --[[
+        for _,page in pairs(pages) do
+            if page.name == string.sub(string.match(currentPage,'[%w+]+.txt'),1, -5) then
+                page.notice = str
+                setTitleBar(page)
+                return
+            end
+        end
+        log('setPageNotice: page not found '..currentPage)
+        --]]
+    end
+
+    local function getcurrentPage()
+        return currentPage
+    end
+
     local function loadPage(page)
         log("loading page " .. page.path)
         file, err = io.open(page.path, "r")
@@ -342,7 +367,7 @@ local function loadScratchpad()
             textarea:setText(content)
 
             -- update title
-            window:setText(page.name)
+            setTitleBar(page)
         end
     end
 
@@ -474,7 +499,8 @@ local function loadScratchpad()
                         pages,
                         {
                             name = name:sub(1, -5),
-                            path = path
+                            path = path,
+                            notice = '',
                         }
                     )
                     pagesCount = pagesCount + 1
@@ -495,6 +521,7 @@ local function loadScratchpad()
             )
             pagesCount = pagesCount + 1
         end
+        pagesnotice = ''
     end
 
     local function unlockKeyboardInput()
@@ -810,7 +837,9 @@ local function loadScratchpad()
                 end,
                 formatCoord = formatCoord,
                 log = log,
-                getSelection = getSelection
+                getSelection = getSelection,
+                setPageNotice = setPageNotice,
+                getcurrentPage = getcurrentPage,
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)
