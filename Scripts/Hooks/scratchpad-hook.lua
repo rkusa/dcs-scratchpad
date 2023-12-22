@@ -336,14 +336,19 @@ local function loadScratchpad()
     end
 
     local function setPageNotice(str)
+        pagesnotice = str
+        setTitleBar(pages[1])
+        return
+        --[[
         for _,page in pairs(pages) do
             if page.name == string.sub(string.match(currentPage,'[%w+]+.txt'),1, -5) then
-                pagesnotice = str
+                page.notice = str
                 setTitleBar(page)
                 return
             end
         end
         log('setPageNotice: page not found '..currentPage)
+        --]]
     end
 
     local function getcurrentPage()
