@@ -33,7 +33,7 @@ local function loadScratchpad()
     local currentPage = nil
     local pagesCount = 0
     local pages = {}
-    local pagesnotice = ''
+    local pagesnotice = {}
 
     -- Crosshair resources
     local crosshairWindow = nil
@@ -42,7 +42,7 @@ local function loadScratchpad()
     local extensions = {}
     local coordListeners = {}
     local frameListeners = {}
-	local missionLoadEndListeners = {}
+    local missionLoadEndListeners = {}
 
     local function log(str)
         if not str then
@@ -332,27 +332,29 @@ local function loadScratchpad()
     end
 
     local function setTitleBar(page)
-        window:setText(page.name .. ' | '..pagesnotice)
-    end
-
-    local function setPageNotice(str)
-        pagesnotice = str
-        setTitleBar(pages[1])
-        return
-        --[[
-        for _,page in pairs(pages) do
-            if page.name == string.sub(string.match(currentPage,'[%w+]+.txt'),1, -5) then
-                page.notice = str
-                setTitleBar(page)
-                return
-            end
+        local notice = ''
+        for i,j in pairs(pagesnotice) do
+            notice = notice .. ' | ' .. j
         end
-        log('setPageNotice: page not found '..currentPage)
-        --]]
+
+        if window then
+            window:setText(page.name .. notice)
+        else
+            log('setTitleBar() window not defined yet')
+        end
     end
 
-    local function getcurrentPage()
-        return currentPage
+    local function setPagesnotice(extid, str)
+        if not extid then
+            log('setPagesnotice() fail extid nil')
+            return
+        end
+        if str then
+            pagesnotice[extid] = str
+        else
+            table.delete(pagesnotice, extid)
+        end
+        setTitleBar(pages[1])
     end
 
     local function loadPage(page)
@@ -521,7 +523,6 @@ local function loadScratchpad()
             )
             pagesCount = pagesCount + 1
         end
-        pagesnotice = ''
     end
 
     local function unlockKeyboardInput()
@@ -550,9 +551,9 @@ local function loadScratchpad()
                         break
                     end
                 end
-            end 
+            end
         end
-        
+
         removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandChat))
         removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandAllChat))
         removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandFriendlyChat))
@@ -803,7 +804,7 @@ local function loadScratchpad()
     local function loadExtensions()
         log("Loading extensions ...")
 
-        local function loadExtension(path)
+        local function loadExtension(path, name)
             local f, err = loadfile(path)
             if not f then
                 log("Error reading file `"..path.."`: "..err)
@@ -813,6 +814,7 @@ local function loadScratchpad()
             -- prepare extension panel
             local children = {}
             table.insert(extensions, {children = children})
+            local extid = name
 
             -- create extension env
             local extEnv = {
@@ -829,8 +831,8 @@ local function loadScratchpad()
                 addCoordinateListener = function(listener)
                     table.insert(coordListeners, listener)
                 end,
-                addFrameListener = function(name, listener)
-                    frameListeners[name] = listener
+                addFrameListener = function(listener)
+                    frameListeners[extid] = listener
                 end,
                 addmissionLoadEndListener = function(listener)
                     table.insert(missionLoadEndListeners, listener)
@@ -838,8 +840,13 @@ local function loadScratchpad()
                 formatCoord = formatCoord,
                 log = log,
                 getSelection = getSelection,
-                setPageNotice = setPageNotice,
-                getcurrentPage = getcurrentPage,
+                getcurrentPage = function()
+                    return currentPage
+                end,
+                extid = extid,
+                setPageNotice = function(str)
+                    setPagesnotice(extid, str)
+                end,
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)
@@ -862,7 +869,7 @@ local function loadScratchpad()
                     log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
                 else
                     log("found extension " .. path)
-                    loadExtension(path)
+                    loadExtension(path, name)
                 end
             end
         end
