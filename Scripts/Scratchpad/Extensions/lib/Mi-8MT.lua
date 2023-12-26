@@ -1,4 +1,13 @@
---Mi8 Startup v0.91
+--[[ working functions:
+    start
+--]]
+
+--#################################
+-- Mi8 Startup v0.91
+-- This start will crank engines hands off. Currently implemented with
+-- delays, could be updated to use GetEngineInfo(). Heli will be ready
+-- to fly once both engines have spooled up to 80% rpm.
+
 ft = {}
 ft['start'] = function ()
 

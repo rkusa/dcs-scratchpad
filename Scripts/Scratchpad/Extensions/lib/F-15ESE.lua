@@ -3,11 +3,22 @@
     mpd - configures pages and modes. Modify screens{} table to configure values
 --]]
 
+-- module specific configuration
+wpseq({cur=3,
+       diff = 1,
+       route = '.A'
+})
+
 ft ={}
 ft.run={'start'}
 
 --#################################
 -- mpd v0.1
+-- This is setup to run immediately after startup. All screen should
+-- be at M page (M2 at OSB 11). This will fail if screens at not at
+-- this starting page. Edit the table below to configure the screens
+-- as you desire
+
 screens = {}
 screens[devices.MPD_FLEFT] = {
     {'TEWS' ,'NAV'},
@@ -103,7 +114,9 @@ end --end of mpd()
 
 --#################################
 -- start v0.6
--- You will need to set INS knob to NAV when OK
+-- You will need to set INS knob to NAV when OK on HUD, after engine
+-- has started.
+
 ft['firstspool'] = true
 ft['start'] = function (action)
     if type(action) == 'table' then

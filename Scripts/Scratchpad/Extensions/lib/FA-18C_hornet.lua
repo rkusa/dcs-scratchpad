@@ -9,10 +9,18 @@
 
 --]]
 
-local ft ={}
+-- F18 can't select WP by number so disable starting number(cur)
+wpseq({ cur = -1,
+        diff = 1,
+})
 
+local ft ={}
 --#################################
 -- toopylon v.5
+-- toopylon is used to set all 4 pylons to TOO. This requires you are
+-- at the STORES page with the munition selected. It will also set QTY
+-- to all 4 pylons
+
 ft['toopylon'] = function ()
   tt('Left MDI PB 5')
 delay(.2)
@@ -58,6 +66,11 @@ end  --end of fence()
 
 --#################################
 --start v.6
+-- This start will start engines and setup pit with assorted initial
+-- setings. You may want to push STORED HDG on AMPCD once alignment
+-- has started. Otherwise you will need to move INS alignment knob to
+-- IFA
+
 ft['start'] = function (action)
     if type(action) == 'table' then
 
@@ -190,5 +203,24 @@ tt('AMPCD PB 19')
         end
     end                         -- end elseif action
 end                             -- end of start()
+
+ft['night'] = function(briteval)
+    if type(briteval) ~= 'number' then
+        briteval = .4
+    end
+
+ttf('HUD Symbology Brightness Selector Knob, DAY/NIGHT')
+tt('UFC Brightness Control Knob', {value=briteval})
+tt('Left MDI Brightness Selector Knob, OFF/NIGHT/DAY',{value=.1})
+tt('Right MDI Brightness Selector Knob, OFF/NIGHT/DAY',{value=.1})
+ttt('AMPCD Night/Day Brightness Selector, NGT',{onvalue=-1})
+tt('IFEI Brightness Control Knob', {value=briteval})
+tt('CONSOLES Lights Dimmer Control', {value=briteval})
+tt('INST PNL Dimmer Control', {value=briteval})
+ttf('MODE Switch, NVG/NITE/DAY')
+ttn('POSITION Lights Dimmer Control')
+ttn('FORMATION Lights Dimmer Control')
+
+end                             -- end of night
 
 return ft

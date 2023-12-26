@@ -1,7 +1,64 @@
 --[[ F16 Fence in v1.0
 --]]
 
+wpseq({menus = 'r4',
+       cur = -1,
+       diff = 1,
+})
+
 ft = {}
+--#################################
+-- start v0.1
+-- This will start engine and initiate a stored heading
+-- alignment. Once alignment is finished you will need to move INS
+-- knob to NAV
+
+ft['start'] = function(action)
+    if type(action) == 'table' then
+
+        -- Beginning of start procedure
+
+ttn('MAIN PWR Switch, MAIN PWR/BATT/OFF')
+tt('JFS Switch, START 1/OFF/START 2',{value=-1})
+tt('Canopy Switch, OPEN/HOLD/CLOSE(momentarily)',{value=-1})
+delay(5)
+ttf('Canopy Switch, OPEN/HOLD/CLOSE(momentarily)')
+ttn('Canopy Handle, UP/DOWN')
+tt('Ejection Safety Lever, ARMED/LOCKED')
+
+ttn('LEFT HDPT Switch, ON/OFF')
+ttn('RIGHT HDPT Switch, ON/OFF')
+ttn('FCR Switch, FCR/OFF')
+--ttf('RDR ALT Switch, RDR ALT/STBY/OFF',{value=1} )
+tt('MMC Switch, MMC/OFF')
+tt('ST STA Switch, ST STA/OFF')
+tt('MFD Switch, MFD/OFF')
+tt('UFC Switch, UFC/OFF')
+tt('GPS Switch, GPS/OFF')
+tt('MIDS LVT Knob, ZERO/OFF/ON',{value=1})
+
+    ft['start']('engspool')
+    elseif action == 'engspool' then
+        rpm = Export.LoGetEngineInfo().RPM
+        loglocal('engspool rpm: '..rpm.left..' : '..rpm.right)
+
+        if rpm.left < 21 then
+            loglocal('engspool 1 true '..DCS.getRealTime(), 4)
+            press('',{delay=1,fn=ft['start'],arg='engspool'})
+        else
+            Export.LoSetCommand(311)
+            ft['start']('posteng')
+        end
+    elseif action == 'posteng' then
+        tt('INS Knob, OFF/STOR HDG/NORM/NAV/CAL/INFLT ALIGN/ATT', {value=.1})
+        tt('ICP HUD Symbology Intensity Knob',{value=1})
+    end
+end                             -- end of start
+
+--#################################
+-- fence v0.6
+-- This is a follow up to the 'start' function above. Once alignment
+-- is done you can fence to do complete cockpit setup
 
 ft['fence'] = function()
 tt('ICP HUD Symbology Intensity Knob',{value=1})
