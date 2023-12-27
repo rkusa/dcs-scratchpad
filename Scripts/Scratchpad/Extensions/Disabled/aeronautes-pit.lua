@@ -348,6 +348,13 @@ supported by each.
   settings, invode wpseq() with no members, "wpseq({})". The results
   will be logged to Scratchpad.log.
 
+## Acknowledgements
+
+- https://github.com/rkusa for building a great platform and making it open source
+- https://www.twitch.tv/aurora_juutilainen for early testing and feedback
+- https://github.com/aronCiucu/DCSTheWay for insight into performClickableAction()
+- hoggit #scripting discord a useful resource for any one developing for DCS
+
 ]=]
 
 local socket = require('socket')
@@ -581,84 +588,115 @@ local function assignKP()
             }
         elseif unit == 'F-15ESE' then
             return {
-                ['0'] = {{ufc_commands.UFC_KEY__0, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['0'] = {
+                    {ufc_commands.UFC_KEY__0, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY__0, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['1'] = {{ufc_commands.UFC_KEY_A1, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['1'] = {
+                    {ufc_commands.UFC_KEY_A1, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_A1, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['2'] = {{ufc_commands.UFC_KEY_N2, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['2'] = {
+                    {ufc_commands.UFC_KEY_N2, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_N2, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['3'] = {{ufc_commands.UFC_KEY_B3, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['3'] = {
+                    {ufc_commands.UFC_KEY_B3, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_B3, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['4'] = {{ufc_commands.UFC_KEY_W4, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['4'] = {
+                    {ufc_commands.UFC_KEY_W4, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_W4, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['5'] = {{ufc_commands.UFC_KEY_M5, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['5'] = {
+                    {ufc_commands.UFC_KEY_M5, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_M5, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['6'] = {{ufc_commands.UFC_KEY_E6, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['6'] = {
+                    {ufc_commands.UFC_KEY_E6, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_E6, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['7'] = {{ufc_commands.UFC_KEY__7, 1, 0.20, devices.UFCCTRL_FRONT},
+                ['7'] = {
+                    {ufc_commands.UFC_KEY__7, 1, 0.20, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY__7, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['8'] = {{ufc_commands.UFC_KEY_S8, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['8'] = {
+                    {ufc_commands.UFC_KEY_S8, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_S8, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['9'] = {{ufc_commands.UFC_KEY_C9, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['9'] = {
+                    {ufc_commands.UFC_KEY_C9, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_C9, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['N'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['N'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_N2, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_N2, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['E'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['E'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_E6, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_E6, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['W'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['W'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_W4, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_W4, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['S'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['S'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_S8, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_S8, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['A'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['A'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_A1, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_A1, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['B'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['B'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_B3, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_B3, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['C'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['C'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_C9, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_C9, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['M'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['M'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_M5, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_KEY_M5, 0, diffiv, devices.UFCCTRL_FRONT},},
                 [' '] = {0, 0, diffiv, devices.UFCCTRL_FRONT},
-                a = {{ufc_commands.UFC_PB_1, 1, diffiv, devices.UFCCTRL_FRONT},
+                a = {
+                    {ufc_commands.UFC_PB_1, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_1, 0, diffiv, devices.UFCCTRL_FRONT},},
-                b = {{ufc_commands.UFC_PB_2, 1, diffiv, devices.UFCCTRL_FRONT},
+                b = {
+                    {ufc_commands.UFC_PB_2, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_2, 0, diffiv, devices.UFCCTRL_FRONT},},
-                c = {{ufc_commands.UFC_PB_3, 1, diffiv, devices.UFCCTRL_FRONT},
+                c = {
+                    {ufc_commands.UFC_PB_3, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_3, 0, diffiv, devices.UFCCTRL_FRONT},},
-                d = {{ufc_commands.UFC_PB_4, 1, diffiv, devices.UFCCTRL_FRONT},
+                d = {
+                    {ufc_commands.UFC_PB_4, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_4, 0, diffiv, devices.UFCCTRL_FRONT},},
-                e = {{ufc_commands.UFC_PB_5, 1, diffiv, devices.UFCCTRL_FRONT},
+                e = {
+                    {ufc_commands.UFC_PB_5, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_5, 0, diffiv, devices.UFCCTRL_FRONT},},
-                f = {{ufc_commands.UFC_PB_6, 1, diffiv, devices.UFCCTRL_FRONT},
+                f = {
+                    {ufc_commands.UFC_PB_6, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_6, 0, diffiv, devices.UFCCTRL_FRONT},},
-                g = {{ufc_commands.UFC_PB_7, 1, diffiv, devices.UFCCTRL_FRONT},
+                g = {
+                    {ufc_commands.UFC_PB_7, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_7, 0, diffiv, devices.UFCCTRL_FRONT},},
-                h = {{ufc_commands.UFC_PB_8, 1, diffiv, devices.UFCCTRL_FRONT},
+                h = {
+                    {ufc_commands.UFC_PB_8, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_8, 0, diffiv, devices.UFCCTRL_FRONT},},
-                i = {{ufc_commands.UFC_PB_9, 1, diffiv, devices.UFCCTRL_FRONT},
+                i = {
+                    {ufc_commands.UFC_PB_9, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_9, 0, diffiv, devices.UFCCTRL_FRONT},},
-                j = {{ufc_commands.UFC_PB_0, 1, diffiv, devices.UFCCTRL_FRONT},
+                j = {
+                    {ufc_commands.UFC_PB_0, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_PB_0, 0, diffiv, devices.UFCCTRL_FRONT},},
-                m = {{ufc_commands.UFC_MENU, 1, diffiv, devices.UFCCTRL_FRONT},
+                m = {
+                    {ufc_commands.UFC_MENU, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_MENU, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['^'] = {{ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['^'] = {
+                    {ufc_commands.UFC_SHF, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_SHF, 0, diffiv, devices.UFCCTRL_FRONT},},
-                ['.'] = {{ufc_commands.UFC_DOT, 1, diffiv, devices.UFCCTRL_FRONT},
+                ['.'] = {
+                    {ufc_commands.UFC_DOT, 1, diffiv, devices.UFCCTRL_FRONT},
                     {ufc_commands.UFC_DOT, 0, diffiv, devices.UFCCTRL_FRONT},},
                 ['_'] = {{0, 99, diffiv, 0}},
             }
@@ -683,58 +721,83 @@ local function assignKP()
                 m = {ufc_commands.DED_DEC, 1, diffiv, devices.UFC},
                 r = {ufc_commands.DCS_RTN, -1, diffiv, devices.UFC},
                 s = {ufc_commands.DCS_SEQ, -1, diffiv, devices.UFC},
-                u = {{ufc_commands.DCS_UP, 1, diffiv, devices.UFC},
+                u = {
+                    {ufc_commands.DCS_UP, 1, diffiv, devices.UFC},
                     {ufc_commands.DCS_UP, 0, 0, devices.UFC}},
-                d = {{ufc_commands.DCS_DOWN, -1, diffiv, devices.UFC},
+                d = {
+                    {ufc_commands.DCS_DOWN, -1, diffiv, devices.UFC},
                     {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}},
             }
         elseif unit == 'FA-18C_hornet' then
             return {
-                ['0'] = {{UFC_commands.KbdSw0, 1, diffiv, devices.UFC},
+                ['0'] = {
+                    {UFC_commands.KbdSw0, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw0, 0, diffiv, devices.UFC},},
-                ['1'] = {{UFC_commands.KbdSw1, 1, diffiv, devices.UFC},
+                ['1'] = {
+                    {UFC_commands.KbdSw1, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw1, 0, diffiv, devices.UFC},},
-                ['2'] = {{UFC_commands.KbdSw2, 1, diffiv, devices.UFC},
+                ['2'] = {
+                    {UFC_commands.KbdSw2, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw2, 0, diffiv, devices.UFC},},
-                ['3'] = {{UFC_commands.KbdSw3, 1, diffiv, devices.UFC},
+                ['3'] = {
+                    {UFC_commands.KbdSw3, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw3, 0, diffiv, devices.UFC},},
-                ['4'] = {{UFC_commands.KbdSw4, 1, diffiv, devices.UFC},
+                ['4'] = {
+                    {UFC_commands.KbdSw4, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw4, 0, diffiv, devices.UFC},},
-                ['5'] = {{UFC_commands.KbdSw5, 1, diffiv, devices.UFC},
+                ['5'] = {
+                    {UFC_commands.KbdSw5, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw5, 0, diffiv, devices.UFC},},
-                ['6'] = {{UFC_commands.KbdSw6, 1, diffiv, devices.UFC},
+                ['6'] = {
+                    {UFC_commands.KbdSw6, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw6, 0, diffiv, devices.UFC},},
-                ['7'] = {{UFC_commands.KbdSw7, 1, 0.20, devices.UFC},
+                ['7'] = {
+                    {UFC_commands.KbdSw7, 1, 0.20, devices.UFC},
                     {UFC_commands.KbdSw7, 0, diffiv, devices.UFC},},
-                ['8'] = {{UFC_commands.KbdSw8, 1, diffiv, devices.UFC},
+                ['8'] = {
+                    {UFC_commands.KbdSw8, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw8, 0, diffiv, devices.UFC},},
-                ['9'] = {{UFC_commands.KbdSw9, 1, diffiv, devices.UFC},
+                ['9'] = {
+                    {UFC_commands.KbdSw9, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw9, 0, diffiv, devices.UFC},},
-                ['N'] = {{UFC_commands.KbdSw2, 1, diffiv, devices.UFC},
+                ['N'] = {
+                    {UFC_commands.KbdSw2, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw2, 0, diffiv, devices.UFC},},
-                ['E'] = {{UFC_commands.KbdSw6, 1, 1, devices.UFC},
+                ['E'] = {
+                    {UFC_commands.KbdSw6, 1, 1, devices.UFC},
                     {UFC_commands.KbdSw6, 0, 1, devices.UFC},},
-                ['W'] = {{UFC_commands.KbdSw4, 1, diffiv, devices.UFC},
+                ['W'] = {
+                    {UFC_commands.KbdSw4, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw4, 0, diffiv, devices.UFC},},
-                ['S'] = {{UFC_commands.KbdSw8, 1, diffiv, devices.UFC},
+                ['S'] = {
+                    {UFC_commands.KbdSw8, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw8, 0, diffiv, devices.UFC},},
-                [' '] = {{UFC_commands.KbdSwENT, 1, 0.5, devices.UFC},
+                [' '] = {
+                    {UFC_commands.KbdSwENT, 1, 0.5, devices.UFC},
                     {UFC_commands.KbdSwENT, 0, 0.25, devices.UFC},},
-                a = {{UFC_commands.OptSw1, 1, 0.25, devices.UFC},
+                a = {
+                    {UFC_commands.OptSw1, 1, 0.25, devices.UFC},
                     {UFC_commands.OptSw1, 0, 0.25, devices.UFC},},
-                b = {{UFC_commands.OptSw2, 1, 0.25, devices.UFC},
+                b = {
+                    {UFC_commands.OptSw2, 1, 0.25, devices.UFC},
                     {UFC_commands.OptSw2, 0, 0.25, devices.UFC},},
-                c = {{UFC_commands.OptSw3, 1, 0.25, devices.UFC},
+                c = {
+                    {UFC_commands.OptSw3, 1, 0.25, devices.UFC},
                     {UFC_commands.OptSw3, 0, 0.25, devices.UFC},},
-                d = {{UFC_commands.OptSw4, 1, 0.25, devices.UFC},
+                d = {
+                    {UFC_commands.OptSw4, 1, 0.25, devices.UFC},
                     {UFC_commands.OptSw4, 0, 0.25, devices.UFC},x},
-                e = {{UFC_commands.OptSw5, 1, 0.25, devices.UFC},
+                e = {
+                    {UFC_commands.OptSw5, 1, 0.25, devices.UFC},
                     {UFC_commands.OptSw5, 0, 0.25, devices.UFC},},
-                f = {{AMPCD_commands.AMPCD_PB_5, 1, 0.25, devices.AMPCD},
+                f = {
+                    {AMPCD_commands.AMPCD_PB_5, 1, 0.25, devices.AMPCD},
                     {AMPCD_commands.AMPCD_PB_5, 0, 0.25, devices.AMPCD},},
-                g = {{AMPCD_commands.AMPCD_PB_12, 1, 0.25, devices.AMPCD},
+                g = {
+                    {AMPCD_commands.AMPCD_PB_12, 1, 0.25, devices.AMPCD},
                     {AMPCD_commands.AMPCD_PB_12, 0, 0.25, devices.AMPCD},},
-                h = {{AMPCD_commands.AMPCD_PB_13, 1, 0.25, devices.AMPCD},
+                h = {
+                    {AMPCD_commands.AMPCD_PB_13, 1, 0.25, devices.AMPCD},
                     {AMPCD_commands.AMPCD_PB_13, 0, 0.25, devices.AMPCD},},
                 ['_'] = {{0, 99, 1, 0}},
             }
