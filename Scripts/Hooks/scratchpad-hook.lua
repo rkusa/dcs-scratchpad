@@ -33,6 +33,7 @@ local function loadScratchpad()
     local currentPage = nil
     local pagesCount = 0
     local pages = {}
+    local pagesnotice = {}
 
     -- Crosshair resources
     local crosshairWindow = nil
@@ -40,6 +41,8 @@ local function loadScratchpad()
     -- Extensions
     local extensions = {}
     local coordListeners = {}
+    local frameListeners = {}
+    local missionLoadEndListeners = {}
 
     local function log(str)
         if not str then
@@ -328,6 +331,41 @@ local function loadScratchpad()
         self:insert("")
     end
 
+    local function setTitleBar(page)
+        local notice = ''
+        for i,j in pairs(pagesnotice) do
+            notice = notice .. ' | ' .. j
+        end
+
+        if window then
+            window:setText(page.name .. notice)
+        else
+            log('setTitleBar() window not defined yet')
+        end
+    end
+
+    local function setPagesnotice(extid, str)
+        if not extid then
+            log('setPagesnotice() fail extid nil')
+            return
+        end
+        if str then
+            pagesnotice[extid] = str
+        else
+            table.delete(pagesnotice, extid)
+        end
+        if not currentPage then
+            return
+        end
+
+        for _,page in pairs(pages) do
+            if page.path == currentPage then
+                setTitleBar(page)
+                return
+            end
+        end
+    end
+
     local function loadPage(page)
         log("loading page " .. page.path)
         file, err = io.open(page.path, "r")
@@ -340,7 +378,7 @@ local function loadScratchpad()
             textarea:setText(content)
 
             -- update title
-            window:setText(page.name)
+            setTitleBar(page)
         end
     end
 
@@ -472,7 +510,8 @@ local function loadScratchpad()
                         pages,
                         {
                             name = name:sub(1, -5),
-                            path = path
+                            path = path,
+                            notice = '',
                         }
                     )
                     pagesCount = pagesCount + 1
@@ -521,9 +560,9 @@ local function loadScratchpad()
                         break
                     end
                 end
-            end 
+            end
         end
-        
+
         removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandChat))
         removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandAllChat))
         removeCommandEvents(Input.getUiLayerCommandKeyboardKeys(inputActions.iCommandFriendlyChat))
@@ -531,6 +570,14 @@ local function loadScratchpad()
 
         DCS.lockKeyboardInput(keyboardEvents)
         keyboardLocked = true
+    end
+
+    local function runListeners(list)
+        for _, listener in pairs(list) do
+            if type(listener) == "function" then
+                listener()
+            end
+        end
     end
 
     function formatCoord(format, isLat, d, opts)
@@ -644,11 +691,7 @@ local function loadScratchpad()
         local text = Text.new()
         text:insertBelow(result)
 
-        for _, listener in pairs(coordListeners) do
-            if type(listener) == "function" then
-                listener(text, lat, lon, alt)
-            end
-        end
+        runListeners(coordListeners)
     end
 
     local function setVisible(b)
@@ -770,7 +813,7 @@ local function loadScratchpad()
     local function loadExtensions()
         log("Loading extensions ...")
 
-        local function loadExtension(path)
+        local function loadExtension(path, name)
             local f, err = loadfile(path)
             if not f then
                 log("Error reading file `"..path.."`: "..err)
@@ -780,6 +823,7 @@ local function loadScratchpad()
             -- prepare extension panel
             local children = {}
             table.insert(extensions, {children = children})
+            local extid = name
 
             -- create extension env
             local extEnv = {
@@ -796,8 +840,22 @@ local function loadScratchpad()
                 addCoordinateListener = function(listener)
                     table.insert(coordListeners, listener)
                 end,
+                addFrameListener = function(listener)
+                    frameListeners[extid] = listener
+                end,
+                addMissionLoadEndListener = function(listener)
+                    table.insert(missionLoadEndListeners, listener)
+                end,
                 formatCoord = formatCoord,
-                log = log
+                log = log,
+                getSelection = getSelection,
+                getCurrentPage = function()
+                    return currentPage
+                end,
+                extid = extid,
+                setPageNotice = function(str)
+                    setPagesnotice(extid, str)
+                end,
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)
@@ -820,7 +878,7 @@ local function loadScratchpad()
                     log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
                 else
                     log("found extension " .. path)
-                    loadExtension(path)
+                    loadExtension(path, name)
                 end
             end
         end
@@ -1063,10 +1121,13 @@ local function loadScratchpad()
                 net.log("[Scratchpad] Failed to create window: " .. tostring(err))
             end
         end
+
+        runListeners(frameListeners)
     end
     function handler.onMissionLoadEnd()
         inMission = true
         updateCoordsMode()
+        runListeners(missionLoadEndListeners)
     end
     function handler.onSimulationStop()
         inMission = false
