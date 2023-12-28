@@ -354,7 +354,16 @@ local function loadScratchpad()
         else
             table.delete(pagesnotice, extid)
         end
-        setTitleBar(pages[1])
+        if not currentPage then
+            return
+        end
+
+        for _,page in pairs(pages) do
+            if page.path == currentPage then
+                setTitleBar(page)
+                return
+            end
+        end
     end
 
     local function loadPage(page)
@@ -834,13 +843,13 @@ local function loadScratchpad()
                 addFrameListener = function(listener)
                     frameListeners[extid] = listener
                 end,
-                addmissionLoadEndListener = function(listener)
+                addMissionLoadEndListener = function(listener)
                     table.insert(missionLoadEndListeners, listener)
                 end,
                 formatCoord = formatCoord,
                 log = log,
                 getSelection = getSelection,
-                getcurrentPage = function()
+                getCurrentPage = function()
                     return currentPage
                 end,
                 extid = extid,

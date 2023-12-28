@@ -314,7 +314,7 @@ supported by each.
 
     - loglocal('string', [number]) log message to the Logs\Scratchpad.log file
 
-    - getcurrentPage() returns string with name of current page of
+    - getCurrentPage() returns string with name of current page of
       scratchpad. For extensions to take specific action based on the
       active page.
 
@@ -1194,7 +1194,7 @@ function loadDTCBuffer(text)
            loglocal = loglocal,
            unittab = unittab,
            setPageNotice = setPageNotice,
-           getcurrentPage = getcurrentPage,
+           getCurrentPage = getCurrentPage,
     }
     setmetatable(env, {__index = _G}) --needed to pickup all the
                                       --module macro definitions like
@@ -1676,7 +1676,7 @@ end)                            -- end of addFrameListener()
 domacro.listeneradded = true
 
 -- addmissionLoadEndListener is to handle initializing when slotting into an aircraft
-addmissionLoadEndListener(function()
+addMissionLoadEndListener(function()
         loglocal('missionLoadEndListener start', 3)
         if DCS.isMultiplayer() then
             loglocal('missionLoadEndListener MP', 3)
