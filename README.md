@@ -69,6 +69,20 @@ addButton(left, top, width, height, title, onClick(text))
   text:insertBelowCursor(text)
   text:insertTop(text)
   text:insertBottom(text)
+
+-- Provides the start and end offsets of the current selection from page being displayed. No argements
+-- passed. Accomodates multibyte characters.
+getSelection() - return 4 numbers: start, end, startByte, endByte
+
+-- Provides the value of the currentPage variable or the page being displayed. This is full path and file
+-- name of the page shown. Takes no arguments.
+getCurrentPage() - returns string
+
+-- Each extension can register a text string to be displayed on the titlebar. It will share the titlebar
+-- with other extension notices, if any, and the page name. Currently no guarantee is made about how much
+-- of the string is displayed. A page notice is not requied for extension use.
+setPageNotice(text) - text: string to display
+                      returns nothing
 ```
 
 ## Kudos
