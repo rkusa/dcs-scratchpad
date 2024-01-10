@@ -162,11 +162,16 @@ supported by each.
 - `Sel` - This will take the current text selection as Lua. If no
   text is selected, then the current line the cursor is on is
   executed. This is a convenience feature to handle single line
-  commands without the need to carefully highlight the line. This
-  also has an added feature of detecting if the line matchs a JTAC
-  provided coordinate and will automatically enter the latlong into
-  the aircrafts input panel if available. The format of the coordinate
-  must be ***
+  commands without the need to carefully highlight the line.
+
+  This also has an added feature of detecting if the current line or
+  selection matchs a DDM coordinate and will automatically enter the
+  latlong into the aircrafts input panel if available. The format of
+  the coordinate must be L NN°NN.NNN', L NNN°NN.NNN'. L = letter, N =
+  number, single quote is optional, degree symbol can be replaced with
+  one or more spaces. Altitude is not currently supported since the
+  scratchpad `+L/L` is not the same across all modules. The format
+  varies among the aircraft.
 
 - `Buf` - This will attempt to execute everything in the current
   scratchpad page as a Lua script.
@@ -318,6 +323,16 @@ supported by each.
       scratchpad. For extensions to take specific action based on the
       active page.
 
+    - setitval(number) sets the base time interval in seconds between
+      cockpit inputs. If you find some of your inputs are getting lost
+      then you can start by extending this time until all your inputs
+      are received. This time applies to all inputs. Some inputs can
+      have extra time added per the kp[] table. Default .1 seconds
+
+        Example:
+        setitval(.2)
+        loglocal(itval)  -- to see value of itval in Scratchpad.log
+
     - unittab[]()
 
 ## Supported API
@@ -391,7 +406,7 @@ local function loglocal(str, lvl)
     end
 end
 
-local scratchpadver = 0         --
+local scratchpadver = 0         -- todo api framework versioning
 local itval = 0.1               -- default input delay
 local unittype = ''             -- DCS name for current module
 local unittab = {}              -- table of module specific functions
@@ -786,7 +801,7 @@ local function assignKP()
                     {UFC_commands.OptSw3, 0, 0.25, devices.UFC},},
                 d = {
                     {UFC_commands.OptSw4, 1, 0.25, devices.UFC},
-                    {UFC_commands.OptSw4, 0, 0.25, devices.UFC},x},
+                    {UFC_commands.OptSw4, 0, 0.25, devices.UFC},},
                 e = {
                     {UFC_commands.OptSw5, 1, 0.25, devices.UFC},
                     {UFC_commands.OptSw5, 0, 0.25, devices.UFC},},
@@ -969,20 +984,17 @@ function press(inp, param)
     loglocal('press(): exit', 5)
 end                             -- end of press()
 
-domacro.idx = 1
-domacro.inp = {}
-
 function push_stop_command(itval, c)
     loglocal('aeronautespit: push_stop_command() start '..net.lua2json(c))
     if c.device and c.action and c.value then
-        loglocal('push_stop_command: dev '..c.device ..', action '.. c.action ..', val '.. c.value..' fn '..type(c.fn)..' arg: '..type(c.arg))
+        loglocal('push_stop_command: device '..c.device ..', action '.. c.action ..', value '.. c.value..' fn '..type(c.fn)..' arg: '..type(c.arg))
         if not c.len then c.len = itval end -- default to switch itval
         if not c.fn then c.fn = nil end
         table.insert(domacro.inp, {c.action, c.value, c.len, c.device, c.fn, c.arg})
     end
 end                             -- end of push_stop_command()
 
--- TTtoDA() tool tip to device action lookup
+-- TTtoDA() tool tip to device action lookup; merges parms with predfined ttlist
 function TTtoDA(name, parms)
     local tmp = parms or {value = 1.0}
 
@@ -990,26 +1002,33 @@ function TTtoDA(name, parms)
     if type(ttlist[name]) == 'table' then
         for i, j in pairs(ttlist[name]) do
             if not tmp[i] then
-                local getval = loadstring("return " .. j)
-                tmp[i] = getval()
+                tmp[i] = j
             end
         end
         return tmp
     end
 
-    loglocal('aeronautespit TTtoDA not found')
+    loglocal('aeronautespit TTtoDA not found: '..name)
     return nil
 end                             -- end of TTtoDA()
 
--- tt() interface to cockpit interface associated with a tool tip
+-- tt() interface to cockpit interface associated with a tool tip; if
+-- name is zero length or nil then assume usage without tooltip, all
+-- params provided by caller
 function tt(name, params)
     local tmp = params or {value = 1.0}
-    tmp = TTtoDA(name, tmp)
 
-    if tmp then
-        loglocal('tt table: '..net.lua2json(tmp))
-        push_stop_command(0.1, tmp)
+    if name and #name > 0 then
+        tmp = TTtoDA(name, tmp)
+        if not tmp then
+            loglocal('tt() unknown name: '..name)
+            return
+        end
     end
+
+    loglocal('tt table: '..net.lua2json(tmp), 4)
+    push_stop_command(itval, tmp)
+
 end
 
 -- ttn() tool tip on, equivalent to tt(,{value=1})
@@ -1193,6 +1212,7 @@ function loadDTCBuffer(text)
            kp = kp,
            loglocal = loglocal,
            unittab = unittab,
+           ttlist = ttlist,
            setPageNotice = setPageNotice,
            getCurrentPage = getCurrentPage,
     }
@@ -1258,7 +1278,7 @@ function assignCustom()
             loadDTCBuffer(unittab['init'])
         end
     else
-        loglocal('assignCustom apcall fail, ok: '..ok..' res: '..type(res))
+        loglocal('assignCustom apcall fail, not ok, res: '..type(res))
     end
 end                             -- end of assignCustom()
 
@@ -1379,21 +1399,66 @@ function uploadinit()
         return(nil)
     end
 
-    local tt, dev, butn
-    while line do
-        tt, dev, butn = string.match(line, '^elements%[".+"%]%s*=.+%("(.+)"%)%s*,%s*([^,]+),%s*([^,]+)')
-        if tt then
-            ttlist[tt] = {device = dev, action = butn}
+    --[[
+    local function getval(cmd)
+        loglocal('getval() '..cmd)
+        local tmp = assert(loadstring('return '..cmd))
+        if tmp then
+            loglocal('getval tmp: '..tmp)
+            return tmp
+        else
+            loglocal('getval() fail: '..cmd)
+            return nil
         end
-        line = infile:read('*line')
+    end
+    --]]
+
+    local tt, dev, butn
+    if unittype == 'Hercules' then -- temp accomodation for Herc which uses single device for all actions
+        ttlist = {}
+        while line do
+            tt, butn = string.match(line, '^elements%[".+"%]%s*=.+%("(.+)"%s*,%s*([^, )]+)')
+            if tt then
+                local tstr, istr = string.match(butn,'([^.]+)\.(.+)')
+                if not _G[tstr] or not _G[tstr][istr] then
+                    loglocal('uploadinit herc _G not found '..tstr..' : '..istr)
+                    return
+                end
+                ttlist[tt] = {device = devices['General'],
+                              action = _G[tstr][istr],
+                              device_nm = 'devices.General',
+                              action_nm = butn,
+                }
+            end
+            line = infile:read('*line')
+        end
+    else
+        ttlist = {}
+        while line do
+            tt, dev, butn = string.match(line, '^elements%[".+"%]%s*=.+%("(.+)"%)%s*,%s*([^,]+),%s*([^,]+)')
+            if tt then
+                local tstr, istr -- table and index names
+                tstr = string.match(dev,'[^.]+\.(.+)')
+
+                if not devices[tstr] then
+                    loglocal('uploadinit couldnt find device: '..line..' dev: '..dev.. ' type: '..type(dev))
+                end
+                ttlist[tt] = {device_nm = dev, action_nm = butn}
+                ttlist[tt]['device'] = devices[tstr]
+
+                local tstr, istr = string.match(butn,'([^.]+)\.(.+)')
+                if not _G[tstr] or not  _G[tstr][istr] then
+                    loglocal('uploadinit _G fail: '..tstr..' : '..istr)
+                else
+                    ttlist[tt]['action'] = _G[tstr][istr]
+                end
+            end
+            line = infile:read('*line')
+        end
     end
     infile:close()
 
-    --???
-    local ctr = 1
-    for i,j in pairs(ttlist) do
-        ctr = ctr + 1
-    end
+    loglocal('uploadinit() ttlist: '..net.lua2json(ttlist), 6)
 
     assignKP()
     assignCustom()
@@ -1429,23 +1494,27 @@ end                             -- end of getCurrentLineOffsets()
 
 local function handleSelection(textarea)
         local text = textarea:getText()
-        local start, eos = getSelection()
+        --        local start, eos, sbyte, ebyte = getSelection()
+        local startp, endp, start, eos = getSelection()
 
+        loglocal('handleSelection() sp: '..startp..' ep: '..endp..' start: '..start..' eos: '..eos)
         if start == eos then    -- if nothing is highlighted use the current line of cursor
             start, eos = getCurrentLineOffsets(text, eos)
-        else
-            start = start
+--        else
+--            start = start
         end
 
         sel = string.sub(text, start, eos)
 
-        loglocal('Sel len '..string.len(sel)..': #'..sel..'#')
+        loglocal('Sel len: '..string.len(sel)..' start: '..start..' end: '..eos..': #'..sel..'#')
 
         local jtest = sel
         jtest = string.gsub(jtest, "[']", '')
         jtest = string.gsub(jtest, '°', ' ')
-        local lat, lon = string.match(jtest, '(%u %d%d +%d%d%.%d%d%d), (%u %d+ +%d%d%.%d%d%d)')
+        local lat, lon = string.match(jtest, '(%u %d%d +%d%d%.%d+), (%u %d+ +%d%d%.%d+)')
+        local altm, altft = string.match(jtest, '(%d+)m, +(%d+)ft')
 
+--        local prec =
         --for jtac coords
         if lon then
             loglocal('Sel: jtac position detected')
@@ -1471,9 +1540,12 @@ local function handleSelection(textarea)
             end
             lat = string.gsub(lat, '[ .]', '')
             lon = string.gsub(lon, '[ .]', '')
+            if not altft then
+                altft = '0'
+            end
 
-            local newstr = "wp('"..LLtoAC(lat, lon, '0') .. "')"
-            loglocal('Sel jtac: '..lat ..' , '..lon..' , '..newstr)
+            local newstr = "wp('"..LLtoAC(lat, lon, altft) .. "')"
+            loglocal('handleSelection() Sel jtac: LL: '..lat ..' , '..lon..' alt: '..altft..' , '..newstr)
             sel = newstr
         end
 
@@ -1584,7 +1656,7 @@ end
 butts[7][5] = "dbglog"
 butts[7][6] = function(text)
     loglocal('aeronautespit: debug level set 9')
-    loglocal('',{dbglvl=9})
+    loglocal('',{debug=9})
 end
 
 butts[8][5] = "help"
@@ -1639,10 +1711,11 @@ addFrameListener(function()
                 return
             end
 
-            i = domacro.idx
-            command = domacro.inp[i][1]
-            val = domacro.inp[i][2]
-            device = domacro.inp[i][4]
+            local i = domacro.idx
+            loglocal('addFrameListener domacro.inp: '..net.lua2json(domacro.inp[i]))
+            local command = domacro.inp[i][1]
+            local val = domacro.inp[i][2]
+            local device = domacro.inp[i][4]
             loglocal('addFrameListener loop: '..i..":"..device..":" .. command ..":".. val..' '..socket.gettime(), 6)
             setPageNotice(Spinr:run()..noticestr)
             if command == -1 and device == -1 then
@@ -1655,7 +1728,10 @@ addFrameListener(function()
                     end
                 end
             else
-                assert(Export.GetDevice(device):performClickableAction(command, val))
+                loglocal('performClickableAction: '..device..' : '..command..' : '..val)
+                if not assert(Export.GetDevice(device):performClickableAction(command, val)) then
+                    loglocal('performClickableAction failed')
+                end
             end
 
             domacro.ctr = socket.gettime() + itval + domacro.inp[i][3]

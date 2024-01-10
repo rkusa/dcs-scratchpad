@@ -55,6 +55,8 @@ ttn('5.5V Lights Switch, ON/OFF')
 ttn('Right Attitude Indicator Power Switch, ON/OFF')
 ttn('R-828, Power Switch, ON/OFF')
 ttn('CMD Power Switch, ON/OFF')
+push_stop_command(0,{device=devices.RADAR_ALTIMETER, action=device_commands.Button_1, value=-1})
+push_stop_command(0,{device=devices.RADAR_ALTIMETER, action=device_commands.Button_1, value=-1})
 
 delay(95)
 
@@ -68,8 +70,6 @@ ttn('Rectifier 1 Switch, ON/OFF')
 ttn('Rectifier 2 Switch, ON/OFF')
 ttn('Rectifier 3 Switch, ON/OFF')
 ttn('Autopilot Pitch/Roll ON Button/Lamp Intensity Knob. Rotate mouse wheel to set lamp intensity')
-
-tt('Dangerous RALT Knob',{value=-1})
 
 end  -- end of start
 

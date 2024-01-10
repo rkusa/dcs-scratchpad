@@ -13,11 +13,9 @@ ft ={}
 ft.run={'start'}
 
 --#################################
--- mpd v0.1
--- This is setup to run immediately after startup. All screen should
--- be at M page (M2 at OSB 11). This will fail if screens at not at
--- this starting page. Edit the table below to configure the screens
--- as you desire
+-- mpd v0.10
+-- This is setup to run immediately after startup. Edit the table
+-- below to configure the screens as you desire
 
 screens = {}
 screens[devices.MPD_FLEFT] = {
@@ -85,9 +83,14 @@ ft['mpd'] = function ()
     for dev=devices.MPD_FLEFT, devices.MPCD_RRIGHT+1 do
         if screens[dev] then
             screen = screens[dev]
+            ttt('Power Switch', {device=dev})
+            ttt('Power Switch', {device=dev, onvalue=-1})
             for x,y in pairs(screen) do
-                if debug then loglocal('PROG: 6')
-                else ttt('Power Switch',{device=dev, action=button[6]}) end
+                if debug then
+                    loglocal('PROG: 6')
+                else
+                    ttt('Power Switch',{device=dev, action=button[6]})
+                end
 
                 for i,j in pairs(menu[y[1]]) do
                     if debug then loglocal('PAGE: '..y[1]..'='..y[2]..'j: '..j)
@@ -120,9 +123,12 @@ end --end of mpd()
 ft['firstspool'] = true
 ft['start'] = function (action)
     if type(action) == 'table' then
+        ft['T1'] = DCS.getRealTime()
 
         -- Beginning of start procedure
 
+tt('MIC Switch', {action=micsctrl_commands.mic_sw, value=.5})
+tt('MIC Switch', {value=.5})
 tt('Oxygen Supply/Mode Control Switch',{action=oxyctrl_commands.oxy_pbg_on_off_sw,value=.5})
 tt('Left Generator')
 tt('Right Generator')
@@ -239,8 +245,138 @@ ttt('Right Throttle Finger Lift') --idle at 21%
                     end
                 end
             end
+            --[[
+            loglocal('total time: '..DCS.getRealTime() - ft['T1'])
+        loglocal('leng time: '..ft['T2'] - ft['T1'])
+        loglocal('reng time: '..ft['T3'] - ft['T2'])
+    loglocal('post time: '..DCS.getRealTime() - ft['T3'])
+--]]
         end
     end                         -- end of elseif action
 end                             -- end of start()
+
+
+-- used during devel to show CLSID of loaded munitions
+function showpayload()
+    local sta = {2,4,8,12,14}
+    pl=Export.LoGetPayloadInfo().Stations --;loglocal(net.lua2json(pl))
+    for i=1,#pl do --for _,i in pairs(sta) do
+        if #pl[i].CLSID > 0 then
+            local wt=pl[i].weapon
+            local wname = Export.LoGetNameByType(wt.level1,wt.level2,wt.level3,wt.level4)
+            loglocal('clsid: '..pl[i].CLSID..' name: '..wname)
+        end
+    end
+end
+
+--#################################
+-- A/G Load programming v0.10
+-- This will look at the aircrafts currently loaded pylons and program
+-- the PACS A/G Load. Defaults to use front left mpd, can be changed as
+-- local dev or argument indev.
+ft['A/Gload'] = function(indev)
+    local dev = devices.MPD_FRIGHT -- MPD to use for input
+    if type(indev) == 'number' then
+        dev = indev
+        loglocal('ft[a/gload] device set to: '..dev)
+    end
+
+    local button={}             -- mpd osb buttons
+    local i = 1
+    for j=mfdg_commands.Button_01, mfdg_commands.Button_20 do
+        button[i] = j
+        i = i + 1
+    end
+
+    local menu = {}             -- table of each weapon type {a/gload page, osb}
+    menu['MXU-648'] = {1, 5}    -- travel pod
+    menu['CBU-87'] = {3, 1}
+    menu['Mk20 Rockeye'] = {3, 3}
+    menu['CBU-97'] = {3, 4}
+
+    menu['Mk-82 SnakeEye'] = {4, 1}
+    menu['Mk-82'] = {4, 2}
+    menu['BDU-50LD'] = menu['Mk-82']
+    menu['Mk-84'] = {4, 3}
+    menu.Mk_84AIR_TP = {4, 12}
+    menu.Mk_84AIR_GP = menu.Mk_84AIR_TP
+    menu.Mk_82AIR_T = {4, 13}
+    menu['Mk-82AIR'] = menu.Mk_82AIR_T
+    menu['BDU-50HD'] = menu.Mk_82AIR_T
+    menu.Durandal = {4, 14}     -- BLU107
+
+    menu['GBU-12'] = {5, 1}
+    menu['LGB-50LGB'] = menu['GBU-12']
+    menu['GBU-10'] = {5, 3}
+    menu['GBU-24A/B Paveway III'] = {5, 13}
+
+    menu['AGM-65D Maverick'] = {6, 1}
+    menu['AGM-65H Maverick'] = {6, 2}
+    menu['AGM-65G Maverick'] = {6, 3}
+    menu['AGM-65K Maverick'] = {6, 4}
+
+    local pyl = {2, 4, 8, 12, 14} -- A/G capable pylon number
+    local pyl2osb = {[2] = 20, [4] = 19,
+        [8] = 18, [12] = 17, [14] = 16} -- Pylon num to osb mapping
+    local pl = Export.LoGetPayloadInfo().Stations -- current payload by station
+    if not pl then
+        loglocal('ft[a/gload] LoGetPayloadInfo returned nil')
+        return
+    end
+
+    -- reset MPD with power cycle
+    ttt('Power Switch', {device=dev})
+    ttt('Power Switch', {device=dev, onvalue=-1})
+    ttt('Push Button 2', {device=dev})
+    ttt('Push Button 11', {device=dev})
+    ttt('Push Button 7', {device=dev})
+
+    local station = {}
+    for _,i in pairs(pyl) do
+        if #pl[i].CLSID > 0 then
+            local wt = pl[i].weapon
+            local wname = Export.LoGetNameByType(wt.level1, wt.level2, wt.level3, wt.level4)
+            local page = 0
+            loglocal('ft[a/gload] wname: '..wname..' CLSID: '.. pl[i].CLSID)
+
+            if menu[wname] then
+                page = menu[wname][1]
+                if not station[page] then
+                    station[page] = {{wname, menu[wname][2], pyl2osb[i]}}
+                else
+                    table.insert(station[page],{wname, menu[wname][2], pyl2osb[i]})
+                end
+            else
+                loglocal('ft[a/gload] possible unsupported type: '
+                         ..wname..' pl: '..net.lua2json(pl))
+            end
+        end
+    end
+
+    for i=1,5 do                -- step thru menu pages
+        loglocal('ft[a/gload] menu page: '..i, 5)
+        if station[i] then
+            for j=1,#station[i] do
+                local act = station[i][#station[i]]
+                loglocal('ft[a/gload] stat len: '..net.lua2json(act), 5)
+                ttt(nil, {device=dev, action=button[act[2]]})
+                ttt(nil, {device=dev, action=button[act[3]]})
+                loglocal('ft[a/gload] PRESSED: '..button[act[2]]..' button: '..button[act[3]], 5)
+                table.remove(station[i])
+            end
+            loglocal('ft[a/gload page station done: '..#station[i], 5)
+            if #station[i] == 0 then
+                table.remove(station[i])
+            end
+        end
+        ttt('Push Button 10', {device=dev}) -- step page
+    end
+    ttt('Push Button 10', {device=dev}) -- step page
+
+    if #station then
+        loglocal('ft[A/Gload]() unprocessed stations: '..net.lua2json(station))
+    end
+end                             -- end of A/Gload
+
 
 return ft

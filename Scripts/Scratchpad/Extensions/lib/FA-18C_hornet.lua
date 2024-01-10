@@ -22,6 +22,12 @@ local ft ={}
 -- to all 4 pylons
 
 ft['toopylon'] = function ()
+    --[[ reset mfd
+    tt('Left MDI PB 18')
+    delay(.2)
+    tt('Left MDI PB 5')
+        delay(.2)
+    --]]
   tt('Left MDI PB 5')
 delay(.2)
   tt('Left MDI PB 13')
@@ -210,6 +216,7 @@ ft['night'] = function(briteval)
     end
 
 ttf('HUD Symbology Brightness Selector Knob, DAY/NIGHT')
+tt('HMD OFF/BRT Knob', {value=.3})
 tt('UFC Brightness Control Knob', {value=briteval})
 tt('Left MDI Brightness Selector Knob, OFF/NIGHT/DAY',{value=.1})
 tt('Right MDI Brightness Selector Knob, OFF/NIGHT/DAY',{value=.1})
