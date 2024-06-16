@@ -278,7 +278,7 @@ ft['A/Gload'] = function(indev)
     local dev = devices.MPD_FRIGHT -- MPD to use for input
     if type(indev) == 'number' then
         dev = indev
-        loglocal('ft[a/gload] device set to: '..dev)
+        loglocal('ft[A/Gload] device override to: '..dev)
     end
 
     local button={}             -- mpd osb buttons

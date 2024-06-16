@@ -1,15 +1,15 @@
 local version=.10
 local readme = [=[
-# aeronautes msghist
+# aeronautes msgs
 
-This scratchpad extension saves each of the 3 types of DCS messages into their own buffers and displays them on command. The message low only be displayed if the name of the current scratchpad buffer is aeronautes-msghist.txt. Updates only occur on presses of the scratchpad UI buttons. You will need to scroll to the bottom of the buffer to see newest messages.
+This scratchpad extension saves each of the 3 types of DCS messages into their own buffers and displays them on command. The message low only be displayed if the name of the current scratchpad buffer is aeronautes-msgs.txt. Updates only occur on presses of the scratchpad UI buttons. You will need to scroll to the bottom of the buffer to see newest messages.
 
 ]=]
 
 local lfs = require('lfs')
 
 local Scratchdir = lfs.writedir() .. [[Scratchpad\]]
-local Scratchpadfn = 'aeronautes-msghist.txt'
+local Scratchpadfn = 'aeronautes-msgs.txt'
 local TA = nil
 local handler = {}
 
@@ -23,7 +23,7 @@ function setupfiles()
     local infile, res
     infile, res = io.open(fqfn, 'w')
     if not infile then
-        log('aeronautespit setupfiles() open fail; ' .. res)
+        log('aeronautes-msgs setupfiles() open fail; ' .. res)
         return(nil)
     end
     infile:close()
@@ -45,7 +45,7 @@ local function bufradd(arg, msg)
     arg.buf = arg.buf .. dateStr .. msg .. '\n'
 end
 
-local function msgupdate(bufnm)
+local function showbuf(bufnm)
     if switchPage(Scratchdir..Scratchpadfn) then
         TA:setText('')
         -- hardcoded 1MB file limit from scratchpad
@@ -53,17 +53,6 @@ local function msgupdate(bufnm)
         local txt = string.sub(hist[bufnm].buf, buflen - (1024*1024))
         TA:setText(bufnm..'\n'..txt)
         TA:insertBottom('')
-        
-        --[[    if switchPage(Scratchdir..Scratchpadfn) then
-            TA:setText('')
-        -- hardcoded 1MB file limit from scratchpad
-        local buflen = string.len(bufr.buf)
-        local txt = string.sub(bufr.buf, buflen - (1024*1024))
-        TA:setText(txt)
-        TA:insertBottom('')
---]]    
---        TA:setSelection(buflen)
---       DCS.unlockKeyboardInput(true)
     end
 end
 
@@ -76,17 +65,14 @@ function handler.onChatMessage(message, from)
     end
     
     bufradd(hist.chat, message)
---    msgupdate(hist.chat)
 end
 
 function handler.onTriggerMessage(message, duration, clearView)
     bufradd(hist.trigger, message)
---    msgupdate(hist.trigger)
 end
 
 function handler.onRadioMessage(message, duration)
     bufradd(hist.radio, message)
---    msgupdate(hist.radio)
 end
 
 function checkarg(a)
@@ -102,17 +88,17 @@ log('setcallback '..type(res))
 
 addButton(00, 00, 50, 30, 'chat', function(text)
               TA = text
-              msgupdate('chat')
+              showbuf('chat')
 end)
 
 addButton(60, 00, 50, 30, 'radio', function(text)
               TA = text
-              msgupdate('radio')
+              showbuf('radio')
 end)
 
 addButton(120, 00, 50, 30, 'trigger', function(text)
               TA = text
-              msgupdate('trigger')
+              showbuf('trigger')
 end)
 
 

@@ -33,9 +33,9 @@ ttn('Network to Batteries, ON/OFF')
 ttn('Main/Auxiliary Hydraulic Switch Cover, UP/DOWN')
 ttn('Main/Auxiliary Hydraulic Switch, MAIN/AUXILIARY', {value=1})
 ttf('Main/Auxiliary Hydraulic Switch Cover, UP/DOWN')
-
-ttn('Sealing, OPEN/CLOSE')
 --]]
+
+ttf('Sealing, OPEN/CLOSE')
 
 --Left forward wall
 ttn('Feed Tank 1 Valve Switch, OPEN/CLOSE')
@@ -141,7 +141,7 @@ ttn('Gyro 1 Power, ON/OFF')
 ttn('Gyro 2 Power, ON/OFF')
 ttn("Greben' ON/OFF")
 ttn('RWR Power')
-ttn('RWR Signal')
+--ttn('RWR Signal')
 ttn('Blinker Switch, ON/OFF')
 ttn('IFF Transponder Power Switch, ON/OFF')
 ttn('ARC-U2 switcher On/Off')

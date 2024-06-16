@@ -316,7 +316,9 @@ local function loadScratchpad()
 
         local text = self:getText()
         setSelection(#text)
-        self:insert("\n\n" .. newText .. "\n")
+        if #newText > 0 then
+            self:insert("\n\n" .. newText .. "\n")
+        end
     end
 
     function Text:deleteBackward()
@@ -376,6 +378,7 @@ local function loadScratchpad()
             local content = file:read("*all")
             file:close()
             textarea:setText(content)
+            currentPage = page.path
 
             -- update title
             setTitleBar(page)
@@ -616,7 +619,20 @@ local function loadScratchpad()
             m = math.floor(m)
             local s = d * 3600 - g * 3600 - m * 60
             s = math.floor(s * 100) / 100
-            return string.format('%s %2d°%.2d\'%05.2f"', h, g, m, s)
+
+            local precision = 0
+            if opts.precision ~= nil then
+                precision = opts.precision
+            end
+            local degreesWidth = 2
+            if opts.lonDegreesWidth ~= nil and not isLat then
+                degreesWidth = opts.lonDegreesWidth
+                if opts.showNegative ~= nil and g < 0 then
+                    degreesWidth = degreesWidth + 1
+                end
+            end
+            return string.format('%s %0'..degreesWidth..'d°%.2d\'%0'..(precision+2)..'.'..precision..'f', h, g, m, s)
+ 
         elseif format == "DDM" then -- Degree Decimal Minutes
             local precision = 3
             if opts.precision ~= nil then
@@ -646,8 +662,10 @@ local function loadScratchpad()
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
             return {DMS = true, DDM = {precision = 4}, MGRS = true}
-        elseif string.sub(ac, 1, 5) == "A-10C" or ac == "AV-8B" then
+        elseif string.sub(ac, 1, 5) == "A-10C" then
             return {DDM = true, MGRS = true}
+        elseif ac == "AV8BNA" then
+            return {DMS = {precision = 0, lonDegreesWidth = 3}, MGRS = true}
         elseif string.sub(ac, 1, 4) == "F-14" then
             return {DDM = {precision = 1}}
         elseif ac == "F-15ESE" then
@@ -664,6 +682,8 @@ local function loadScratchpad()
             return {DDM = {precision = 1}}
         elseif ac == "Hercules" then
             return {DDM = {precision = 3, lonDegreesWidth = 3}}
+        elseif ac == "OH58D" then
+            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
         else
             return {DMS = true, DDM = true, MGRS = true}
         end
@@ -849,8 +869,23 @@ local function loadScratchpad()
                 formatCoord = formatCoord,
                 log = log,
                 getSelection = getSelection,
-                getCurrentPage = function()
-                    return currentPage
+                switchPage = function(pname)
+                    local found = nil
+                    for _,page in pairs(pages) do
+                        if page.path == pname then
+                            found = page
+                        end
+                    end
+                    if found then
+                        if currentPage ~= pname then
+                            savePage(currentPage, textarea:getText(), true)
+                            loadPage(found)
+                        end
+                        return found
+                    else
+                        loglocal('apit switchpage() could not find: '..pname, 1)
+                        return nil
+                    end
                 end,
                 extid = extid,
                 setPageNotice = function(str)

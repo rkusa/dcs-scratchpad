@@ -1,6 +1,6 @@
-local version=.61
+local version=.62
 local readme = [=[
-# aeronautes-pit
+# aeronautes-pit (Apit)
 
 This is an extension to github.com/rkusa/scratchpad for DCS. At a high
 level it provides the ability to configure your aircraft, assist with
@@ -25,21 +25,33 @@ Game\DCS.openbeta\Scripts\Scratchpad\Extensions\`. Copy the
 aeronautes-pit.lua file from `Scripts\Scratchpad\Extensions\Disabled\`
 directory to the parent `Scripts\Scratchpad\Extensions\' directory.
 
-- Prerequisite - scratchpad-hook.lua rel XX or higher should be
-  installed under the Saved Game directory structure.
-
 - Required file - aeronautes-pit.lua is necessary for base
-  functionality. This needs copied from
+  functionality. This needs to be copied from
   Scripts\Scratchpad\Extensions\Disabled\ to the parent Extensions\
   directory. On the next start of DCS you should see the apit menu
-  buttons when scratchpad window is open.
+  buttons when scratchpad window is open. This is how scratchpad enables
+  extensions.
 
 - Optional files - For each DCS module an optional customization file,
   such as F-16C_50.lua, is searched for when slotting into the
   aircraft. Generally these are input commands that are grouped into
   functions. Examples of functions include 'start' to start the
   aircraft or 'mfd' to configure MFD pages. If no file is found the,
-  base apit functionality is still available.
+  base apit functionality is still available. These files are searched
+  for in `Scripts\Scratchpad\Extensions\lib`
+
+- Scratchpad page aeronautes-pit.txt is created in <Saved Games>\DCS\Scratchpad
+  if it does not exist on DCS startup. Because the extension creates
+  the file after scratchpad starts you will need to reload pages using
+  the scratchpad reload key bind (ctrl-shift-r). If the file already
+  exists you won't need the reload.
+  This page is used when Apit needs to display text. For example when
+  the user clicks on buttons such as log or mod, the content of those
+  overwrite the aeronautes-pit page. You should not put anything onto
+  this page that you want to keep around. That said the last contents
+  of this page are saved to file when scratchpad switches to another
+  page. You can go into the Scratchpad\ directory and copy that file
+  if it hsa something you want to keep.
 
 ## Feature/Module matrix
 
@@ -52,7 +64,7 @@ supported by each.
 |---------------|-----|--------|------|
 | DCS macros    | X   |        |    1 |
 | Convenience   | X   |        |    2 |
-| DCS API       | X   |        |    3 |
+| Lua/DCS API   | X   |        |    3 |
 | Waypoint      |     | X      |    4 |
 | Customization |     | X      |    5 |
 
@@ -69,11 +81,12 @@ supported by each.
   tips to refer to the buttons and switches. These API calls include
   tt(), ttt(), etc. It's automatically configured based on the
   module's Cockpit\Scripts\clickabledata.lua.
-  * All modules supported
+  * All modules supported, paid or community provided the module includes
+    a working clickabledata.lua.
 
 - 3. DCS APIs as defined in DCS World OpenBeta\API\DCS_ControlAPI.html
   are available. The level of functionality and support is entirely up
-  to ED.
+  to ED. Lua is executed in a scratchpad page with `Buf` or `Sel` buttons.
   * All modules supported
 
 - 4. Waypoint functions provide the ability input latlong and certain
@@ -81,9 +94,8 @@ supported by each.
   to press. These have been adapted for specific aircraft as each one
   has it's own particular sequence of input. The API for this includes
   wp(), wpseq(), press() and UI buttons `LL` and `wp`.
-
-  * Abbreviated waypoint input is currently supported for AV8, F-15E,
-  F-16C, FA-18C, Blackshark 2&3.
+  * Waypoint input is currently supported for A-10C, AV8,
+  F-15E, F-16C, FA-18C, Hercules, Ka-50/3, OH-58
 
 - 5. Customizations are higher level capabilities that utilize any
   combination of the above features. These are separated per module in
@@ -91,11 +103,9 @@ supported by each.
   support and functions vary by module as apit updates are made. You
   can modify these yourself to make your own customizations for your
   aircraft. They can be utilized by clicking on the function buttons,
-  `1`, `2`, ...  or executing the function name in a scratchpad page
-  with `Buf` or `Sel` buttons.
-
-  * Customizations are provided for AV8, F-15E, F-16C, FA-18C,
-  Mi-8.
+  `1`, `2`, ...
+  * Customizations are provided for A-10C, AV8, F-15E, F-16C, FA-18C,
+  Hercules, Ka-50/3, Mi-8, Mi-24.
 
 ## Installed File - Functionality map
 
@@ -144,7 +154,7 @@ supported by each.
       one of the previous indicators.
 
     Button labels that are capitalized will cause some type of input
-    to the cockpit, such as `LL` or `Sel`. Those without
+    to the cockpit, `LL`, `Sel`, 'Buf', 'Cancel'. Those without
     capitalization do not cause input.
 
 - `LL` - Using the camera's current location, the latlong is entered
@@ -177,35 +187,40 @@ supported by each.
   scratchpad page as a Lua script.
 
 - `Cancel` - If the system is processing a series of cockpit inputs,
-  this will stop and cancel any outstanding inputs remaining.
+  this will stop and cancel any outstanding inputs remaining. If you
+  reslot in the middle of a sequence, it will be canceled.
 
 - `wp` - This works similarly to LL, but instead of directly
   entering the latlong, instead it will print the equivalent wp()
   command at the current cursor location in scratchpad. This is useful
   for building a mission plan that can be reused or passed along.
 
-- `reload` - Convenience and customization code for the current
+- `mod` - scratchpad will switch to the page named aeronautes-pit and
+  overwrites the page with a copy of the module customization file. This is useful to
+  see the module specific aeronautes-pit documentation as well as the
+  code for the customization. This is useful if you want to see the
+  startup sequence in checklist form, for example.
+
+- `modlod` - Convenience and customization code for the current
   aircraft are immediately reloaded and made available. This is useful
   if you are modifying or adding apit Customization
   files(Extensions\lib), or if you've messed up some certain values
   from a scratchpad page and want to reset using Customization file
   values.
 
-- `dbglog` - This is used to increase the debug level of apit
-  logging. It is equivalent to `loglocal('',{debug=6})
+- `log` - aeronautes-pit keeps a log of it's execution in a buffer.
+  Clicking this button switches to the scratchpad page aeronautes-pit
+  and overwrites it with the log.
 
-- `help` - This will create a file called help-aeronautes-pit.txt in
-  the scratchpad directory if it doesn't exist. If one already exists
-  it will overwrite it. If you change your help file and don't want to
-  lose the it, rename it to some other file name. After clicking on
-  the help button, you'll need to refresh the pages with the Reload
-  Page hotkey to see it immediately. See scratchpad instruction on how
-  to assign the hotkey if you have not already. Otherwise scratchpad
-  will not recognize it until the next time you start DCS.
+- `log9` - This is used to increase the debug level of apit
+  logging. It is equivalent to `loglocal('',{debug=9})
+
+- `help` - This will overwrite the aeronautes-pit scatchpad page with
+  copy of the help section from the start of the aeronautes-pit.lua file.
 
 - `1`, `2`,... - These dynamic function buttons provide one-click
   access to functions defined in the per module customization files in
-  Scratchpad\Extensions\lib\. The particular function names associated
+  Scratchpad\Extensions\lib\<module>.lua. The particular function names associated
   with each button are display on the title bar of the scratchpad
   window just to the right of the page name. Each function is prefaced
   with the corresponding button number.
@@ -308,7 +323,6 @@ supported by each.
 
     - tt('string') interface to cockpit interface associated with a tool tip
 
-
     - ttn('string') tool tip on, equivalent to tt(,{value=1})
 
     - ttf('string') tool tip off, equivalent to tt(,{value=0})
@@ -319,9 +333,9 @@ supported by each.
 
     - loglocal('string', [number]) log message to the Logs\Scratchpad.log file
 
-    - getCurrentPage() returns string with name of current page of
-      scratchpad. For extensions to take specific action based on the
-      active page.
+    - switchPage(pagename) When no argument is passed, returns a page record of current page of
+      scratchpad. Otherwise pagename is the full path and filename of the scratchpad page you want
+      to load, <Saved Game>\DCS\Scratchpad\<name>.txt. Returns nil on failure.
 
     - setitval(number) sets the base time interval in seconds between
       cockpit inputs. If you find some of your inputs are getting lost
@@ -340,7 +354,8 @@ supported by each.
 
     - scratchpad
 
-    - DCS Lua environment
+    - DCS Lua environment -
+        See C:\Program Files\Eagle Dynamics\DCS World OpenBeta\API
 
 ## Howto/FAQ
 
@@ -351,7 +366,7 @@ supported by each.
   this command, "Get-Content .\Scratchpad.log -wait". This will update
   as the file is written to.
 
-- How to change log level? You can press the `dbglog` button to set
+- How to change log level? You can press the `log9` button to set
   the logging level to 9. This is intended for users who are not able
   to run the loglevel() function. Or you can run this command in a
   scratchpad page: "loglocal('',{debug=5})" while setting the 5 to any
@@ -383,7 +398,25 @@ local domacro = {
     listeneradded = false,
 }
 
+local Scratchdir = lfs.writedir() .. [[Scratchpad\]]
+local Scratchpadfn = 'aeronautes-pit.txt'
+local Apitlibsubdir = [[Scripts\Scratchpad\Extensions\lib\]]
+local Apitlibdir = lfs.writedir() .. Apitlibsubdir
+
 local dbglvl = 1
+Hist = {
+    enable = true,
+    linenum = 0,
+    buf = '',
+    add = function(self, msg)
+        local date = os.date('*t')
+        local dateStr = string.format("%i:%02i:%02i ", date.hour, date.min, date.sec)
+        self.buf = self.buf .. dateStr  .. msg .. '\n'
+        self.linenum = self.linenum + 1
+        return
+    end,
+}
+
 local function loglocal(str, lvl)
     if not lvl then
         lvl = 0
@@ -403,6 +436,7 @@ local function loglocal(str, lvl)
     if dbglvl > lvl then
         --        log(debug.getinfo(1,'n').name ..' '..str)
         log(str)
+        Hist.add(Hist, str)
     end
 end
 
@@ -424,6 +458,7 @@ local noticestr = ''
 Spinr = {
     frames = {'/','|','\\','-'},
     idx = 1,
+    buf = '',
     run = function(self)
         if self.idx <= 1 then
             self.idx = #self.frames
@@ -459,14 +494,44 @@ local wps = copytable(wpsdefaults) --waypoint sequence used by wp(); also initia
 
 -- LT is the per module table for various configuration and wp specialization values/funcs
 local LT = {           -- per module customization for convenience api
+    ['A-10C'] = {
+        ['notes'] = [[Waypoint input requires WAYPT menu, L/L mode. Default to LSK 7 to increment wp number]],
+        ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
+        ['wpentry'] = 'LAT#LON$ALT@',
+        prewp = function()
+            if wps.enable then
+                if wps.diff ~= 0 then
+                    press('&')
+                end
+            end
+        end,
+        postwp = function()
+            if wps.enable and wps.cur ~= -1 then
+                wps.cur = wps.cur + wps.diff
+                if wps.cur < 1 then wps.cur = 2050 end -- rollover doesnt take modulus into account
+                if wps.cur > 2050 then wps.cur = 1 end
+                return
+            end
+        end,
+        llconvert = function(result)
+            result = string.gsub(result, '[°\'" .]', '')
+            result = string.lower(result)
+            return result
+        end,
+
+    },
     ['AV8BNA'] = {
-        ['coordsType'] = {format = 'DMS', lonDegreesWidth = 3},
-        ['wpentry'] = 'LATe$LONe',
-        prewp = function() press('') end,
-        midwp = function(result) return result end,
-        postwp = function() press('') end,
+        ['notes'] = [[Waypoint input requires DATA page. Adds new wp to the list.(wp #77)]],
+        ['coordsType'] = {format = 'DMS', precision = 0, lonDegreesWidth = 3},
+        ['wpentry'] = 'LATeLONe#ALTe',
+        prewp = function()      -- currently only supporting incrementing or editing current wp
+            if wps.enable then
+                press('P77e@')
+            end
+        end,
     },
     ["F-15ESE"] = {
+        ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing supported.]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
         ['wpentry'] = 'LATbLONcALTg',
         prewp = function()
@@ -488,7 +553,6 @@ local LT = {           -- per module customization for convenience api
             end
             return
         end,
-        midwp = function(result) return result end,
         postwp = function()
             if wps.enable and wps.cur ~= -1 then
                 wps.cur = wps.cur + wps.diff
@@ -504,7 +568,9 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ["F-16C_50"] = {
+        ['notes'] = [[Waypoint input ]],
         ['coordsType'] = {format = 'DDM', lonDegreesWidth = 3},
+        ['menus'] = 'r4',
         ['wpentry'] = 'LATedLONedALTe',
         prewp = function()
 	    if wps.enable then
@@ -524,9 +590,8 @@ local LT = {           -- per module customization for convenience api
 		end
 	    end
 	end,
-
-        midwp = function(result) return result end,
-        postwp = function() --press('euum') end,
+        postwp = function()
+            press('dd')
 	    if wps.enable and wps.cur ~= -1 then
                 wps.cur = wps.cur + wps.diff
                 if wps.cur < 1 then wps.cur = 699 end
@@ -536,6 +601,7 @@ local LT = {           -- per module customization for convenience api
 	end,
     },
     ["FA-18C_hornet"] = {
+        ['notes'] = [[Waypoint input requires HSI DATA menu with precise. Default increments from the current waypoint. Increment or decrement controlled with wpseq({diff=})]],
         ['coordsType'] = {format = 'DDM', precision = 4},
         ['wpentry'] = 'faLAT LON caALT ',
         -- f18 can't select wpt by number, only cycle with arrows
@@ -548,7 +614,6 @@ local LT = {           -- per module customization for convenience api
                 end
             end
         end,
-        midwp = function(result) return result end,
         postwp = function() return end,
         llconvert =function(result)
             result = string.gsub(result, "[°'\"]", "")
@@ -558,18 +623,45 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ['Hercules'] = {
+        ['notes'] = [[Waypoint input sets the current point. No sequencing implented.]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
-        ['wpentry'] = 'LATeLONf',
+        ['wpentry'] = 'LATeLONfgh', -- inc/dec to activate in AFCS
         prewp = function() press('w') end,
-        midwp = function(result) return result end,
-        postwp = function() return end,
+        postload = function()   -- remap for community herc cockpit lua interface
+            for i,j in pairs(ttlist) do
+                ttlist[i].device=devices.Radios_control
+                local act=string.gsub(j.action_nm, '([^%.]+%.)','')
+                ttlist[i].action=devaction[act]
+            end
+        end,
     },
     ['Ka-50'] = {
+        ['notes'] = [[Waypoint input starts at target 1 and increments. The WP type can be changed with wpseq({route=})]],
         ['coordsType'] = {format = 'DDM', precision = 1, lonDegreesWidth = 3},
         ['wpentry'] = 'LATeLONe',
-        prewp = function() return end, -- press('nw1') end,
-        midwp = function(result) return result end,
-        postwp = function() press('o') end,
+        prewp = function(input)
+            if wps.enable and string.sub(input,1,1) ~= 'n' then
+                if wps.cur > -1 then
+                    press('n'..wps.route..wps.cur)
+                else
+                    loglocal('Ka-50 prewp() invalid wps.cur: ',net.lua2json(wps))
+                    return
+                end
+            end
+        end,
+        postwp = function()
+            press('o')
+            if wps.enable and wps.cur ~= -1 then -- increment even if prewp() gets specified wp('n')
+                wps.cur = wps.cur + wps.diff
+                if wps.cur < 1 then wps.cur = 9 end
+                if wps.cur > 9 then wps.cur = 1 end
+            end
+        end,
+    },
+    ['OH58D'] = {
+        ['notes'] = [[Waypoint input requires the New WP page and LatLon mode. Store MFD button automatically increments current wp number.]],
+        ['coordsType'] = {format = 'DDM', precision = 2, lonDegreesWidth = 3},
+        ['wpentry'] = '@~LAT_#~LON_$~ALT_)',
     },
 } --end LT{}
 LT['Ka-50_3'] = LT['Ka-50']
@@ -577,12 +669,103 @@ LT['Ka-50_3'] = LT['Ka-50']
 local function assignKP()
     loglocal('assignKP begin')
     local function getTypeKP(unit)
-        loglocal('getTypeKP begin')
+        loglocal('getTypeKP begin', 6)
 
 --########## SNIP BEGIN for Scripts\Scratchpad\Extensions\lib\kp.lua
 --function kpload(unit)
         local diffiv = 0
-        if unit == 'AV8BNA' then
+        if unit == 'A-10C' then
+            return {
+                ['1'] = {{device_commands.Button_15, 1, diffiv, devices.CDU},
+                    {device_commands.Button_15, 0, diffiv, devices.CDU}},
+                ['2'] = {{device_commands.Button_16, 1, diffiv, devices.CDU},
+                    {device_commands.Button_16, 0, diffiv, devices.CDU}},
+                ['3'] = {{device_commands.Button_17, 1, diffiv, devices.CDU},
+                    {device_commands.Button_17, 0, diffiv, devices.CDU}},
+                ['4'] = {{device_commands.Button_18, 1, diffiv, devices.CDU},
+                    {device_commands.Button_18, 0, diffiv, devices.CDU}},
+                ['5'] = {{device_commands.Button_19, 1, diffiv, devices.CDU},
+                    {device_commands.Button_19, 0, diffiv, devices.CDU}},
+                ['6'] = {{device_commands.Button_20, 1, diffiv, devices.CDU},
+                    {device_commands.Button_20, 0, diffiv, devices.CDU}},
+                ['7'] = {{device_commands.Button_21, 1, diffiv, devices.CDU},
+                    {device_commands.Button_21, 0, diffiv, devices.CDU}},
+                ['8'] = {{device_commands.Button_22, 1, diffiv, devices.CDU},
+                    {device_commands.Button_22, 0, diffiv, devices.CDU}},
+                ['9'] = {{device_commands.Button_23, 1, diffiv, devices.CDU},
+                    {device_commands.Button_23, 0, diffiv, devices.CDU}},
+                ['0'] = {{device_commands.Button_24, 1, diffiv, devices.CDU},
+                    {device_commands.Button_24, 0, diffiv, devices.CDU}},
+                ['a'] = {{device_commands.Button_27, 1, diffiv, devices.CDU},
+                    {device_commands.Button_27, 0, diffiv, devices.CDU}},
+                ['b'] = {{device_commands.Button_28, 1, diffiv, devices.CDU},
+                    {device_commands.Button_28, 0, diffiv, devices.CDU}},
+                ['c'] = {{device_commands.Button_29, 1, diffiv, devices.CDU},
+                    {device_commands.Button_29, 0, diffiv, devices.CDU}},
+                ['d'] = {{device_commands.Button_30, 1, diffiv, devices.CDU},
+                    {device_commands.Button_30, 0, diffiv, devices.CDU}},
+                ['e'] = {{device_commands.Button_31, 1, diffiv, devices.CDU},
+                    {device_commands.Button_31, 0, diffiv, devices.CDU}},
+                ['f'] = {{device_commands.Button_32, 1, diffiv, devices.CDU},
+                    {device_commands.Button_32, 0, diffiv, devices.CDU}},
+                ['g'] = {{device_commands.Button_33, 1, diffiv, devices.CDU},
+                    {device_commands.Button_33, 0, diffiv, devices.CDU}},
+                ['h'] = {{device_commands.Button_34, 1, diffiv, devices.CDU},
+                    {device_commands.Button_34, 0, diffiv, devices.CDU}},
+                ['i'] = {{device_commands.Button_35, 1, diffiv, devices.CDU},
+                    {device_commands.Button_35, 0, diffiv, devices.CDU}},
+                ['j'] = {{device_commands.Button_36, 1, diffiv, devices.CDU},
+                    {device_commands.Button_36, 0, diffiv, devices.CDU}},
+                ['k'] = {{device_commands.Button_37, 1, diffiv, devices.CDU},
+                    {device_commands.Button_37, 0, diffiv, devices.CDU}},
+                ['l'] = {{device_commands.Button_38, 1, diffiv, devices.CDU},
+                    {device_commands.Button_38, 0, diffiv, devices.CDU}},
+                ['m'] = {{device_commands.Button_39, 1, diffiv, devices.CDU},
+                    {device_commands.Button_39, 0, diffiv, devices.CDU}},
+                ['n'] = {{device_commands.Button_40, 1, diffiv, devices.CDU},
+                    {device_commands.Button_40, 0, diffiv, devices.CDU}},
+                ['o'] = {{device_commands.Button_41, 1, diffiv, devices.CDU},
+                    {device_commands.Button_41, 0, diffiv, devices.CDU}},
+                ['p'] = {{device_commands.Button_42, 1, diffiv, devices.CDU},
+                    {device_commands.Button_42, 0, diffiv, devices.CDU}},
+                ['q'] = {{device_commands.Button_43, 1, diffiv, devices.CDU},
+                    {device_commands.Button_43, 0, diffiv, devices.CDU}},
+                ['r'] = {{device_commands.Button_44, 1, diffiv, devices.CDU},
+                    {device_commands.Button_44, 0, diffiv, devices.CDU}},
+                ['s'] = {{device_commands.Button_45, 1, diffiv, devices.CDU},
+                    {device_commands.Button_45, 0, diffiv, devices.CDU}},
+                ['t'] = {{device_commands.Button_46, 1, diffiv, devices.CDU},
+                    {device_commands.Button_46, 0, diffiv, devices.CDU}},
+                ['u'] = {{device_commands.Button_47, 1, diffiv, devices.CDU},
+                    {device_commands.Button_47, 0, diffiv, devices.CDU}},
+                ['v'] = {{device_commands.Button_48, 1, diffiv, devices.CDU},
+                    {device_commands.Button_48, 0, diffiv, devices.CDU}},
+                ['w'] = {{device_commands.Button_49, 1, diffiv, devices.CDU},
+                    {device_commands.Button_49, 0, diffiv, devices.CDU}},
+                ['x'] = {{device_commands.Button_50, 1, diffiv, devices.CDU},
+                    {device_commands.Button_50, 0, diffiv, devices.CDU}},
+                ['y'] = {{device_commands.Button_51, 1, diffiv, devices.CDU},
+                    {device_commands.Button_51, 0, diffiv, devices.CDU}},
+                ['z'] = {{device_commands.Button_52, 1, diffiv, devices.CDU},
+                    {device_commands.Button_52, 0, diffiv, devices.CDU}},
+                ['!'] = {{device_commands.Button_1, 1, diffiv, devices.CDU}, -- following 8 keys are LSK
+                    {device_commands.Button_1, 0, diffiv, devices.CDU}},
+                ['@'] = {{device_commands.Button_2, 1, diffiv, devices.CDU},
+                    {device_commands.Button_2, 0, diffiv, devices.CDU}},
+                ['#'] = {{device_commands.Button_3, 1, diffiv, devices.CDU},
+                    {device_commands.Button_3, 0, diffiv, devices.CDU}},
+                ['$'] = {{device_commands.Button_4, 1, diffiv, devices.CDU},
+                    {device_commands.Button_4, 0, diffiv, devices.CDU}},
+                ['%'] = {{device_commands.Button_5, 1, diffiv, devices.CDU},
+                    {device_commands.Button_5, 0, diffiv, devices.CDU}},
+                ['^'] = {{device_commands.Button_6, 1, diffiv, devices.CDU},
+                    {device_commands.Button_6, 0, diffiv, devices.CDU}},
+                ['&'] = {{device_commands.Button_7, 1, diffiv, devices.CDU},
+                    {device_commands.Button_7, 0, diffiv, devices.CDU}},
+                ['*'] = {{device_commands.Button_8, 1, diffiv, devices.CDU},
+                    {device_commands.Button_8, 0, diffiv, devices.CDU}},
+            }
+        elseif unit == 'AV8BNA' then
             return {
                 ['1'] = {ufc_commands.Button_1, 1, diffiv, devices.UFCCONTROL},
                 ['2'] = {ufc_commands.Button_2, 1, diffiv, devices.UFCCONTROL},
@@ -595,11 +778,16 @@ local function assignKP()
                 ['9'] = {ufc_commands.Button_9, 1, diffiv, devices.UFCCONTROL},
                 ['0'] = {ufc_commands.Button_0, 1, diffiv, devices.UFCCONTROL},
                 ['e'] = {ufc_commands.Button_ENT, 1, diffiv, devices.UFCCONTROL},
-                ['$'] = {ufc_commands.Button_4, 1, diffiv, devices.ODUCONTROL},
                 ['N'] = {ufc_commands.Button_2, 1, diffiv, devices.UFCCONTROL},
                 ['E'] = {ufc_commands.Button_6, 1, diffiv, devices.UFCCONTROL},
                 ['W'] = {ufc_commands.Button_4, 1, diffiv, devices.UFCCONTROL},
                 ['S'] = {ufc_commands.Button_8, 1, diffiv, devices.UFCCONTROL},
+                ['P'] = {mpcd_l_commands.Button_19, 1, diffiv, devices.MPCD_LEFT},
+                ['!'] = {odu_commands.Button_1, 1, .25, devices.ODUCONTROL},
+                ['@'] = {odu_commands.Button_2, 1, .25, devices.ODUCONTROL},
+                ['#'] = {odu_commands.Button_3, 1, .25, devices.ODUCONTROL},
+                ['$'] = {odu_commands.Button_4, 1, .25, devices.ODUCONTROL},
+                ['%'] = {odu_commands.Button_5, 1, .25, devices.ODUCONTROL},
             }
         elseif unit == 'F-15ESE' then
             return {
@@ -731,16 +919,18 @@ local function assignKP()
                 ['E'] = {ufc_commands.DIG6_TIME, 1, diffiv, devices.UFC},
                 ['W'] = {ufc_commands.DIG4_STPT, 1, diffiv, devices.UFC},
                 ['S'] = {ufc_commands.DIG8_FIX, 1, diffiv, devices.UFC},
+                ['L'] = {ufc_commands.LIST, 1, diffiv, devices.UFC},
                 e = {ufc_commands.ENTR, 1, diffiv, devices.UFC},
+                c = {ufc_commands.RCL, 1, diffiv, devices.UFC},
                 p = {ufc_commands.DED_INC, 1, diffiv, devices.UFC},
                 m = {ufc_commands.DED_DEC, 1, diffiv, devices.UFC},
-                r = {ufc_commands.DCS_RTN, -1, diffiv, devices.UFC},
-                s = {ufc_commands.DCS_SEQ, -1, diffiv, devices.UFC},
-                u = {
-                    {ufc_commands.DCS_UP, 1, diffiv, devices.UFC},
+                r = {{ufc_commands.DCS_RTN, -1, diffiv, devices.UFC},
+                    {ufc_commands.DCS_RTN, 0, diffiv, devices.UFC}},
+                s = {{ufc_commands.DCS_SEQ, -1, diffiv, devices.UFC},
+                    {ufc_commands.DCS_SEQ, 0, diffiv, devices.UFC}},
+                u = {{ufc_commands.DCS_UP, 1, diffiv, devices.UFC},
                     {ufc_commands.DCS_UP, 0, 0, devices.UFC}},
-                d = {
-                    {ufc_commands.DCS_DOWN, -1, diffiv, devices.UFC},
+                d = {{ufc_commands.DCS_DOWN, -1, diffiv, devices.UFC},
                     {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}},
             }
         elseif unit == 'FA-18C_hornet' then
@@ -817,54 +1007,176 @@ local function assignKP()
                 ['_'] = {{0, 99, 1, 0}},
             }
         elseif unit == 'Ka-50' or unit == 'Ka-50_3' then
+            diffiv = 0
             return {
-                ['0'] = {device_commands.Button_1, 1, diffiv, devices.PVI},
-                ['1'] = {device_commands.Button_2, 1, diffiv, devices.PVI},
-                ['2'] = {device_commands.Button_3, 1, diffiv, devices.PVI},
-                ['3'] = {device_commands.Button_4, 1, diffiv, devices.PVI},
-                ['4'] = {device_commands.Button_5, 1, diffiv, devices.PVI},
-                ['5'] = {device_commands.Button_6, 1, diffiv, devices.PVI},
-                ['6'] = {device_commands.Button_7, 1, diffiv, devices.PVI},
-                ['7'] = {device_commands.Button_8, 1, diffiv, devices.PVI},
-                ['8'] = {device_commands.Button_9, 1, diffiv, devices.PVI},
-                ['9'] = {device_commands.Button_10, 1, diffiv, devices.PVI},
-                ['N'] = {device_commands.Button_1, 1, diffiv, devices.PVI},
-                ['E'] = {device_commands.Button_1, 1, diffiv, devices.PVI},
-                ['W'] = {device_commands.Button_2, 1, diffiv, devices.PVI},
-                ['S'] = {device_commands.Button_2, 1, diffiv, devices.PVI},
-                e = {device_commands.Button_18, 1, diffiv, devices.PVI}, --NAV Enter
-                w = {device_commands.Button_11, 1, diffiv, devices.PVI}, --NAV Waypoints
-                t = {device_commands.Button_17, 1, diffiv, devices.PVI}, --NAV Targets
-                n = {device_commands.Button_26, 0.2, diffiv, devices.PVI}, --NAV Master mode ent
-                o = {device_commands.Button_26, 0.3, diffiv, devices.PVI}, --NAV Master mode oper
+                ['0'] = {{device_commands.Button_1, 1, diffiv, devices.PVI},
+                    {device_commands.Button_1, 0, diffiv, devices.PVI}},
+                ['1'] = {{device_commands.Button_2, 1, diffiv, devices.PVI},
+                    {device_commands.Button_2, 0, diffiv, devices.PVI}},
+                ['2'] = {{device_commands.Button_3, 1, diffiv, devices.PVI},
+                    {device_commands.Button_3, 0, diffiv, devices.PVI}},
+                ['3'] = {{device_commands.Button_4, 1, diffiv, devices.PVI},
+                    {device_commands.Button_4, 0, diffiv, devices.PVI}},
+                ['4'] = {{device_commands.Button_5, 1, diffiv, devices.PVI},
+                    {device_commands.Button_5, 0, diffiv, devices.PVI}},
+                ['5'] = {{device_commands.Button_6, 1, diffiv, devices.PVI},
+                    {device_commands.Button_6, 0, diffiv, devices.PVI}},
+                ['6'] = {{device_commands.Button_7, 1, diffiv, devices.PVI},
+                    {device_commands.Button_7, 0, diffiv, devices.PVI}},
+                ['7'] = {{device_commands.Button_8, 1, diffiv, devices.PVI},
+                    {device_commands.Button_8, 0, diffiv, devices.PVI}},
+                ['8'] = {{device_commands.Button_9, 1, diffiv, devices.PVI},
+                    {device_commands.Button_9, 0, diffiv, devices.PVI}},
+                ['9'] = {{device_commands.Button_10, 1, diffiv, devices.PVI},
+                    {device_commands.Button_10, 0, diffiv, devices.PVI}},
+                ['N'] = {{device_commands.Button_1, 1, diffiv, devices.PVI},
+                    {device_commands.Button_1, 0, diffiv, devices.PVI}},
+                ['E'] = {{device_commands.Button_1, 1, diffiv, devices.PVI},
+                    {device_commands.Button_1, 0, diffiv, devices.PVI}},
+                ['W'] = {{device_commands.Button_2, 1, diffiv, devices.PVI},
+                    {device_commands.Button_2, 0, diffiv, devices.PVI}},
+                ['S'] = {{device_commands.Button_2, 1, diffiv, devices.PVI},
+                    {device_commands.Button_2, 0, diffiv, devices.PVI}},
+                e = {{device_commands.Button_18, 1, diffiv, devices.PVI}, --NAV Enter
+                    {device_commands.Button_18, 0, diffiv, devices.PVI}},
+                w = {{device_commands.Button_11, 1, diffiv, devices.PVI}, --NAV Waypoints
+                    {device_commands.Button_11, 0, diffiv, devices.PVI}},
+                f = {{device_commands.Button_13, 1, diffiv, devices.PVI}, --NAV Fixpnt
+                    {device_commands.Button_13, 0, diffiv, devices.PVI}},
+                a = {{device_commands.Button_15, 1, diffiv, devices.PVI}, --NAV Airfield
+                    {device_commands.Button_15, 0, diffiv, devices.PVI}},
+                t = {{device_commands.Button_17, 1, diffiv, devices.PVI}, --NAV Targets
+                    {device_commands.Button_17, 0, diffiv, devices.PVI}},
+                n = {{device_commands.Button_26, 0.2, diffiv, devices.PVI}, --NAV Master mode ent
+                    {device_commands.Button_26, 0.2, diffiv, devices.PVI}},
+                o = {{device_commands.Button_26, 0.3, diffiv, devices.PVI}, --NAV Master mode oper
+                    {device_commands.Button_26, 0.3, diffiv, devices.PVI}},
             }
         elseif unit == 'Hercules' then
             return {
-                ['0'] = {CNI_MU.pilot_CNI_MU_KBD_0, 1, diffiv, devices.General},
-                ['1'] = {CNI_MU.pilot_CNI_MU_KBD_1, 1, diffiv, devices.General},
-                ['2'] = {CNI_MU.pilot_CNI_MU_KBD_2, 1, diffiv, devices.General},
-                ['3'] = {CNI_MU.pilot_CNI_MU_KBD_3, 1, diffiv, devices.General},
-                ['4'] = {CNI_MU.pilot_CNI_MU_KBD_4, 1, diffiv, devices.General},
-                ['5'] = {CNI_MU.pilot_CNI_MU_KBD_5, 1, diffiv, devices.General},
-                ['6'] = {CNI_MU.pilot_CNI_MU_KBD_6, 1, diffiv, devices.General},
-                ['7'] = {CNI_MU.pilot_CNI_MU_KBD_7, 1, diffiv, devices.General},
-                ['8'] = {CNI_MU.pilot_CNI_MU_KBD_8, 1, diffiv, devices.General},
-                ['9'] = {CNI_MU.pilot_CNI_MU_KBD_9, 1, diffiv, devices.General},
-                ['E'] = {CNI_MU.pilot_CNI_MU_KBD_E, 1, diffiv, devices.General},
-                ['N'] = {CNI_MU.pilot_CNI_MU_KBD_N, 1, diffiv, devices.General},
-                ['S'] = {CNI_MU.pilot_CNI_MU_KBD_S, 1, diffiv, devices.General},
-                ['W'] = {CNI_MU.pilot_CNI_MU_KBD_W, 1, diffiv, devices.General},
-                a = {CNI_MU.pilot_CNI_MU_SelectKey_001, 1, diffiv, devices.General}, --SelectKey 1; wp #
-                b = {CNI_MU.pilot_CNI_MU_SelectKey_diffiv, 1, diffiv, devices.General}, --SelectKey 2; wp name
-                e = {CNI_MU.pilot_CNI_MU_SelectKey_005, 1, diffiv, devices.General}, --SelectKey 5; lat
-                f = {CNI_MU.pilot_CNI_MU_SelectKey_006, 1, diffiv, devices.General}, --SelectKey 6; lon
-                g = {CNI_MU.pilot_CNI_MU_SelectKey_007, 1, diffiv, devices.General}, --SelectKey 7; inc
-                h = {CNI_MU.pilot_CNI_MU_SelectKey_008, 1, diffiv, devices.General}, --SelectKey 8; dec
-                w = {CNI_MU.pilot_CNI_MU_NAV_CTRL, 1, diffiv, devices.General}, --NAV CTRL
+                ['0'] = {devaction.copilot_CNI_MU_KBD_0, 1, diffiv, devices.Radios_control},
+                ['1'] = {devaction.copilot_CNI_MU_KBD_1, 1, diffiv, devices.Radios_control},
+                ['2'] = {devaction.copilot_CNI_MU_KBD_2, 1, diffiv, devices.Radios_control},
+                ['3'] = {devaction.copilot_CNI_MU_KBD_3, 1, diffiv, devices.Radios_control},
+                ['4'] = {devaction.copilot_CNI_MU_KBD_4, 1, diffiv, devices.Radios_control},
+                ['5'] = {devaction.copilot_CNI_MU_KBD_5, 1, diffiv, devices.Radios_control},
+                ['6'] = {devaction.copilot_CNI_MU_KBD_6, 1, diffiv, devices.Radios_control},
+                ['7'] = {devaction.copilot_CNI_MU_KBD_7, 1, diffiv, devices.Radios_control},
+                ['8'] = {devaction.copilot_CNI_MU_KBD_8, 1, diffiv, devices.Radios_control},
+                ['9'] = {devaction.copilot_CNI_MU_KBD_9, 1, diffiv, devices.Radios_control},
+                ['E'] = {devaction.copilot_CNI_MU_KBD_E, 1, diffiv, devices.Radios_control},
+                ['N'] = {devaction.copilot_CNI_MU_KBD_N, 1, diffiv, devices.Radios_control},
+                ['S'] = {devaction.copilot_CNI_MU_KBD_S, 1, diffiv, devices.Radios_control},
+                ['W'] = {devaction.copilot_CNI_MU_KBD_W, 1, diffiv, devices.Radios_control},
+                a = {devaction.copilot_CNI_MU_SelectKey_001, 1, diffiv, devices.Radios_control}, --SelectKey 1 wp#
+                b = {devaction.copilot_CNI_MU_SelectKey_diffiv, 1, diffiv, devices.Radios_control}, --SelectKey 2 name
+                e = {devaction.copilot_CNI_MU_SelectKey_005, 1, diffiv, devices.Radios_control}, --SelectKey 5 lat
+                f = {devaction.copilot_CNI_MU_SelectKey_006, 1, diffiv, devices.Radios_control}, --SelectKey 6 lon
+                g = {devaction.copilot_CNI_MU_SelectKey_007, 1, diffiv, devices.Radios_control}, --SelectKey 7 inc
+                h = {devaction.copilot_CNI_MU_SelectKey_008, 1, diffiv, devices.Radios_control}, --SelectKey 8 dec
+                l = {devaction.copilot_CNI_MU_SelectKey_012, 1, diffiv, devices.Radios_control}, --SelectKey 12
+                w = {devaction.copilot_CNI_MU_NAV_CTRL, 1, diffiv, devices.Radios_control}, --NAV CTRL
+                x = {devaction.copilot_CNI_MU_INDEX, 1, diffiv, devices.Radios_control}, --INDEX
             }
-
---    end
---end
+        elseif unit == 'OH58D' then
+            return {
+                ['1'] = {{device_commands.Button_6, 1, diffiv, devices.MFK},
+                    {device_commands.Button_6, 0, diffiv, devices.MFK}},
+                ['2'] = {{device_commands.Button_7, 1, diffiv, devices.MFK},
+                    {device_commands.Button_7, 0, diffiv, devices.MFK}},
+                ['3'] = {{device_commands.Button_8, 1, diffiv, devices.MFK},
+                    {device_commands.Button_8, 0, diffiv, devices.MFK}},
+                ['4'] = {{device_commands.Button_9, 1, diffiv, devices.MFK},
+                    {device_commands.Button_9, 0, diffiv, devices.MFK}},
+                ['5'] = {{device_commands.Button_10, 1, diffiv, devices.MFK},
+                    {device_commands.Button_10, 0, diffiv, devices.MFK}},
+                ['6'] = {{device_commands.Button_11, 1, diffiv, devices.MFK},
+                    {device_commands.Button_11, 0, diffiv, devices.MFK}},
+                ['7'] = {{device_commands.Button_12, 1, diffiv, devices.MFK},
+                    {device_commands.Button_12, 0, diffiv, devices.MFK}},
+                ['8'] = {{device_commands.Button_13, 1, diffiv, devices.MFK},
+                    {device_commands.Button_13, 0, diffiv, devices.MFK}},
+                ['9'] = {{device_commands.Button_14, 1, diffiv, devices.MFK},
+                    {device_commands.Button_14, 0, diffiv, devices.MFK}},
+                ['0'] = {{device_commands.Button_15, 1, diffiv, devices.MFK},
+                    {device_commands.Button_15, 0, diffiv, devices.MFK}},
+                ['~'] = {{device_commands.Button_17, 1, diffiv, devices.MFK}, -- clear
+                    {device_commands.Button_17, 0, diffiv, devices.MFK}},
+                ['_'] = {{device_commands.Button_23, 1, diffiv, devices.MFK}, -- enter
+                    {device_commands.Button_23, 0, diffiv, devices.MFK}},
+                ['A'] = {{device_commands.Button_25, 1, diffiv, devices.MFK},
+                    {device_commands.Button_25, 0, diffiv, devices.MFK}},
+                ['B'] = {{device_commands.Button_26, 1, diffiv, devices.MFK},
+                    {device_commands.Button_26, 0, diffiv, devices.MFK}},
+                ['C'] = {{device_commands.Button_27, 1, diffiv, devices.MFK},
+                    {device_commands.Button_27, 0, diffiv, devices.MFK}},
+                ['D'] = {{device_commands.Button_28, 1, diffiv, devices.MFK},
+                    {device_commands.Button_28, 0, diffiv, devices.MFK}},
+                ['E'] = {{device_commands.Button_29, 1, diffiv, devices.MFK},
+                    {device_commands.Button_29, 0, diffiv, devices.MFK}},
+                ['F'] = {{device_commands.Button_30, 1, diffiv, devices.MFK},
+                    {device_commands.Button_30, 0, diffiv, devices.MFK}},
+                ['G'] = {{device_commands.Button_31, 1, diffiv, devices.MFK},
+                    {device_commands.Button_31, 0, diffiv, devices.MFK}},
+                ['H'] = {{device_commands.Button_32, 1, diffiv, devices.MFK},
+                    {device_commands.Button_32, 0, diffiv, devices.MFK}},
+                ['I'] = {{device_commands.Button_33, 1, diffiv, devices.MFK},
+                    {device_commands.Button_33, 0, diffiv, devices.MFK}},
+                ['J'] = {{device_commands.Button_34, 1, diffiv, devices.MFK},
+                    {device_commands.Button_34, 0, diffiv, devices.MFK}},
+                ['K'] = {{device_commands.Button_35, 1, diffiv, devices.MFK},
+                    {device_commands.Button_35, 0, diffiv, devices.MFK}},
+                ['L'] = {{device_commands.Button_36, 1, diffiv, devices.MFK},
+                    {device_commands.Button_36, 0, diffiv, devices.MFK}},
+                ['M'] = {{device_commands.Button_37, 1, diffiv, devices.MFK},
+                    {device_commands.Button_37, 0, diffiv, devices.MFK}},
+                ['N'] = {{device_commands.Button_38, 1, diffiv, devices.MFK},
+                    {device_commands.Button_38, 0, diffiv, devices.MFK}},
+                ['O'] = {{device_commands.Button_39, 1, diffiv, devices.MFK},
+                    {device_commands.Button_39, 0, diffiv, devices.MFK}},
+                ['P'] = {{device_commands.Button_40, 1, diffiv, devices.MFK},
+                    {device_commands.Button_40, 0, diffiv, devices.MFK}},
+                ['Q'] = {{device_commands.Button_41, 1, diffiv, devices.MFK},
+                    {device_commands.Button_41, 0, diffiv, devices.MFK}},
+                ['R'] = {{device_commands.Button_42, 1, diffiv, devices.MFK},
+                    {device_commands.Button_42, 0, diffiv, devices.MFK}},
+                ['S'] = {{device_commands.Button_43, 1, diffiv, devices.MFK},
+                    {device_commands.Button_43, 0, diffiv, devices.MFK}},
+                ['T'] = {{device_commands.Button_44, 1, diffiv, devices.MFK},
+                    {device_commands.Button_44, 0, diffiv, devices.MFK}},
+                ['U'] = {{device_commands.Button_45, 1, diffiv, devices.MFK},
+                    {device_commands.Button_45, 0, diffiv, devices.MFK}},
+                ['V'] = {{device_commands.Button_46, 1, diffiv, devices.MFK},
+                    {device_commands.Button_46, 0, diffiv, devices.MFK}},
+                ['W'] = {{device_commands.Button_47, 1, diffiv, devices.MFK},
+                    {device_commands.Button_47, 0, diffiv, devices.MFK}},
+                ['X'] = {{device_commands.Button_48, 1, diffiv, devices.MFK},
+                    {device_commands.Button_48, 0, diffiv, devices.MFK}},
+                ['Y'] = {{device_commands.Button_49, 1, diffiv, devices.MFK},
+                    {device_commands.Button_49, 0, diffiv, devices.MFK}},
+                ['Z'] = {{device_commands.Button_50, 1, diffiv, devices.MFK},
+                    {device_commands.Button_50, 0, diffiv, devices.MFK}},
+                ['!'] = {{device_commands.Button_1, 1, diffiv, devices.RMFD}, -- these are pilot mfd L/R
+                    {device_commands.Button_1, 0, diffiv, devices.RMFD}},
+                ['@'] = {{device_commands.Button_2, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_2, 0, diffiv, devices.RMFD}},
+                ['#'] = {{device_commands.Button_3, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_3, 0, diffiv, devices.RMFD}},
+                ['$'] = {{device_commands.Button_4, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_4, 0, diffiv, devices.RMFD}},
+                ['%'] = {{device_commands.Button_5, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_5, 0, diffiv, devices.RMFD}},
+                ['^'] = {{device_commands.Button_13, 1, diffiv, devices.RMFD}, --LAK R1
+                    {device_commands.Button_13, 0, diffiv, devices.RMFD}},
+                ['&'] = {{device_commands.Button_14, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_14, 0, diffiv, devices.RMFD}},
+                ['*'] = {{device_commands.Button_15, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_15, 0, diffiv, devices.RMFD}},
+                ['('] = {{device_commands.Button_16, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_16, 0, diffiv, devices.RMFD}},
+                [')'] = {{device_commands.Button_17, 1, diffiv, devices.RMFD},
+                    {device_commands.Button_17, 0, diffiv, devices.RMFD}},
+            }
 --########## SNIP END for kp.lua
         else
             loglocal('assignKP unknown unit: '..unit)
@@ -873,7 +1185,7 @@ local function assignKP()
     end --end getTypeKP()
 
     -- support for optional kp.lua file used for adding or modifying wp for a DCS module
-    local kpfile = lfs.writedir() .. 'Scripts\\Scratchpad\\Extensions\\lib\\kp.lua'
+    local kpfile = Apitlibdir .. 'kp.lua'
     local kpfun = ''
     local atr = lfs.attributes(kpfile)
     if atr and atr.mode == 'file' then
@@ -889,9 +1201,17 @@ local function assignKP()
         kpfun = getTypeKP
         kp = kpfun(unittype)
     end
-    loglocal('assignKP: done '..unittype..', '..type(kp))
-    loglocal(net.lua2json(kp))
-    loglocal(net.lua2json(LT))
+    loglocal('assignKP() done '..unittype..', '..type(kp), 2)
+    loglocal('assignKP() kp: '..net.lua2json(kp), 2)
+    loglocal('assignKP() LT: '..net.lua2json(LT), 2)
+end
+
+function cancelmacro()
+    loglocal('cancelmacro')
+    domacro.inp = {}
+    domacro.idx = 1
+    domacro.flag = false
+    setPageNotice(Spinr:rest()..noticestr)
 end
 
 local modname2dir = {}
@@ -925,7 +1245,7 @@ function searchmodules()
                 if ut then
                     modname2dir[ut] = moddir2name[i]
                     modnametot = modnametot + 1
-                    loglocal('aeronautespit searchmodules: added '..ut)
+                    loglocal('aeronautespit searchmodules: added '..ut, 2)
                 end
             end
         else
@@ -940,6 +1260,24 @@ end                             -- end of searchmodules()
 loglocal('aeronautes-pit extension version: '..version)
 loglocal('detected scratchpad version: '..scratchpadver)
 
+function setupfiles()
+    local fqfn = Scratchdir..Scratchpadfn
+    local atr = lfs.attributes(fqfn)
+    if atr and atr.mode == 'file' then
+        return
+    end
+    loglocal('apit setupfiles() creating '..Scratchpadfn)
+    local infile, res
+    infile, res = io.open(fqfn, 'w')
+    if not infile then
+        loglocal('aeronautespit setupfiles() open fail; ' .. res)
+        return(nil)
+    end
+    infile:close()
+
+end                             -- end setupfiles
+
+setupfiles()
 searchmodules()
 for i,j in pairs(modname2dir) do
 
@@ -947,9 +1285,8 @@ for i,j in pairs(modname2dir) do
         LT[i] = {}
     end
     LT[i].dirname = j.dir
-    loglocal('aeronautespit cycle LT.dirname: '..i..' = '..LT[i].dirname)
+    loglocal('aeronautespit cycle LT.dirname: '..i..' = '..LT[i].dirname, 2)
 end
-
 
 function press(inp, param)
     loglocal('press(): '..inp, 5)
@@ -965,8 +1302,8 @@ function press(inp, param)
     end
     for key in string.gmatch(inp, '.') do
         if kp[key] == nil then
-            loglocal("upload: press() nil " .. key, 0)
-            return ""
+            loglocal('upload: press() nil ' .. key, 6)
+            return ''
         end
         if type(kp[key][1]) == 'table' then
             a = kp[key]
@@ -985,9 +1322,9 @@ function press(inp, param)
 end                             -- end of press()
 
 function push_stop_command(itval, c)
-    loglocal('aeronautespit: push_stop_command() start '..net.lua2json(c))
+    loglocal('aeronautespit: push_stop_command() start '..net.lua2json(c), 2)
     if c.device and c.action and c.value then
-        loglocal('push_stop_command: device '..c.device ..', action '.. c.action ..', value '.. c.value..' fn '..type(c.fn)..' arg: '..type(c.arg))
+        loglocal('push_stop_command: device '..c.device ..', action '.. c.action ..', value '.. c.value..' fn '..type(c.fn)..' arg: '..type(c.arg), 2)
         if not c.len then c.len = itval end -- default to switch itval
         if not c.fn then c.fn = nil end
         table.insert(domacro.inp, {c.action, c.value, c.len, c.device, c.fn, c.arg})
@@ -1065,21 +1402,21 @@ function delay(seconds)
 end
 
 -- prewp() input sequence before entering latlong
-function prewp(num)
+function prewp(input)
     loglocal('prewp() unittype: '..unittype, 3)
     if LT[unittype].prewp then
-        LT[unittype].prewp()
+        LT[unittype].prewp(input)
     end
     loglocal('prewp 2: ', 3)
 end
 
 -- midwp() input sequence during middle of latlong
 function midwp(wpstr)
-    loglocal('midwp: ')
+    loglocal('midwp: ', 6)
     if LT[unittype].midwp then
         return LT[unittype].midwp(wpstr)
     end
-    loglocal('midwp 2: no midwp defined')
+    loglocal('midwp 2: not defined', 6)
     return wpstr
 end
 
@@ -1087,9 +1424,10 @@ end
 function postwp()
     loglocal('postwp: ', 3)
     if LT[unittype].postwp then
-        LT[unittype].postwp()
+        return LT[unittype].postwp()
     end
-    loglocal('postwp 2: ', 3)
+    loglocal('postwp 2: not defined', 6)
+    return 
 end
 
 -- wpseq() interface for setting the next steerpoint number
@@ -1114,9 +1452,9 @@ function wpseq(param)
 end
 
 -- wp() interface for entering in a latlong for a particular aircraft
-function wp(LLA)
+function wp(LLA, data)
     loglocal('wp: '..LLA, 3)
-    prewp()
+    prewp(LLA)
 
     local result = convertformatCoords(LLA)
     result = midwp(result)
@@ -1136,21 +1474,21 @@ function apcall(p)     -- common pcall() for loadDTCBuffer and assignCustom
             f, err = loadfile(p.fn)
             if not f then
                 loglocal('apcall() loadfile failed: '..err)
-                return nil
+                return nil, err
             end
         else
             loglocal('apcall() not a file '..p.fn)
-            return nil
+            return nil, err
         end
     elseif p.str then
         f, err = loadstring(p.str)
         if not f then
             loglocal('apcall() loadstring failed: '..err)
-            return nil
+            return nil, err
         end
     else
         loglocal('apcall() unknown input p: '..type(p))
-        return nil
+        return nil, err
     end
 
     local env = {}
@@ -1168,6 +1506,8 @@ function apcall(p)     -- common pcall() for loadDTCBuffer and assignCustom
                ttt = ttt,
                delay = delay,
                loglocal = loglocal,
+               getSelection = getSelection,
+               switchPage = switchPage,
         }
         setmetatable(env, {__index = _G})
     else
@@ -1178,10 +1518,10 @@ function apcall(p)     -- common pcall() for loadDTCBuffer and assignCustom
     local ok, res = pcall(f)
 
     if not ok then
+        loglocal('apcall() pcall error '..res)
         if p.str then
             loglocal("Error executing macro[first 40]: " .. string.sub(p.str, 1, 40))
         end
-        loglocal('apcall() pcall error '..res)
     end
 
     return ok, res
@@ -1214,7 +1554,8 @@ function loadDTCBuffer(text)
            unittab = unittab,
            ttlist = ttlist,
            setPageNotice = setPageNotice,
-           getCurrentPage = getCurrentPage,
+           getPageName = getPageName,
+           textarea = textarea,
     }
     setmetatable(env, {__index = _G}) --needed to pickup all the
                                       --module macro definitions like
@@ -1230,8 +1571,8 @@ function loadDTCBuffer(text)
 end                             -- end of loadDTCBuffer()
 
 function assignCustom()
-    local infn = lfs.writedir() .. 'Scripts\\Scratchpad\\Extensions\\lib\\'..unittype..'.lua'
-    loglocal('aeronautespit: using customfile '..infn)
+    local infn = Apitlibdir ..unittype..'.lua'
+    loglocal('aeronautespit: using customfile '..infn, 1)
     local env = {push_stop_command = push_stop_command,
                push_start_command = push_stop_command,
                prewp = prew,
@@ -1283,14 +1624,16 @@ function assignCustom()
 end                             -- end of assignCustom()
 
 function uploadinit()
-    loglocal('uploadinit(): begin')
-    wps = copytable(wpsdefaults)
+    cancelmacro()               -- cancel if macro is in progress
+    loglocal('uploadinit(): begin', 6)
+
     local newunittype = DCS.getPlayerUnitType()
     if newunittype == unittype then
         if not unittype then
             loglocal('uploadinit(): unittype already nil')
         else
             loglocal('uploadinit(): unittype already same, '..unittype)
+            assignCustom()
         end
         return
     end
@@ -1311,6 +1654,7 @@ function uploadinit()
         loglocal('uploadinit() getPlayerUnitType nil, ')
         return
     end
+
 
     loglocal('cycle thru modules,')
     for i,j in pairs(LT) do
@@ -1414,6 +1758,7 @@ function uploadinit()
     --]]
 
     local tt, dev, butn
+    --TODO revise this temp code
     if unittype == 'Hercules' then -- temp accomodation for Herc which uses single device for all actions
         ttlist = {}
         while line do
@@ -1458,9 +1803,16 @@ function uploadinit()
     end
     infile:close()
 
+    loglocal('uploadinit() before postload: '..net.lua2json(ttlist), 2)
+    if type(LT[unittype].postload) == 'function' then
+        loglocal('uploadinit() calling postload')
+        LT[unittype].postload()
+        loglocal('uploadinit() calling postload done')
+    end
     loglocal('uploadinit() ttlist: '..net.lua2json(ttlist), 6)
 
     assignKP()
+    wps = copytable(wpsdefaults)
     assignCustom()
 
     return unittype
@@ -1494,7 +1846,6 @@ end                             -- end of getCurrentLineOffsets()
 
 local function handleSelection(textarea)
         local text = textarea:getText()
-        --        local start, eos, sbyte, ebyte = getSelection()
         local startp, endp, start, eos = getSelection()
 
         loglocal('handleSelection() sp: '..startp..' ep: '..endp..' start: '..start..' eos: '..eos)
@@ -1558,10 +1909,10 @@ end                             -- end of handleSelection()
 function convertformatCoords(result)
     if LT[unittype].llconvert then
         result = LT[unittype].llconvert(result)
-        loglocal('convertformatCoords: llconvert '.. result)
+        loglocal('convertformatCoords: llconvert '.. result, 6)
     else
         result = string.gsub(result, "[Â°'%.\"]", "")
-        loglocal('convertformatCoords: no llconvert '..result)
+        loglocal('convertformatCoords: no llconvert '..result, 6)
     end
     return result
 end
@@ -1583,15 +1934,12 @@ end
 
 function LLtoAC(lat, lon, alt)
     local wpfmt = LT[unittype].wpentry
-    loglocal('LLtoAC '..wpfmt..' lat: '..lat)
+    loglocal('LLtoAC '..wpfmt..' lat: '..lat, 6)
     str = string.gsub(wpfmt, 'LAT', lat)
-    --   loglocal('ba: '..str)
     str = string.gsub(str, 'LON', lon)
-    --   loglocal('ba2: '..str)
     str = string.gsub(str, 'ALT', alt)
-    --   loglocal('ba3: '..str)
     str = convertformatCoords(str)
-    loglocal('LLtoAC str: '..str)
+    loglocal('LLtoAC str: '..str, 6)
     return str
 end
 
@@ -1611,93 +1959,160 @@ function getloc()
     return str
 end
 
--- first row buttons
-local rown = 8
-for i=1,rown do                 -- initialize locations and size
-    butts[i] = {((i-1)*buttw), 0, buttw, butth}
-end
+function createbuttons()
+    -- first row buttons
+    local numbutts = 10
+    local rowh = 0
 
-butts[1][5] = "LL"
-butts[1][6] = function(text)
-    str = getloc()
-    loglocal('aeronautespit: button LL: '..str)
-    wp(str)
-    domacro.flag = true
-end
-
-butts[2][5] = "Sel"
-butts[2][6] = handleSelection
-
-butts[3][5] = "Buf"
-butts[3][6] = function(textarea)
-    loadDTCBuffer(textarea:getText())
-end
-
-butts[4][5] = "Cancel"
-butts[4][6] = function(textarea)
-    domacro.inp = {}
-    domacro.idx = 1
-    domacro.flag = false
-    setPageNotice(Spinr:rest()..noticestr)
-end
-
-butts[5][5] = "wp"
-butts[5][6] = function(text)
-    text:insertBelow("wp('" .. getloc() .. "')")
-end
-
-butts[6][5] = "reload"
-butts[6][6] = function(text)
-    loglocal('aeronautespit: reload click '..#LT)
-    assignKP()
-    assignCustom()
-end
-
-butts[7][5] = "dbglog"
-butts[7][6] = function(text)
-    loglocal('aeronautespit: debug level set 9')
-    loglocal('',{debug=9})
-end
-
-butts[8][5] = "help"
-butts[8][6] = function(text)
-    local helpfn = lfs.writedir()..'Scratchpad\\help-aeronautes-pit.txt'
-    loglocal('aeronautespit: help click '..helpfn)
-    local fp, res
-    fp, res = io.open(helpfn, 'w+')
-    if not fp then
-        loglocal('aeronautespit: help click error open: '..res)
+    local buttx = 0
+    for i=1, 4 do                   -- first row are macro execution related
+        butts[i] = {buttx, rowh, buttw, butth}
+        buttx = buttx + buttw
     end
-    fp:write('version: '..version..'\n'..readme)
-    fp:close()
-    noticestr = noticestr .. 'help file created. reload pages'
-    setPageNotice(Spinr:rest()..noticestr)
-end
 
---start second row buttons
-for i=1,buttfnamt do
-    butts[i+rown] = {((i-1)*buttw)+10, butth, buttw, butth, tostring(i)}
-    --[[ attempt at runtime generation of indirection func table for dynamic function buttons
-    local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
-    local fn
-    local res
-    fn, res = loadstring(str)
-    if not fn then
-        loglocal('aeronautes button butts fns : '..res)
+    rowh = rowh + butth
+    buttx = 0
+    for i=5, numbutts do            -- second row modify Scratchpadfn buffer or other function
+        butts[i] = {buttx, rowh, buttw, butth}
+        buttx = buttx + buttw
+    end
+
+    butts[1][5] = "LL"
+    butts[1][6] = function()
+        str = getloc()
+        loglocal('aeronautespit: button LL: '..str)
+        wp(str)
+        domacro.flag = true
+    end
+
+    butts[2][5] = "Sel"
+    butts[2][6] = function(TA)
+        handleSelection(TA)
+    end
+
+    butts[3][5] = "Buf"
+    butts[3][6] = function(TA)
+        loadDTCBuffer(TA:getText())
+    end
+
+    butts[4][5] = "Cancel"
+    butts[4][6] = cancelmacro
+
+    butts[5][5] = "wp"
+    butts[5][6] = function(TA)
+        TA:insertBelow("wp('" .. getloc() .. "')")
+    end
+
+    butts[6][5] = "mod"
+    butts[6][6] = function(TA)
+        if switchPage(Scratchdir..Scratchpadfn) then
+            local txt = ''
+            local readtxt = ''
+            if LT[unittype].notes then
+                txt = LT[unittype].notes
+            end
+
+            local infn = Apitlibdir..unittype..'.lua'
+            local infile, res
+            infile, res = io.open(infn,'r')
+            if not infile then
+                txt = txt .. '\nThis module, '..unittype..', has no custom file in '..Apitlibsubdir
+                loglocal('aeronautespit mod open file fail; non critical' .. res)
+            else
+                readtxt = infile:read('*all')
+                infile:close()
+                if not readtxt then
+                    loglocal('aeronautespit mod read error; ' .. infn)
+                else
+                    txt = txt .. '\n\n-- COPY of '..Apitlibsubdir..unittype..'.lua\n'..readtxt
+                end
+            end
+
+            TA:setText('')
+            -- hardcoded 1MB file limit from scratchpad
+            local buflen = string.len(txt)
+            if buflen > (1024 * 1024) then
+                txt = string.sub(txt, 0, (1024*1024)-80) --limit 1 MB worth
+                txt = txt ..'<<< File too big for scratchpad. Displaying truncation >>>'
+                loglocal('apit mod buflen > 1MB: '..buflen)
+            end
+
+            TA:setText(txt)
         end
-    --]]
-end
+    end
 
-butts[rown+1][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
-butts[rown+2][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
-butts[rown+3][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
-butts[rown+4][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
-butts[rown+5][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
-butts[rown+6][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
+    butts[7][5] = "modlod"
+    butts[7][6] = function()
+        loglocal('aeronautespit: reload click '..#LT)
+        assignKP()
+        assignCustom()
+    end
 
-for i,j in pairs(butts) do      -- create all buttons
-    addButton(j[1], j[2], j[3], j[4], j[5], j[6])
-end
+    butts[8][5] = "log"
+    butts[8][6] = function(TA)
+        if switchPage(Scratchdir..Scratchpadfn) then
+            TA:setText('')
+            -- hardcoded 1MB file limit from scratchpad
+            local buflen = string.len(Hist.buf)
+            if buflen > (1024 * 1024) then
+                loglocal('apit log buflen > 1MB: '..buflen)
+            end
+
+            local txt = string.sub(Hist.buf, buflen - (1024*1024))
+            TA:setText(txt)
+            TA:insertBottom('')
+        end
+    end
+
+    butts[9][5] = "log9"
+    butts[9][6] = function()
+        loglocal('aeronautespit: debug level set 9')
+        loglocal('',{debug=9})
+    end
+
+    butts[10][5] = "help"
+    butts[10][6] = function(TA)
+        if switchPage(Scratchdir..Scratchpadfn) then
+            TA:setText('')
+            -- hardcoded 1MB file limit from scratchpad
+            local buflen = string.len(readme)
+            if buflen > (1024 * 1024) then
+                loglocal('apit help buflen > 1MB: '..buflen)
+            end
+            local txt = 'version: '..version..'\n'..readme..'\nEOF'
+            txt = string.sub(txt, buflen - (1024*1024))
+            TA:setText(txt)
+        end
+    end
+
+    --start row of "dynamic" buttons after static buttons above
+    rowh = rowh + butth
+    for i=1,buttfnamt do
+        butts[i+numbutts] = {((i-1)*buttw)+10, rowh, buttw, butth, tostring(i)}
+        --[[ attempt at runtime generation of indirection func table for dynamic function buttons
+            local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
+            local fn
+            local res
+            fn, res = loadstring(str)
+            if not fn then
+            loglocal('aeronautes button butts fns : '..res)
+            end
+        --]]
+    end
+
+butts[numbutts+1][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
+butts[numbutts+2][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
+butts[numbutts+3][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
+butts[numbutts+4][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
+butts[numbutts+5][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
+butts[numbutts+6][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
+
+    for i,j in pairs(butts) do      -- create all buttons
+        addButton(j[1], j[2], j[3], j[4], j[5], j[6])
+    end
+end                             -- end createbuttons
+
+createbuttons()
 
 -- addFrameListener is used for scheduling and inputing of cockpit commands
 addFrameListener(function()
@@ -1712,7 +2127,7 @@ addFrameListener(function()
             end
 
             local i = domacro.idx
-            loglocal('addFrameListener domacro.inp: '..net.lua2json(domacro.inp[i]))
+            loglocal('addFrameListener domacro.inp: '..net.lua2json(domacro.inp[i]), 6)
             local command = domacro.inp[i][1]
             local val = domacro.inp[i][2]
             local device = domacro.inp[i][4]
@@ -1728,9 +2143,10 @@ addFrameListener(function()
                     end
                 end
             else
-                loglocal('performClickableAction: '..device..' : '..command..' : '..val)
-                if not assert(Export.GetDevice(device):performClickableAction(command, val)) then
-                    loglocal('performClickableAction failed')
+                loglocal('performClickableAction: '..device..' : '..command..' : '..val, 6)
+
+                if not Export.GetDevice(device):performClickableAction(command, val) then
+                    loglocal('performClickableAction: fail')
                 end
             end
 

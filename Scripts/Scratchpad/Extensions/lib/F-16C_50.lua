@@ -1,4 +1,9 @@
---[[ F16 Fence in v1.0
+--[[ working functions:
+    start - minimal start engine
+    setup - configure systems in jet
+    WIP-mfd - configures pages and modes. Modify screens{} table to configure values
+    DEPREC-fense - fence configures all systems other than jet start. Still works but
+    to be replaced with setup
 --]]
 
 wpseq({menus = 'r4',
@@ -7,6 +12,9 @@ wpseq({menus = 'r4',
 })
 
 ft = {}
+ft['test'] = function()
+    loglocal(type(textarea))
+end
 --#################################
 -- start v0.1
 -- This will start engine and initiate a stored heading
@@ -56,11 +64,89 @@ tt('MIDS LVT Knob, ZERO/OFF/ON',{value=1})
 end                             -- end of start
 
 --#################################
+-- setup v0.1
+-- This is fence but with tt() api instead of push_stop_command()
+ft['setup'] = function ()
+
+tt('IFF MASTER Knob, OFF/STBY/LOW/NORM/EMER',{value=.3})
+tt('MASTER Switch, OFF/ALL/A-C/FORM/NORM',{value=.1})
+ttn('ECM Power Switch')
+tt('ECM XMIT Switch',{value=-1})
+ttn('ECM 1 Button')
+ttn('ECM 2 Button')
+ttn('ECM 3 Button')
+ttn('ECM 4 Button')
+ttn('ECM 5 Button')
+ttn('ECM 6 Button')
+
+ttn('RWR Indicator Control POWER Button')
+ttn('RWR Indicator Control SEARCH Button')
+ttn('RWR Indicator Control MODE Button')
+ttn('RWR 555 Switch, ON/OFF')
+ttn('JMR Source Switch, ON/OFF')
+ttn('CH Expendable Category Switch, ON/OFF')
+ttn('FL Expendable Category Switch, ON/OFF')
+tt('MODE Knob, OFF/STBY/MAN/SEMI/AUTO/BYP',{value=.2})
+
+tt('HMCS SYMBOLOGY INT Knob',{value=.8})
+ttn('LANDING TAXI LIGHTS Switch, LANDING/OFF/TAXI')
+ttf('ILS Power Knob')           -- ILS volume off
+ttf('TACAN Knob')               -- tacan volume off
+ttn('MASTER ARM Switch, MASTER ARM/OFF/SIMULATE')
+ttf('LASER ARM Switch, ARM/OFF')
+ttf('RF Switch, SILENT/QUIET/NORM')
+
+-- setup mfds
+
+--bullseye enable
+press('L080')
+
+--hmcs pit unblank
+press('L0cd0r')
+
+ttn('LEFT HDPT Switch, ON/OFF')
+ttn('RIGH HDPT Switch, ON/OFF')
+ttn('FCR Switch, FCR/OFF')
+ttn('RDR ALT Switch, RDR ALT/STBY/OFF')
+-- fuel gauge to centerline
+push_stop_command(0,{device=devices.FUEL_INTERFACE,action=fuel_commands.FuelQtySelSw,value = 0.5})
+push_stop_command(0,{device=devices.SAI, action=sai_commands.cage,value=-1})
+-- uncage backup artificial horizon
+push_stop_command(0,{device=devices.SAI, action=sai_commands.cage,value=0})
+
+--temp workaround for no datalink bug
+press('Le11r')
+
+end                         -- end of setup
+
+local mfds = {}
+mfds.left = {}
+mfds.right = {}
+mfds.left.dogfight = {}
+
+--#################################
+-- mfd v0.1
+-- Configure MFD preset pages
+ft['WIP-mfd'] = function ()
+    local OSB = {}
+    local i = 1
+    for j=mfd_commands.OSB_1, mfd_commands.Button_20 do
+        OSB[i] = j
+        i = i + 1
+    end
+
+    local menu = {}
+    menu.BLANK = {1}; menu.HAD = {2}; menu.SMS = {6}; menu.HSD = {7}
+    menu.DTE = {8}; menu.TEST = {9}; menu.FLCS = {10}; menu.WPN = {18}
+    menu.TGP = {19}; menu.FCR = {20}
+
+
+end                             -- end of mfd
+--#################################
 -- fence v0.6
 -- This is a follow up to the 'start' function above. Once alignment
 -- is done you can fence to do complete cockpit setup
-
-ft['fence'] = function()
+ft['DEPREC-fence'] = function()
 tt('ICP HUD Symbology Intensity Knob',{value=1})
 dt = 0
 dt_mto = 0
@@ -116,7 +202,7 @@ push_stop_command(dt,{device = devices.CMDS,    action = cmds_commands.Mode, val
 push_stop_command(dt,{message = _("- HMCS SYMBOLOGY INT POWER KNOB - INT"),    message_timeout = dt_mto})
 push_stop_command(dt,{device = devices.HMCS,    action = hmcs_commands.IntKnob,    value = 0.8})
 
--- HMCS on
+-- Landing lights
 push_stop_command(dt,{message = _("- LANDING LIGHTS"),    message_timeout = dt_mto})
 push_stop_command(dt,{device = devices.EXTLIGHTS_SYSTEM,    action = extlights_commands.LandingTaxi,    value = 1.0})
 
