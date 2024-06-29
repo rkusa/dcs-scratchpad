@@ -33,7 +33,6 @@ local function loadScratchpad()
     local currentPage = nil
     local pagesCount = 0
     local pages = {}
-    local pagesnotice = {}
 
     -- Crosshair resources
     local crosshairWindow = nil
@@ -333,41 +332,6 @@ local function loadScratchpad()
         self:insert("")
     end
 
-    local function setTitleBar(page)
-        local notice = ''
-        for i,j in pairs(pagesnotice) do
-            notice = notice .. ' | ' .. j
-        end
-
-        if window then
-            window:setText(page.name .. notice)
-        else
-            log('setTitleBar() window not defined yet')
-        end
-    end
-
-    local function setPagesnotice(extid, str)
-        if not extid then
-            log('setPagesnotice() fail extid nil')
-            return
-        end
-        if str then
-            pagesnotice[extid] = str
-        else
-            table.delete(pagesnotice, extid)
-        end
-        if not currentPage then
-            return
-        end
-
-        for _,page in pairs(pages) do
-            if page.path == currentPage then
-                setTitleBar(page)
-                return
-            end
-        end
-    end
-
     local function loadPage(page)
         log("loading page " .. page.path)
         file, err = io.open(page.path, "r")
@@ -381,7 +345,7 @@ local function loadScratchpad()
             currentPage = page.path
 
             -- update title
-            setTitleBar(page)
+            window:setText(page.name)
         end
     end
 
@@ -452,6 +416,25 @@ local function loadScratchpad()
         currentPage = pages[pagesCount].path
     end
 
+    function switchPage(pname)
+        local found = nil
+        for _,page in pairs(pages) do
+            if page.path == pname then
+                found = page
+            end
+        end
+        if found then
+            if currentPage ~= pname then
+                savePage(currentPage, textarea:getText(), true)
+                loadPage(found)
+            end
+            return found
+        else
+            log('switchPage() could not find: '..pname)
+            return nil
+        end
+    end
+
     local function loadConfiguration()
         log("Loading config file...")
 
@@ -513,8 +496,7 @@ local function loadScratchpad()
                         pages,
                         {
                             name = name:sub(1, -5),
-                            path = path,
-                            notice = '',
+                            path = path
                         }
                     )
                     pagesCount = pagesCount + 1
@@ -615,39 +597,27 @@ local function loadScratchpad()
         local g = math.floor(d)
         local m = d * 60 - g * 60
 
+        local precision = 3
+        if opts.precision ~= nil then
+            precision = opts.precision
+        end
+        if opts.showNegative ~= nil then
+            g, h = showNegative(g, h)
+        end
+        local degreesWidth = 2
+        if opts.lonDegreesWidth ~= nil and not isLat then
+            degreesWidth = opts.lonDegreesWidth
+            if opts.showNegative ~= nil and g < 0 then
+                degreesWidth = degreesWidth + 1
+            end
+        end
+
         if format == "DMS" then -- Degree Minutes Seconds
             m = math.floor(m)
             local s = d * 3600 - g * 3600 - m * 60
             s = math.floor(s * 100) / 100
-
-            local precision = 0
-            if opts.precision ~= nil then
-                precision = opts.precision
-            end
-            local degreesWidth = 2
-            if opts.lonDegreesWidth ~= nil and not isLat then
-                degreesWidth = opts.lonDegreesWidth
-                if opts.showNegative ~= nil and g < 0 then
-                    degreesWidth = degreesWidth + 1
-                end
-            end
             return string.format('%s %0'..degreesWidth..'d°%.2d\'%0'..(precision+2)..'.'..precision..'f', h, g, m, s)
- 
         elseif format == "DDM" then -- Degree Decimal Minutes
-            local precision = 3
-            if opts.precision ~= nil then
-                precision = opts.precision
-            end
-            if opts.showNegative ~= nil then
-                g, h = showNegative(g, h)
-            end
-            local degreesWidth = 2
-            if opts.lonDegreesWidth ~= nil and not isLat then
-                degreesWidth = opts.lonDegreesWidth
-                if opts.showNegative ~= nil and g < 0 then
-                    degreesWidth = degreesWidth + 1
-                end
-            end
             return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
         else -- Decimal Degrees
             return  string.format('%f', showNegative(d, h))
@@ -842,8 +812,8 @@ local function loadScratchpad()
 
             -- prepare extension panel
             local children = {}
-            table.insert(extensions, {children = children})
             local extid = name
+            extensions[extid] = {children = children}
 
             -- create extension env
             local extEnv = {
@@ -869,28 +839,9 @@ local function loadScratchpad()
                 formatCoord = formatCoord,
                 log = log,
                 getSelection = getSelection,
-                switchPage = function(pname)
-                    local found = nil
-                    for _,page in pairs(pages) do
-                        if page.path == pname then
-                            found = page
-                        end
-                    end
-                    if found then
-                        if currentPage ~= pname then
-                            savePage(currentPage, textarea:getText(), true)
-                            loadPage(found)
-                        end
-                        return found
-                    else
-                        loglocal('apit switchpage() could not find: '..pname, 1)
-                        return nil
-                    end
-                end,
+                switchPage = switchPage,
                 extid = extid,
-                setPageNotice = function(str)
-                    setPagesnotice(extid, str)
-                end,
+                panel = extensions[extid].children,
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)
@@ -1044,7 +995,7 @@ local function loadScratchpad()
             local panel = Panel.new()
             local panelWidth = 0
             local panelHeight = 0
-            for _, child in pairs(container.children) do
+            for idx, child in pairs(container.children) do
                 if child.x + child.w > panelWidth then
                     panelWidth = child.x + child.w
                 end
@@ -1059,6 +1010,7 @@ local function loadScratchpad()
                 button:addMouseUpCallback(function(self)
                     child.onClick(Text.new())
                 end)
+                container.children[idx].button = button
                 panel:insertWidget(button)
             end
             panel:setBounds(0, 0, panelWidth, panelHeight)
