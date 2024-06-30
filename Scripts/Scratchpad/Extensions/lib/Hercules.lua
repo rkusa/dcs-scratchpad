@@ -167,7 +167,7 @@ Export.LoSetCommand(967)--f2
     end                             -- end elseif posteng
 end                             -- start
 
-ft['TO'] = function(action)
+ft['takeoff'] = function(action)
     
 ttn('CNI MU INDEX Select',{action=devaction.pilot_CNI_MU_INDEX})
 ttn('CNI MU SelectKey 2',{action=devaction.pilot_CNI_MU_SelectKey_002})
@@ -175,7 +175,7 @@ ttn('CNI MU SelectKey 12',{action=devaction.pilot_CNI_MU_SelectKey_012})
     
 end
 
-ft['LDG'] = function(action)
+ft['landing'] = function(action)
     
 ttn('CNI MU INDEX Select',{action=devaction.pilot_CNI_MU_INDEX})
 ttn('CNI MU SelectKey 3',{action=devaction.pilot_CNI_MU_SelectKey_003})

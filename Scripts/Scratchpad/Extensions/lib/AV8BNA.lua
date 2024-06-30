@@ -14,7 +14,7 @@ ft.run={'start'}
 ft = {}
 ft['run'] = {'start'}
 
-ft['disablemap'] = function()
+ft['mapoff'] = function()
    ttn('MPCD Left Button 3')
    ttn('MPCD Left Button 12')
 end

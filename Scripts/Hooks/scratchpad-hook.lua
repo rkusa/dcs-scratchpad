@@ -417,6 +417,10 @@ local function loadScratchpad()
     end
 
     function switchPage(pname)
+        if pname == nil then
+            return currentPage
+        end
+
         local found = nil
         for _,page in pairs(pages) do
             if page.path == pname then
@@ -842,6 +846,12 @@ local function loadScratchpad()
                 switchPage = switchPage,
                 extid = extid,
                 panel = extensions[extid].children,
+                isHidden = function()
+                    return isHidden
+                end,
+                getTextarea = function()
+                    return textarea
+                end,
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)

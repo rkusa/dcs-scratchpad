@@ -450,26 +450,45 @@ local ttlist = {}               -- tool tips from clicabledata.lua
 -- butt vars below control the apit UI buttons created in scratchpad
 local butts = {}
 local buttfn = {} -- indirection funcs to bind to onClick by vary with assignCustom()
-local buttfnamt = 6
+local buttfnamt = 10            -- number of assignable custom function buttons
 local buttw = 50
 local butth = 30
+local panelbytitle = {}
 
 local noticestr = ''
 Spinr = {
     frames = {'/','|','\\','-'},
     idx = 1,
     buf = '',
+    setPageNotice = function(str)
+        if not str then
+            str = 'UNSET'
+        end
+
+        if panelbytitle['mod'] then
+            panelbytitle['mod'].button:setText(str)
+        else
+            loglocal('setPageNotice() no panel "mod"', 2)
+        end
+    end,
     run = function(self)
         if self.idx <= 1 then
             self.idx = #self.frames
         else
             self.idx = self.idx - 1
         end
-        return self.frames[self.idx]
+        self.setPageNotice(self.frames[self.idx])
     end,
     rest = function(self)
         idx = 1
-        return '*'
+        if not unittype then
+            self.setPageNotice('NO UNIT')
+        else
+            self.setPageNotice(string.sub(unittype, 1, 8))
+        end
+    end,
+    delay = function(self)
+        self.setPageNotice('D')
     end,
 }
 
@@ -518,7 +537,6 @@ local LT = {           -- per module customization for convenience api
             result = string.lower(result)
             return result
         end,
-
     },
     ['AV8BNA'] = {
         ['notes'] = [[Waypoint input requires DATA page. Adds new wp to the list.(wp #77)]],
@@ -676,93 +694,137 @@ local function assignKP()
         local diffiv = 0
         if unit == 'A-10C' then
             return {
-                ['1'] = {{device_commands.Button_15, 1, diffiv, devices.CDU},
+                ['1'] = {
+                    {device_commands.Button_15, 1, diffiv, devices.CDU},
                     {device_commands.Button_15, 0, diffiv, devices.CDU}},
-                ['2'] = {{device_commands.Button_16, 1, diffiv, devices.CDU},
+                ['2'] = {
+                    {device_commands.Button_16, 1, diffiv, devices.CDU},
                     {device_commands.Button_16, 0, diffiv, devices.CDU}},
-                ['3'] = {{device_commands.Button_17, 1, diffiv, devices.CDU},
+                ['3'] = {
+                    {device_commands.Button_17, 1, diffiv, devices.CDU},
                     {device_commands.Button_17, 0, diffiv, devices.CDU}},
-                ['4'] = {{device_commands.Button_18, 1, diffiv, devices.CDU},
+                ['4'] = {
+                    {device_commands.Button_18, 1, diffiv, devices.CDU},
                     {device_commands.Button_18, 0, diffiv, devices.CDU}},
-                ['5'] = {{device_commands.Button_19, 1, diffiv, devices.CDU},
+                ['5'] = {
+                    {device_commands.Button_19, 1, diffiv, devices.CDU},
                     {device_commands.Button_19, 0, diffiv, devices.CDU}},
-                ['6'] = {{device_commands.Button_20, 1, diffiv, devices.CDU},
+                ['6'] = {
+                    {device_commands.Button_20, 1, diffiv, devices.CDU},
                     {device_commands.Button_20, 0, diffiv, devices.CDU}},
-                ['7'] = {{device_commands.Button_21, 1, diffiv, devices.CDU},
+                ['7'] = {
+                    {device_commands.Button_21, 1, diffiv, devices.CDU},
                     {device_commands.Button_21, 0, diffiv, devices.CDU}},
-                ['8'] = {{device_commands.Button_22, 1, diffiv, devices.CDU},
+                ['8'] = {
+                    {device_commands.Button_22, 1, diffiv, devices.CDU},
                     {device_commands.Button_22, 0, diffiv, devices.CDU}},
-                ['9'] = {{device_commands.Button_23, 1, diffiv, devices.CDU},
+                ['9'] = {
+                    {device_commands.Button_23, 1, diffiv, devices.CDU},
                     {device_commands.Button_23, 0, diffiv, devices.CDU}},
-                ['0'] = {{device_commands.Button_24, 1, diffiv, devices.CDU},
+                ['0'] = {
+                    {device_commands.Button_24, 1, diffiv, devices.CDU},
                     {device_commands.Button_24, 0, diffiv, devices.CDU}},
-                ['a'] = {{device_commands.Button_27, 1, diffiv, devices.CDU},
+                ['a'] = {
+                    {device_commands.Button_27, 1, diffiv, devices.CDU},
                     {device_commands.Button_27, 0, diffiv, devices.CDU}},
-                ['b'] = {{device_commands.Button_28, 1, diffiv, devices.CDU},
+                ['b'] = {
+                    {device_commands.Button_28, 1, diffiv, devices.CDU},
                     {device_commands.Button_28, 0, diffiv, devices.CDU}},
-                ['c'] = {{device_commands.Button_29, 1, diffiv, devices.CDU},
+                ['c'] = {
+                    {device_commands.Button_29, 1, diffiv, devices.CDU},
                     {device_commands.Button_29, 0, diffiv, devices.CDU}},
-                ['d'] = {{device_commands.Button_30, 1, diffiv, devices.CDU},
+                ['d'] = {
+                    {device_commands.Button_30, 1, diffiv, devices.CDU},
                     {device_commands.Button_30, 0, diffiv, devices.CDU}},
-                ['e'] = {{device_commands.Button_31, 1, diffiv, devices.CDU},
+                ['e'] = {
+                    {device_commands.Button_31, 1, diffiv, devices.CDU},
                     {device_commands.Button_31, 0, diffiv, devices.CDU}},
-                ['f'] = {{device_commands.Button_32, 1, diffiv, devices.CDU},
+                ['f'] = {
+                    {device_commands.Button_32, 1, diffiv, devices.CDU},
                     {device_commands.Button_32, 0, diffiv, devices.CDU}},
-                ['g'] = {{device_commands.Button_33, 1, diffiv, devices.CDU},
+                ['g'] = {
+                    {device_commands.Button_33, 1, diffiv, devices.CDU},
                     {device_commands.Button_33, 0, diffiv, devices.CDU}},
-                ['h'] = {{device_commands.Button_34, 1, diffiv, devices.CDU},
+                ['h'] = {
+                    {device_commands.Button_34, 1, diffiv, devices.CDU},
                     {device_commands.Button_34, 0, diffiv, devices.CDU}},
-                ['i'] = {{device_commands.Button_35, 1, diffiv, devices.CDU},
+                ['i'] = {
+                    {device_commands.Button_35, 1, diffiv, devices.CDU},
                     {device_commands.Button_35, 0, diffiv, devices.CDU}},
-                ['j'] = {{device_commands.Button_36, 1, diffiv, devices.CDU},
+                ['j'] = {
+                    {device_commands.Button_36, 1, diffiv, devices.CDU},
                     {device_commands.Button_36, 0, diffiv, devices.CDU}},
-                ['k'] = {{device_commands.Button_37, 1, diffiv, devices.CDU},
+                ['k'] = {
+                    {device_commands.Button_37, 1, diffiv, devices.CDU},
                     {device_commands.Button_37, 0, diffiv, devices.CDU}},
-                ['l'] = {{device_commands.Button_38, 1, diffiv, devices.CDU},
+                ['l'] = {
+                    {device_commands.Button_38, 1, diffiv, devices.CDU},
                     {device_commands.Button_38, 0, diffiv, devices.CDU}},
-                ['m'] = {{device_commands.Button_39, 1, diffiv, devices.CDU},
+                ['m'] = {
+                    {device_commands.Button_39, 1, diffiv, devices.CDU},
                     {device_commands.Button_39, 0, diffiv, devices.CDU}},
-                ['n'] = {{device_commands.Button_40, 1, diffiv, devices.CDU},
+                ['n'] = {
+                    {device_commands.Button_40, 1, diffiv, devices.CDU},
                     {device_commands.Button_40, 0, diffiv, devices.CDU}},
-                ['o'] = {{device_commands.Button_41, 1, diffiv, devices.CDU},
+                ['o'] = {
+                    {device_commands.Button_41, 1, diffiv, devices.CDU},
                     {device_commands.Button_41, 0, diffiv, devices.CDU}},
-                ['p'] = {{device_commands.Button_42, 1, diffiv, devices.CDU},
+                ['p'] = {
+                    {device_commands.Button_42, 1, diffiv, devices.CDU},
                     {device_commands.Button_42, 0, diffiv, devices.CDU}},
-                ['q'] = {{device_commands.Button_43, 1, diffiv, devices.CDU},
+                ['q'] = {
+                    {device_commands.Button_43, 1, diffiv, devices.CDU},
                     {device_commands.Button_43, 0, diffiv, devices.CDU}},
-                ['r'] = {{device_commands.Button_44, 1, diffiv, devices.CDU},
+                ['r'] = {
+                    {device_commands.Button_44, 1, diffiv, devices.CDU},
                     {device_commands.Button_44, 0, diffiv, devices.CDU}},
-                ['s'] = {{device_commands.Button_45, 1, diffiv, devices.CDU},
+                ['s'] = {
+                    {device_commands.Button_45, 1, diffiv, devices.CDU},
                     {device_commands.Button_45, 0, diffiv, devices.CDU}},
-                ['t'] = {{device_commands.Button_46, 1, diffiv, devices.CDU},
+                ['t'] = {
+                    {device_commands.Button_46, 1, diffiv, devices.CDU},
                     {device_commands.Button_46, 0, diffiv, devices.CDU}},
-                ['u'] = {{device_commands.Button_47, 1, diffiv, devices.CDU},
+                ['u'] = {
+                    {device_commands.Button_47, 1, diffiv, devices.CDU},
                     {device_commands.Button_47, 0, diffiv, devices.CDU}},
-                ['v'] = {{device_commands.Button_48, 1, diffiv, devices.CDU},
+                ['v'] = {
+                    {device_commands.Button_48, 1, diffiv, devices.CDU},
                     {device_commands.Button_48, 0, diffiv, devices.CDU}},
-                ['w'] = {{device_commands.Button_49, 1, diffiv, devices.CDU},
+                ['w'] = {
+                    {device_commands.Button_49, 1, diffiv, devices.CDU},
                     {device_commands.Button_49, 0, diffiv, devices.CDU}},
-                ['x'] = {{device_commands.Button_50, 1, diffiv, devices.CDU},
+                ['x'] = {
+                    {device_commands.Button_50, 1, diffiv, devices.CDU},
                     {device_commands.Button_50, 0, diffiv, devices.CDU}},
-                ['y'] = {{device_commands.Button_51, 1, diffiv, devices.CDU},
+                ['y'] = {
+                    {device_commands.Button_51, 1, diffiv, devices.CDU},
                     {device_commands.Button_51, 0, diffiv, devices.CDU}},
-                ['z'] = {{device_commands.Button_52, 1, diffiv, devices.CDU},
+                ['z'] = {
+                    {device_commands.Button_52, 1, diffiv, devices.CDU},
                     {device_commands.Button_52, 0, diffiv, devices.CDU}},
-                ['!'] = {{device_commands.Button_1, 1, diffiv, devices.CDU}, -- following 8 keys are LSK
+                ['!'] = {
+                    {device_commands.Button_1, 1, diffiv, devices.CDU}, -- following 8 keys are LSK
                     {device_commands.Button_1, 0, diffiv, devices.CDU}},
-                ['@'] = {{device_commands.Button_2, 1, diffiv, devices.CDU},
+                ['@'] = {
+                    {device_commands.Button_2, 1, diffiv, devices.CDU},
                     {device_commands.Button_2, 0, diffiv, devices.CDU}},
-                ['#'] = {{device_commands.Button_3, 1, diffiv, devices.CDU},
+                ['#'] = {
+                    {device_commands.Button_3, 1, diffiv, devices.CDU},
                     {device_commands.Button_3, 0, diffiv, devices.CDU}},
-                ['$'] = {{device_commands.Button_4, 1, diffiv, devices.CDU},
+                ['$'] = {
+                    {device_commands.Button_4, 1, diffiv, devices.CDU},
                     {device_commands.Button_4, 0, diffiv, devices.CDU}},
-                ['%'] = {{device_commands.Button_5, 1, diffiv, devices.CDU},
+                ['%'] = {
+                    {device_commands.Button_5, 1, diffiv, devices.CDU},
                     {device_commands.Button_5, 0, diffiv, devices.CDU}},
-                ['^'] = {{device_commands.Button_6, 1, diffiv, devices.CDU},
+                ['^'] = {
+                    {device_commands.Button_6, 1, diffiv, devices.CDU},
                     {device_commands.Button_6, 0, diffiv, devices.CDU}},
-                ['&'] = {{device_commands.Button_7, 1, diffiv, devices.CDU},
+                ['&'] = {
+                    {device_commands.Button_7, 1, diffiv, devices.CDU},
                     {device_commands.Button_7, 0, diffiv, devices.CDU}},
-                ['*'] = {{device_commands.Button_8, 1, diffiv, devices.CDU},
+                ['*'] = {
+                    {device_commands.Button_8, 1, diffiv, devices.CDU},
                     {device_commands.Button_8, 0, diffiv, devices.CDU}},
             }
         elseif unit == 'AV8BNA' then
@@ -924,13 +986,17 @@ local function assignKP()
                 c = {ufc_commands.RCL, 1, diffiv, devices.UFC},
                 p = {ufc_commands.DED_INC, 1, diffiv, devices.UFC},
                 m = {ufc_commands.DED_DEC, 1, diffiv, devices.UFC},
-                r = {{ufc_commands.DCS_RTN, -1, diffiv, devices.UFC},
+                r = {
+                    {ufc_commands.DCS_RTN, -1, diffiv, devices.UFC},
                     {ufc_commands.DCS_RTN, 0, diffiv, devices.UFC}},
-                s = {{ufc_commands.DCS_SEQ, -1, diffiv, devices.UFC},
+                s = {
+                    {ufc_commands.DCS_SEQ, -1, diffiv, devices.UFC},
                     {ufc_commands.DCS_SEQ, 0, diffiv, devices.UFC}},
-                u = {{ufc_commands.DCS_UP, 1, diffiv, devices.UFC},
+                u = {
+                    {ufc_commands.DCS_UP, 1, diffiv, devices.UFC},
                     {ufc_commands.DCS_UP, 0, 0, devices.UFC}},
-                d = {{ufc_commands.DCS_DOWN, -1, diffiv, devices.UFC},
+                d = {
+                    {ufc_commands.DCS_DOWN, -1, diffiv, devices.UFC},
                     {ufc_commands.DCS_DOWN, 0, 0, devices.UFC}},
             }
         elseif unit == 'FA-18C_hornet' then
@@ -1009,47 +1075,68 @@ local function assignKP()
         elseif unit == 'Ka-50' or unit == 'Ka-50_3' then
             diffiv = 0
             return {
-                ['0'] = {{device_commands.Button_1, 1, diffiv, devices.PVI},
+                ['0'] = {
+                    {device_commands.Button_1, 1, diffiv, devices.PVI},
                     {device_commands.Button_1, 0, diffiv, devices.PVI}},
-                ['1'] = {{device_commands.Button_2, 1, diffiv, devices.PVI},
+                ['1'] = {
+                    {device_commands.Button_2, 1, diffiv, devices.PVI},
                     {device_commands.Button_2, 0, diffiv, devices.PVI}},
-                ['2'] = {{device_commands.Button_3, 1, diffiv, devices.PVI},
+                ['2'] = {
+                    {device_commands.Button_3, 1, diffiv, devices.PVI},
                     {device_commands.Button_3, 0, diffiv, devices.PVI}},
-                ['3'] = {{device_commands.Button_4, 1, diffiv, devices.PVI},
+                ['3'] = {
+                    {device_commands.Button_4, 1, diffiv, devices.PVI},
                     {device_commands.Button_4, 0, diffiv, devices.PVI}},
-                ['4'] = {{device_commands.Button_5, 1, diffiv, devices.PVI},
+                ['4'] = {
+                    {device_commands.Button_5, 1, diffiv, devices.PVI},
                     {device_commands.Button_5, 0, diffiv, devices.PVI}},
-                ['5'] = {{device_commands.Button_6, 1, diffiv, devices.PVI},
+                ['5'] = {
+                    {device_commands.Button_6, 1, diffiv, devices.PVI},
                     {device_commands.Button_6, 0, diffiv, devices.PVI}},
-                ['6'] = {{device_commands.Button_7, 1, diffiv, devices.PVI},
+                ['6'] = {
+                    {device_commands.Button_7, 1, diffiv, devices.PVI},
                     {device_commands.Button_7, 0, diffiv, devices.PVI}},
-                ['7'] = {{device_commands.Button_8, 1, diffiv, devices.PVI},
+                ['7'] = {
+                    {device_commands.Button_8, 1, diffiv, devices.PVI},
                     {device_commands.Button_8, 0, diffiv, devices.PVI}},
-                ['8'] = {{device_commands.Button_9, 1, diffiv, devices.PVI},
+                ['8'] = {
+                    {device_commands.Button_9, 1, diffiv, devices.PVI},
                     {device_commands.Button_9, 0, diffiv, devices.PVI}},
-                ['9'] = {{device_commands.Button_10, 1, diffiv, devices.PVI},
+                ['9'] = {
+                    {device_commands.Button_10, 1, diffiv, devices.PVI},
                     {device_commands.Button_10, 0, diffiv, devices.PVI}},
-                ['N'] = {{device_commands.Button_1, 1, diffiv, devices.PVI},
+                ['N'] = {
+                    {device_commands.Button_1, 1, diffiv, devices.PVI},
                     {device_commands.Button_1, 0, diffiv, devices.PVI}},
-                ['E'] = {{device_commands.Button_1, 1, diffiv, devices.PVI},
+                ['E'] = {
+                    {device_commands.Button_1, 1, diffiv, devices.PVI},
                     {device_commands.Button_1, 0, diffiv, devices.PVI}},
-                ['W'] = {{device_commands.Button_2, 1, diffiv, devices.PVI},
+                ['W'] = {
+                    {device_commands.Button_2, 1, diffiv, devices.PVI},
                     {device_commands.Button_2, 0, diffiv, devices.PVI}},
-                ['S'] = {{device_commands.Button_2, 1, diffiv, devices.PVI},
+                ['S'] = {
+                    {device_commands.Button_2, 1, diffiv, devices.PVI},
                     {device_commands.Button_2, 0, diffiv, devices.PVI}},
-                e = {{device_commands.Button_18, 1, diffiv, devices.PVI}, --NAV Enter
+                e = {
+                    {device_commands.Button_18, 1, diffiv, devices.PVI}, --NAV Enter
                     {device_commands.Button_18, 0, diffiv, devices.PVI}},
-                w = {{device_commands.Button_11, 1, diffiv, devices.PVI}, --NAV Waypoints
+                w = {
+                    {device_commands.Button_11, 1, diffiv, devices.PVI}, --NAV Waypoints
                     {device_commands.Button_11, 0, diffiv, devices.PVI}},
-                f = {{device_commands.Button_13, 1, diffiv, devices.PVI}, --NAV Fixpnt
+                f = {
+                    {device_commands.Button_13, 1, diffiv, devices.PVI}, --NAV Fixpnt
                     {device_commands.Button_13, 0, diffiv, devices.PVI}},
-                a = {{device_commands.Button_15, 1, diffiv, devices.PVI}, --NAV Airfield
+                a = {
+                    {device_commands.Button_15, 1, diffiv, devices.PVI}, --NAV Airfield
                     {device_commands.Button_15, 0, diffiv, devices.PVI}},
-                t = {{device_commands.Button_17, 1, diffiv, devices.PVI}, --NAV Targets
+                t = {
+                    {device_commands.Button_17, 1, diffiv, devices.PVI}, --NAV Targets
                     {device_commands.Button_17, 0, diffiv, devices.PVI}},
-                n = {{device_commands.Button_26, 0.2, diffiv, devices.PVI}, --NAV Master mode ent
+                n = {
+                    {device_commands.Button_26, 0.2, diffiv, devices.PVI}, --NAV Master mode ent
                     {device_commands.Button_26, 0.2, diffiv, devices.PVI}},
-                o = {{device_commands.Button_26, 0.3, diffiv, devices.PVI}, --NAV Master mode oper
+                o = {
+                    {device_commands.Button_26, 0.3, diffiv, devices.PVI}, --NAV Master mode oper
                     {device_commands.Button_26, 0.3, diffiv, devices.PVI}},
             }
         elseif unit == 'Hercules' then
@@ -1080,101 +1167,149 @@ local function assignKP()
             }
         elseif unit == 'OH58D' then
             return {
-                ['1'] = {{device_commands.Button_6, 1, diffiv, devices.MFK},
+                ['1'] = {
+                    {device_commands.Button_6, 1, diffiv, devices.MFK},
                     {device_commands.Button_6, 0, diffiv, devices.MFK}},
-                ['2'] = {{device_commands.Button_7, 1, diffiv, devices.MFK},
+                ['2'] = {
+                    {device_commands.Button_7, 1, diffiv, devices.MFK},
                     {device_commands.Button_7, 0, diffiv, devices.MFK}},
-                ['3'] = {{device_commands.Button_8, 1, diffiv, devices.MFK},
+                ['3'] = {
+                    {device_commands.Button_8, 1, diffiv, devices.MFK},
                     {device_commands.Button_8, 0, diffiv, devices.MFK}},
-                ['4'] = {{device_commands.Button_9, 1, diffiv, devices.MFK},
+                ['4'] = {
+                    {device_commands.Button_9, 1, diffiv, devices.MFK},
                     {device_commands.Button_9, 0, diffiv, devices.MFK}},
-                ['5'] = {{device_commands.Button_10, 1, diffiv, devices.MFK},
+                ['5'] = {
+                    {device_commands.Button_10, 1, diffiv, devices.MFK},
                     {device_commands.Button_10, 0, diffiv, devices.MFK}},
-                ['6'] = {{device_commands.Button_11, 1, diffiv, devices.MFK},
+                ['6'] = {
+                    {device_commands.Button_11, 1, diffiv, devices.MFK},
                     {device_commands.Button_11, 0, diffiv, devices.MFK}},
-                ['7'] = {{device_commands.Button_12, 1, diffiv, devices.MFK},
+                ['7'] = {
+                    {device_commands.Button_12, 1, diffiv, devices.MFK},
                     {device_commands.Button_12, 0, diffiv, devices.MFK}},
-                ['8'] = {{device_commands.Button_13, 1, diffiv, devices.MFK},
+                ['8'] = {
+                    {device_commands.Button_13, 1, diffiv, devices.MFK},
                     {device_commands.Button_13, 0, diffiv, devices.MFK}},
-                ['9'] = {{device_commands.Button_14, 1, diffiv, devices.MFK},
+                ['9'] = {
+                    {device_commands.Button_14, 1, diffiv, devices.MFK},
                     {device_commands.Button_14, 0, diffiv, devices.MFK}},
-                ['0'] = {{device_commands.Button_15, 1, diffiv, devices.MFK},
+                ['0'] = {
+                    {device_commands.Button_15, 1, diffiv, devices.MFK},
                     {device_commands.Button_15, 0, diffiv, devices.MFK}},
-                ['~'] = {{device_commands.Button_17, 1, diffiv, devices.MFK}, -- clear
+                ['~'] = {
+                    {device_commands.Button_17, 1, diffiv, devices.MFK}, -- clear
                     {device_commands.Button_17, 0, diffiv, devices.MFK}},
-                ['_'] = {{device_commands.Button_23, 1, diffiv, devices.MFK}, -- enter
+                ['_'] = {
+                    {device_commands.Button_23, 1, diffiv, devices.MFK}, -- enter
                     {device_commands.Button_23, 0, diffiv, devices.MFK}},
-                ['A'] = {{device_commands.Button_25, 1, diffiv, devices.MFK},
+                ['A'] = {
+                    {device_commands.Button_25, 1, diffiv, devices.MFK},
                     {device_commands.Button_25, 0, diffiv, devices.MFK}},
-                ['B'] = {{device_commands.Button_26, 1, diffiv, devices.MFK},
+                ['B'] = {
+                    {device_commands.Button_26, 1, diffiv, devices.MFK},
                     {device_commands.Button_26, 0, diffiv, devices.MFK}},
-                ['C'] = {{device_commands.Button_27, 1, diffiv, devices.MFK},
+                ['C'] = {
+                    {device_commands.Button_27, 1, diffiv, devices.MFK},
                     {device_commands.Button_27, 0, diffiv, devices.MFK}},
-                ['D'] = {{device_commands.Button_28, 1, diffiv, devices.MFK},
+                ['D'] = {
+                    {device_commands.Button_28, 1, diffiv, devices.MFK},
                     {device_commands.Button_28, 0, diffiv, devices.MFK}},
-                ['E'] = {{device_commands.Button_29, 1, diffiv, devices.MFK},
+                ['E'] = {
+                    {device_commands.Button_29, 1, diffiv, devices.MFK},
                     {device_commands.Button_29, 0, diffiv, devices.MFK}},
-                ['F'] = {{device_commands.Button_30, 1, diffiv, devices.MFK},
+                ['F'] = {
+                    {device_commands.Button_30, 1, diffiv, devices.MFK},
                     {device_commands.Button_30, 0, diffiv, devices.MFK}},
-                ['G'] = {{device_commands.Button_31, 1, diffiv, devices.MFK},
+                ['G'] = {
+                    {device_commands.Button_31, 1, diffiv, devices.MFK},
                     {device_commands.Button_31, 0, diffiv, devices.MFK}},
-                ['H'] = {{device_commands.Button_32, 1, diffiv, devices.MFK},
+                ['H'] = {
+                    {device_commands.Button_32, 1, diffiv, devices.MFK},
                     {device_commands.Button_32, 0, diffiv, devices.MFK}},
-                ['I'] = {{device_commands.Button_33, 1, diffiv, devices.MFK},
+                ['I'] = {
+                    {device_commands.Button_33, 1, diffiv, devices.MFK},
                     {device_commands.Button_33, 0, diffiv, devices.MFK}},
-                ['J'] = {{device_commands.Button_34, 1, diffiv, devices.MFK},
+                ['J'] = {
+                    {device_commands.Button_34, 1, diffiv, devices.MFK},
                     {device_commands.Button_34, 0, diffiv, devices.MFK}},
-                ['K'] = {{device_commands.Button_35, 1, diffiv, devices.MFK},
+                ['K'] = {
+                    {device_commands.Button_35, 1, diffiv, devices.MFK},
                     {device_commands.Button_35, 0, diffiv, devices.MFK}},
-                ['L'] = {{device_commands.Button_36, 1, diffiv, devices.MFK},
+                ['L'] = {
+                    {device_commands.Button_36, 1, diffiv, devices.MFK},
                     {device_commands.Button_36, 0, diffiv, devices.MFK}},
-                ['M'] = {{device_commands.Button_37, 1, diffiv, devices.MFK},
+                ['M'] = {
+                    {device_commands.Button_37, 1, diffiv, devices.MFK},
                     {device_commands.Button_37, 0, diffiv, devices.MFK}},
-                ['N'] = {{device_commands.Button_38, 1, diffiv, devices.MFK},
+                ['N'] = {
+                    {device_commands.Button_38, 1, diffiv, devices.MFK},
                     {device_commands.Button_38, 0, diffiv, devices.MFK}},
-                ['O'] = {{device_commands.Button_39, 1, diffiv, devices.MFK},
+                ['O'] = {
+                    {device_commands.Button_39, 1, diffiv, devices.MFK},
                     {device_commands.Button_39, 0, diffiv, devices.MFK}},
-                ['P'] = {{device_commands.Button_40, 1, diffiv, devices.MFK},
+                ['P'] = {
+                    {device_commands.Button_40, 1, diffiv, devices.MFK},
                     {device_commands.Button_40, 0, diffiv, devices.MFK}},
-                ['Q'] = {{device_commands.Button_41, 1, diffiv, devices.MFK},
+                ['Q'] = {
+                    {device_commands.Button_41, 1, diffiv, devices.MFK},
                     {device_commands.Button_41, 0, diffiv, devices.MFK}},
-                ['R'] = {{device_commands.Button_42, 1, diffiv, devices.MFK},
+                ['R'] = {
+                    {device_commands.Button_42, 1, diffiv, devices.MFK},
                     {device_commands.Button_42, 0, diffiv, devices.MFK}},
-                ['S'] = {{device_commands.Button_43, 1, diffiv, devices.MFK},
+                ['S'] = {
+                    {device_commands.Button_43, 1, diffiv, devices.MFK},
                     {device_commands.Button_43, 0, diffiv, devices.MFK}},
-                ['T'] = {{device_commands.Button_44, 1, diffiv, devices.MFK},
+                ['T'] = {
+                    {device_commands.Button_44, 1, diffiv, devices.MFK},
                     {device_commands.Button_44, 0, diffiv, devices.MFK}},
-                ['U'] = {{device_commands.Button_45, 1, diffiv, devices.MFK},
+                ['U'] = {
+                    {device_commands.Button_45, 1, diffiv, devices.MFK},
                     {device_commands.Button_45, 0, diffiv, devices.MFK}},
-                ['V'] = {{device_commands.Button_46, 1, diffiv, devices.MFK},
+                ['V'] = {
+                    {device_commands.Button_46, 1, diffiv, devices.MFK},
                     {device_commands.Button_46, 0, diffiv, devices.MFK}},
-                ['W'] = {{device_commands.Button_47, 1, diffiv, devices.MFK},
+                ['W'] = {
+                    {device_commands.Button_47, 1, diffiv, devices.MFK},
                     {device_commands.Button_47, 0, diffiv, devices.MFK}},
-                ['X'] = {{device_commands.Button_48, 1, diffiv, devices.MFK},
+                ['X'] = {
+                    {device_commands.Button_48, 1, diffiv, devices.MFK},
                     {device_commands.Button_48, 0, diffiv, devices.MFK}},
-                ['Y'] = {{device_commands.Button_49, 1, diffiv, devices.MFK},
+                ['Y'] = {
+                    {device_commands.Button_49, 1, diffiv, devices.MFK},
                     {device_commands.Button_49, 0, diffiv, devices.MFK}},
-                ['Z'] = {{device_commands.Button_50, 1, diffiv, devices.MFK},
+                ['Z'] = {
+                    {device_commands.Button_50, 1, diffiv, devices.MFK},
                     {device_commands.Button_50, 0, diffiv, devices.MFK}},
-                ['!'] = {{device_commands.Button_1, 1, diffiv, devices.RMFD}, -- these are pilot mfd L/R
+                ['!'] = {
+                    {device_commands.Button_1, 1, diffiv, devices.RMFD}, -- these are pilot mfd L/R
                     {device_commands.Button_1, 0, diffiv, devices.RMFD}},
-                ['@'] = {{device_commands.Button_2, 1, diffiv, devices.RMFD},
+                ['@'] = {
+                    {device_commands.Button_2, 1, diffiv, devices.RMFD},
                     {device_commands.Button_2, 0, diffiv, devices.RMFD}},
-                ['#'] = {{device_commands.Button_3, 1, diffiv, devices.RMFD},
+                ['#'] = {
+                    {device_commands.Button_3, 1, diffiv, devices.RMFD},
                     {device_commands.Button_3, 0, diffiv, devices.RMFD}},
-                ['$'] = {{device_commands.Button_4, 1, diffiv, devices.RMFD},
+                ['$'] = {
+                    {device_commands.Button_4, 1, diffiv, devices.RMFD},
                     {device_commands.Button_4, 0, diffiv, devices.RMFD}},
-                ['%'] = {{device_commands.Button_5, 1, diffiv, devices.RMFD},
+                ['%'] = {
+                    {device_commands.Button_5, 1, diffiv, devices.RMFD},
                     {device_commands.Button_5, 0, diffiv, devices.RMFD}},
-                ['^'] = {{device_commands.Button_13, 1, diffiv, devices.RMFD}, --LAK R1
+                ['^'] = {
+                    {device_commands.Button_13, 1, diffiv, devices.RMFD}, --LAK R1
                     {device_commands.Button_13, 0, diffiv, devices.RMFD}},
-                ['&'] = {{device_commands.Button_14, 1, diffiv, devices.RMFD},
+                ['&'] = {
+                    {device_commands.Button_14, 1, diffiv, devices.RMFD},
                     {device_commands.Button_14, 0, diffiv, devices.RMFD}},
-                ['*'] = {{device_commands.Button_15, 1, diffiv, devices.RMFD},
+                ['*'] = {
+                    {device_commands.Button_15, 1, diffiv, devices.RMFD},
                     {device_commands.Button_15, 0, diffiv, devices.RMFD}},
-                ['('] = {{device_commands.Button_16, 1, diffiv, devices.RMFD},
+                ['('] = {
+                    {device_commands.Button_16, 1, diffiv, devices.RMFD},
                     {device_commands.Button_16, 0, diffiv, devices.RMFD}},
-                [')'] = {{device_commands.Button_17, 1, diffiv, devices.RMFD},
+                [')'] = {
+                    {device_commands.Button_17, 1, diffiv, devices.RMFD},
                     {device_commands.Button_17, 0, diffiv, devices.RMFD}},
             }
 --########## SNIP END for kp.lua
@@ -1211,7 +1346,7 @@ function cancelmacro()
     domacro.inp = {}
     domacro.idx = 1
     domacro.flag = false
-    setPageNotice(Spinr:rest()..noticestr)
+    Spinr:rest()
 end
 
 local modname2dir = {}
@@ -1397,7 +1532,7 @@ end
 function delay(seconds)
     loglocal('delay: '..seconds)
     push_stop_command(0, {device = -1, action = -1, value = 0, len = seconds,
-                          fn = function() setPageNotice('D'..noticestr) end
+                          fn = function() Spinr:delay() end
     })
 end
 
@@ -1548,14 +1683,12 @@ function loadDTCBuffer(text)
                end
            end,
            itval = itval,
-           dbglvl = dbgvlv,
+           dbglvl = dbgvlvl,
            kp = kp,
            loglocal = loglocal,
            unittab = unittab,
            ttlist = ttlist,
-           setPageNotice = setPageNotice,
-           getPageName = getPageName,
-           textarea = textarea,
+           panel = panel,
     }
     setmetatable(env, {__index = _G}) --needed to pickup all the
                                       --module macro definitions like
@@ -1573,6 +1706,16 @@ end                             -- end of loadDTCBuffer()
 function assignCustom()
     local infn = Apitlibdir ..unittype..'.lua'
     loglocal('aeronautespit: using customfile '..infn, 1)
+    for i,j in pairs(panel) do
+        if string.match(j.title, '^%d+$') then
+            j.button:setText(j.title)
+            j.button:setVisible(false)
+        end
+        if not panelbytitle[j.title] then
+            panelbytitle[j.title] = j
+        end
+    end
+
     local env = {push_stop_command = push_stop_command,
                push_start_command = push_stop_command,
                prewp = prew,
@@ -1596,7 +1739,7 @@ function assignCustom()
         for i,j in pairs(buttfn) do
             buttfn[i] = nil
         end
-        local x = 0
+        local idx = 0
 
         if not unittab then
             loglocal('assignCustom() res/unittab nil ')
@@ -1606,20 +1749,21 @@ function assignCustom()
         noticestr = ''
         for i,j in pairs(unittab) do
             if type(j) == 'function' then
-                x = x + 1
-                buttfn[x] = j
-                noticestr = noticestr ..' '..x..':'..i..'  '
+                idx = idx + 1
+                buttfn[idx] = j
+                panelbytitle[tostring(idx)].button:setText(i)
+                panelbytitle[tostring(idx)].button:setVisible(true)
             end
         end
         loglocal('assignCustom #unittab: '..#unittab ..': '.. unittype)
-        setPageNotice(Spinr:rest()..noticestr)
+        Spinr:rest()
 
         if unittab['init'] and type(unittab['init']) == 'string' then
             loglocal('assignCustom() running unit init', 4)
             loadDTCBuffer(unittab['init'])
         end
     else
-        loglocal('assignCustom apcall fail, not ok, res: '..type(res))
+        loglocal('assignCustom apcall fail, res: '..type(res))
     end
 end                             -- end of assignCustom()
 
@@ -1638,7 +1782,7 @@ function uploadinit()
         return
     end
 
-    setPageNotice('')
+    Spinr:rest()
     if unittype then
         loglocal('uploadinit() type '..unittype)
     else
@@ -1814,6 +1958,14 @@ function uploadinit()
     assignKP()
     wps = copytable(wpsdefaults)
     assignCustom()
+    if panelbytitle['mod'] then
+        panelbytitle['mod'].button:setText(string.sub(unittype,1, 8))
+    end
+    if not isHidden() then
+        if switchPage() == Scratchdir..Scratchpadfn then
+            showCustom(getTextarea())
+        end
+    end
 
     return unittype
 end                             -- end of uploadinit()
@@ -1844,15 +1996,13 @@ function getCurrentLineOffsets(text, cur)
     return linestart, lineend
 end                             -- end of getCurrentLineOffsets()
 
-local function handleSelection(textarea)
-        local text = textarea:getText()
+local function handleSelection(TA)
+        local text = TA:getText()
         local startp, endp, start, eos = getSelection()
 
         loglocal('handleSelection() sp: '..startp..' ep: '..endp..' start: '..start..' eos: '..eos)
         if start == eos then    -- if nothing is highlighted use the current line of cursor
             start, eos = getCurrentLineOffsets(text, eos)
---        else
---            start = start
         end
 
         sel = string.sub(text, start, eos)
@@ -1865,14 +2015,13 @@ local function handleSelection(textarea)
         local lat, lon = string.match(jtest, '(%u %d%d +%d%d%.%d+), (%u %d+ +%d%d%.%d+)')
         local altm, altft = string.match(jtest, '(%d+)m, +(%d+)ft')
 
---        local prec =
-        --for jtac coords
+        --for highlighted jtac coords
         if lon then
             loglocal('Sel: jtac position detected')
             local cType = coordsType(unittype)
             if cType then
                 if cType.precision then
-                    delta = 3 - cType.precision
+                    local delta = 3 - cType.precision
                     loglocal('Sel jtac delta: '.. delta)
                     if delta > 0 then
                         loglocal('Sel jtac precision: '..#lat)
@@ -1959,25 +2108,72 @@ function getloc()
     return str
 end
 
+function showCustom(TA)
+    if switchPage(Scratchdir..Scratchpadfn) then
+        local txt = ''
+        local readtxt = ''
+        if LT[unittype].notes then
+            txt = LT[unittype].notes
+        end
+        if not TA then
+            TA = getTextarea()
+        end
+
+        local infn = Apitlibdir..unittype..'.lua'
+        local infile, res
+        infile, res = io.open(infn,'r')
+        if not infile then
+            txt = txt .. '\nThis module, '..unittype..', has no custom file in '..Apitlibsubdir
+            loglocal('aeronautespit mod open file fail; non critical' .. res)
+        else
+            readtxt = infile:read('*all')
+            infile:close()
+            if not readtxt then
+                loglocal('aeronautespit mod read error; ' .. infn)
+            else
+                txt = txt .. '\n\n-- COPY of '..Apitlibsubdir..unittype..'.lua\n'..readtxt
+            end
+        end
+
+        TA:setText('')
+        -- hardcoded 1MB file limit from scratchpad
+        local buflen = string.len(txt)
+        if buflen > (1024 * 1024) then
+            txt = string.sub(txt, 0, (1024*1024)-80) --limit 1 MB worth
+            txt = txt ..'<<< File too big for scratchpad. Displaying truncated to 1MB >>>'
+            loglocal('apit mod buflen > 1MB: '..buflen)
+        end
+
+        TA:setText(txt)
+    end
+end                             -- end showCustom()
+
 function createbuttons()
-    -- first row buttons
     local numbutts = 10
     local rowh = 0
 
     local buttx = 0
-    for i=1, 4 do                   -- first row are macro execution related
+    for i=1, 4 do             -- first row are macro execution related
         butts[i] = {buttx, rowh, buttw, butth}
         buttx = buttx + buttw
     end
 
     rowh = rowh + butth
     buttx = 0
-    for i=5, numbutts do            -- second row modify Scratchpadfn buffer or other function
+    for i=5, 8 do -- second row modify Scratchpadfn buffer or other function
         butts[i] = {buttx, rowh, buttw, butth}
         buttx = buttx + buttw
     end
 
-    butts[1][5] = "LL"
+    rowh = rowh + butth
+    buttx = 0
+    buttw = buttw + 20
+    for i=9, 10 do              -- third row
+        butts[i] = {buttx, rowh, buttw, butth}
+        buttx = buttx + buttw
+    end
+
+    butts[1][5] = 'LatLon'
     butts[1][6] = function()
         str = getloc()
         loglocal('aeronautespit: button LL: '..str)
@@ -1985,71 +2181,25 @@ function createbuttons()
         domacro.flag = true
     end
 
-    butts[2][5] = "Sel"
+    butts[2][5] = 'Sel'
     butts[2][6] = function(TA)
         handleSelection(TA)
     end
 
-    butts[3][5] = "Buf"
+    butts[3][5] = 'Buf'
     butts[3][6] = function(TA)
         loadDTCBuffer(TA:getText())
     end
 
-    butts[4][5] = "Cancel"
+    butts[4][5] = 'Cancel'
     butts[4][6] = cancelmacro
 
-    butts[5][5] = "wp"
+    butts[5][5] = 'wp'
     butts[5][6] = function(TA)
         TA:insertBelow("wp('" .. getloc() .. "')")
     end
-
-    butts[6][5] = "mod"
+    butts[6][5] = 'log'
     butts[6][6] = function(TA)
-        if switchPage(Scratchdir..Scratchpadfn) then
-            local txt = ''
-            local readtxt = ''
-            if LT[unittype].notes then
-                txt = LT[unittype].notes
-            end
-
-            local infn = Apitlibdir..unittype..'.lua'
-            local infile, res
-            infile, res = io.open(infn,'r')
-            if not infile then
-                txt = txt .. '\nThis module, '..unittype..', has no custom file in '..Apitlibsubdir
-                loglocal('aeronautespit mod open file fail; non critical' .. res)
-            else
-                readtxt = infile:read('*all')
-                infile:close()
-                if not readtxt then
-                    loglocal('aeronautespit mod read error; ' .. infn)
-                else
-                    txt = txt .. '\n\n-- COPY of '..Apitlibsubdir..unittype..'.lua\n'..readtxt
-                end
-            end
-
-            TA:setText('')
-            -- hardcoded 1MB file limit from scratchpad
-            local buflen = string.len(txt)
-            if buflen > (1024 * 1024) then
-                txt = string.sub(txt, 0, (1024*1024)-80) --limit 1 MB worth
-                txt = txt ..'<<< File too big for scratchpad. Displaying truncation >>>'
-                loglocal('apit mod buflen > 1MB: '..buflen)
-            end
-
-            TA:setText(txt)
-        end
-    end
-
-    butts[7][5] = "modlod"
-    butts[7][6] = function()
-        loglocal('aeronautespit: reload click '..#LT)
-        assignKP()
-        assignCustom()
-    end
-
-    butts[8][5] = "log"
-    butts[8][6] = function(TA)
         if switchPage(Scratchdir..Scratchpadfn) then
             TA:setText('')
             -- hardcoded 1MB file limit from scratchpad
@@ -2064,14 +2214,18 @@ function createbuttons()
         end
     end
 
-    butts[9][5] = "log9"
-    butts[9][6] = function()
-        loglocal('aeronautespit: debug level set 9')
-        loglocal('',{debug=9})
+    butts[7][5] = 'loglvl'
+    butts[7][6] = function()
+        dbglvl = dbglvl + 1
+        if dbglvl > 9 then
+            dbglvl = 0
+        end
+        loglocal('aeronautespit: debug level set: '..dbglvl)
+        panelbytitle['loglvl'].button:setText('log:'..tostring(dbglvl))
     end
 
-    butts[10][5] = "help"
-    butts[10][6] = function(TA)
+    butts[8][5] = 'help'
+    butts[8][6] = function(TA)
         if switchPage(Scratchdir..Scratchpadfn) then
             TA:setText('')
             -- hardcoded 1MB file limit from scratchpad
@@ -2085,10 +2239,22 @@ function createbuttons()
         end
     end
 
+    butts[9][5] = 'mod'
+    butts[9][6] = showCustom
+
+    butts[10][5] = 'modload'
+    butts[10][6] = function()
+        loglocal('aeronautespit: reload click '..#LT)
+        assignKP()
+        assignCustom()
+    end
+
     --start row of "dynamic" buttons after static buttons above
     rowh = rowh + butth
+    buttw = buttw + 20
     for i=1,buttfnamt do
-        butts[i+numbutts] = {((i-1)*buttw)+10, rowh, buttw, butth, tostring(i)}
+        butts[numbutts+i] = {((i-1)*buttw)+10, rowh, buttw, butth, tostring(i)}
+        butts[numbutts+i][6] = function(text) if buttfn[i] then buttfn[i](text); domacro.flag = true end end
         --[[ attempt at runtime generation of indirection func table for dynamic function buttons
             local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
             local fn
@@ -2099,13 +2265,6 @@ function createbuttons()
             end
         --]]
     end
-
-butts[numbutts+1][6] = function(text) if buttfn[1] then buttfn[1](text); domacro.flag = true end end
-butts[numbutts+2][6] = function(text) if buttfn[2] then buttfn[2](text); domacro.flag = true end end
-butts[numbutts+3][6] = function(text) if buttfn[3] then buttfn[3](text); domacro.flag = true end end
-butts[numbutts+4][6] = function(text) if buttfn[4] then buttfn[4](text); domacro.flag = true end end
-butts[numbutts+5][6] = function(text) if buttfn[5] then buttfn[5](text); domacro.flag = true end end
-butts[numbutts+6][6] = function(text) if buttfn[6] then buttfn[6](text); domacro.flag = true end end
 
     for i,j in pairs(butts) do      -- create all buttons
         addButton(j[1], j[2], j[3], j[4], j[5], j[6])
@@ -2132,7 +2291,7 @@ addFrameListener(function()
             local val = domacro.inp[i][2]
             local device = domacro.inp[i][4]
             loglocal('addFrameListener loop: '..i..":"..device..":" .. command ..":".. val..' '..socket.gettime(), 6)
-            setPageNotice(Spinr:run()..noticestr)
+            Spinr:run()
             if command == -1 and device == -1 then
                 loglocal('addFrameListener potential fn '..DCS.getRealTime()..' '..net.lua2json(domacro.inp[i]), 6)
                 if domacro.inp[i][5] then
@@ -2157,7 +2316,7 @@ addFrameListener(function()
                 domacro.inp = {}
                 domacro.idx = 1
                 domacro.flag = false
-                setPageNotice(Spinr:rest()..noticestr)
+                Spinr:rest()
                 loglocal('addFrameListener: finished macro ul')
             else
                 domacro.idx = i

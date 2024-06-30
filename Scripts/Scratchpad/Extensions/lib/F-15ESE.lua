@@ -1,12 +1,13 @@
 --[[ working functions:
     start - starts jet and engines
     mpd - configures pages and modes. Modify screens{} table to configure values
+    A/GLoad - programs the A/G Combat Weapon Load menu with munitions that are loaded on jet
 --]]
 
 -- module specific configuration
-wpseq({cur=3,
+wpseq({cur=1,
        diff = 1,
-       route = '.A'
+       route = '.B'
 })
 
 ft ={}
@@ -212,6 +213,8 @@ ttt('T/O Trim Button')
 
 ttn('Canopy Handle')
 
+ttn('Flaps Control Switch')
+
 ttt('Right Throttle Finger Lift') --idle at 21%
 
     ft['start']('engspool')
@@ -245,13 +248,16 @@ ttt('Right Throttle Finger Lift') --idle at 21%
                     end
                 end
             end
-            --[[
-            loglocal('total time: '..DCS.getRealTime() - ft['T1'])
-        loglocal('leng time: '..ft['T2'] - ft['T1'])
-        loglocal('reng time: '..ft['T3'] - ft['T2'])
-    loglocal('post time: '..DCS.getRealTime() - ft['T3'])
---]]
         end
+    elseif action == 'posteng' then
+        ttt('Data Key',{device=devices.UFCCTRL_FRONT})
+        ttt('NAV Master Mode Selector')
+        --[[
+            loglocal('total time: '..DCS.getRealTime() - ft['T1'])
+            loglocal('leng time: '..ft['T2'] - ft['T1'])
+            loglocal('reng time: '..ft['T3'] - ft['T2'])
+            loglocal('post time: '..DCS.getRealTime() - ft['T3'])
+        --]]
     end                         -- end of elseif action
 end                             -- end of start()
 
@@ -328,7 +334,6 @@ ft['A/Gload'] = function(indev)
     ttt('Power Switch', {device=dev})
     ttt('Power Switch', {device=dev, onvalue=-1})
     ttt('Push Button 2', {device=dev})
-    ttt('Push Button 11', {device=dev})
     ttt('Push Button 7', {device=dev})
 
     local station = {}
