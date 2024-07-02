@@ -38,7 +38,7 @@ directory to the parent `Scripts\Scratchpad\Extensions\' directory.
   functions. Examples of functions include 'start' to start the
   aircraft or 'mfd' to configure MFD pages. If no file is found the,
   base apit functionality is still available. These files are searched
-  for in `Scripts\Scratchpad\Extensions\lib`
+  for in `Scripts\Scratchpad\Extensions\aeronautes-lib`
 
 - Scratchpad page aeronautes-pit.txt is created in <Saved Games>\DCS\Scratchpad
   if it does not exist on DCS startup. Because the extension creates
@@ -99,7 +99,7 @@ supported by each.
 
 - 5. Customizations are higher level capabilities that utilize any
   combination of the above features. These are separated per module in
-  the Scripts\Scratchpad\Extensions\lib\ directory. The level of
+  the Scripts\Scratchpad\Extensions\aeronautes-lib\ directory. The level of
   support and functions vary by module as apit updates are made. You
   can modify these yourself to make your own customizations for your
   aircraft. They can be utilized by clicking on the function buttons,
@@ -123,7 +123,7 @@ supported by each.
                                 \Disabled\
                                 |       |[aeronautes-pit.lua] - Core macro and convenience functionality
                                 |
-                                \lib\   - Optional module files for custom functions
+                                \aeronautes-lib\   - Optional module files for custom functions
                                         |[AV8NA.lua]
                                         |[F-15ESE.lua]
                                         |[F-16C_50.lua]
@@ -221,7 +221,7 @@ supported by each.
 - `modload` - Convenience and customization code for the current
   aircraft are immediately reloaded and made available. This is useful
   if you are modifying or adding apit Customization files
-  (Extensions\lib), or if you've messed up some certain values from a
+  (Extensions\aeronautes-lib), or if you've messed up some certain values from a
   scratchpad page and want to reset using Customization file values.
 
 - `log` - aeronautes-pit keeps a log of it's execution in a buffer.
@@ -237,7 +237,7 @@ supported by each.
 
 - `1`, `2`,... - These dynamic function buttons provide one-click
   access to functions defined in the per module customization files in
-  Scratchpad\Extensions\lib\<module>.lua. 
+  Scratchpad\Extensions\aeronautes-lib\<module>.lua. 
 
 ## apit API
     The Lua functions provided by apit are as follows:
@@ -321,7 +321,7 @@ supported by each.
       as defined in the kp table. press() can also be used to schedule
       functions during the input of controls. This is useful when
       combined with DCS api library to create conditional
-      behavior. See Extensions\lib\F-15ESE customization to see how
+      behavior. See Extensions\aeronautes-lib\F-15ESE customization to see how
       engines are spooled up using this.
 
       Example:
@@ -399,6 +399,7 @@ supported by each.
 - https://www.twitch.tv/aurora_juutilainen for early testing and feedback
 - https://github.com/aronCiucu/DCSTheWay for insight into performClickableAction()
 - hoggit #scripting discord a useful resource for any one developing for DCS
+- https://github.com/asherao bailey's example of using setText() for panel widgets
 
 ]=]
 
@@ -415,7 +416,7 @@ local domacro = {
 
 local Scratchdir = lfs.writedir() .. [[Scratchpad\]]
 local Scratchpadfn = 'aeronautes-pit.txt'
-local Apitlibsubdir = [[Scripts\Scratchpad\Extensions\lib\]]
+local Apitlibsubdir = [[Scripts\Scratchpad\Extensions\aeronautes-lib\]]
 local Apitlibdir = lfs.writedir() .. Apitlibsubdir
 
 local dbglvl = 1
@@ -704,7 +705,7 @@ local function assignKP()
     local function getTypeKP(unit)
         loglocal('getTypeKP begin', 6)
 
---########## SNIP BEGIN for Scripts\Scratchpad\Extensions\lib\kp.lua
+--########## SNIP BEGIN for <Apitlibsubdir>\kp.lua
 --function kpload(unit)
         local diffiv = 0
         if unit == 'A-10C' then
