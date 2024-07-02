@@ -1,4 +1,4 @@
-local version=.62
+local version=.63
 local readme = [=[
 # aeronautes-pit (Apit)
 
@@ -135,16 +135,26 @@ supported by each.
 
 ## UI:
 
-    The scratchpad title bar will show from left to right the name of
-    the current page, a static vertical separator, a progress spinner
-    and a list of available customization functions if available. The
-    numbers of the functions correspond to the numbered buttons below
-    the scratchpad window. The progress spinner will indicate the
+    The UI is comprised of the scratchpad buffer with the same name as
+    the extension, aeronautes-pit. This buffer is used to display
+    information such as module specific notes and custom lua or to
+    show the help information. Anything in this buffer should not be
+    considered permanent as the contents can be overwritten. If you
+    want to save anything then place it in one of the other
+    buffers. The UI also includes several rows of buttons. The first
+    row contain buttons that interact with the cockpit or execute lua
+    directly. The second row of buttons may output to the scratchpad
+    buffer but dont affect the cockpit systems. The third and forth
+    row of buttons are module specific functionality. The current
+    module that you're slotted as is labeled as the left most button
+    of the third row. Generically this is the 'mod' button but can be
+    for example Hercules or F-16C_50. The forth row are dynamic
+    buttons that are each associated with a module specific
+    function. These functions are defined in the module customization
+    file. The contents of the file can be viewed by pressing the 'mod'
+    button.  Whenever apit is processing some lua the 'mod' will
+    display a progress spinner. The progress spinner will indicate the
     current state of system input with the following symbols:
-
-    `0000 | * 1.start 2.`
-
-    - `*` astericks indicates the system is ready
 
     - `-\|/` any instance of the lines to represent a rotating bar
       indicates the system is processing some input
@@ -154,23 +164,26 @@ supported by each.
       one of the previous indicators.
 
     Button labels that are capitalized will cause some type of input
-    to the cockpit, `LL`, `Sel`, 'Buf', 'Cancel'. Those without
-    capitalization do not cause input.
+    to the cockpit, `LatLon`, `Sel`, 'Buf', 'Cancel'. Those without
+    capitalization do not cause cockpit input.
 
-- `LL` - Using the camera's current location, the latlong is entered
-  into the aircrafts coordinate input system. In F10 map view this is
-  the location at center of the screen. In any other view, cockpit or
-  external, it is the 3d location of the camera position. Some
-  aircraft may have prerequisites before using `LL`. For example, F-18
-  currently requires Precise coordinates enabled. The default behavior
-  upon click is to increment the current waypoint, enter latlong and
-  stop. The next click will carry out the same steps. You can modify
-  this behavior using the wpseq() function(see below). You can also
-  use wpseq() to disable any waypoint number change, leaving it up to
-  you to set the correct number.
+- `LatLon` - Using the camera's current location, the latlong is
+  entered into the aircrafts coordinate input system. In F10 map view
+  this is the location at center of the screen. In any other view,
+  cockpit or external, it is the 3d location of the camera
+  position. Some aircraft may have prerequisites before using
+  `LatLon`. For example, F-18 currently requires Precise coordinates
+  enabled. Per module notes should describe these requires and is
+  viewable by pressing the button labeled with the name of the module,
+  eg Hercules, F-16C_50. The default behavior upon click is for the
+  sequencer to increment the current waypoint and enter latlong. The
+  next click will carry out the same steps. You can modify this
+  behavior using the wpseq() function(see below). You can also disable
+  wpseq() to prevent any waypoint number change, leaving it up to you
+  to set the correct number.
 
-- `Sel` - This will take the current text selection as Lua. If no
-  text is selected, then the current line the cursor is on is
+- `Sel` - This will take the current text selection as Lua. If no text
+  is selected, then the current line the cursor is on is
   executed. This is a convenience feature to handle single line
   commands without the need to carefully highlight the line.
 
@@ -190,40 +203,41 @@ supported by each.
   this will stop and cancel any outstanding inputs remaining. If you
   reslot in the middle of a sequence, it will be canceled.
 
-- `wp` - This works similarly to LL, but instead of directly
-  entering the latlong, instead it will print the equivalent wp()
-  command at the current cursor location in scratchpad. This is useful
-  for building a mission plan that can be reused or passed along.
+- `wp` - This works similarly to LL, but instead of directly entering
+  the latlong, instead it will print the equivalent wp() command at
+  the current cursor location in scratchpad. This is useful for
+  building a mission plan that can be reused or passed along.
 
 - `mod` - scratchpad will switch to the page named aeronautes-pit and
-  overwrites the page with a copy of the module customization file. This is useful to
-  see the module specific aeronautes-pit documentation as well as the
-  code for the customization. This is useful if you want to see the
-  startup sequence in checklist form, for example.
 
-- `modlod` - Convenience and customization code for the current
+  overwrites the page with a copy of the module customization
+  file. This is useful to see the module specific aeronautes-pit
+  documentation as well as the code for the customization. This is
+  useful if you want to see the startup sequence in checklist form,
+  for example. The name of this button will change based on which
+  module you've slotted into. Also this button will show a progress
+  spinner when the extension is processing commands.
+
+- `modload` - Convenience and customization code for the current
   aircraft are immediately reloaded and made available. This is useful
-  if you are modifying or adding apit Customization
-  files(Extensions\lib), or if you've messed up some certain values
-  from a scratchpad page and want to reset using Customization file
-  values.
+  if you are modifying or adding apit Customization files
+  (Extensions\lib), or if you've messed up some certain values from a
+  scratchpad page and want to reset using Customization file values.
 
 - `log` - aeronautes-pit keeps a log of it's execution in a buffer.
   Clicking this button switches to the scratchpad page aeronautes-pit
   and overwrites it with the log.
 
-- `log9` - This is used to increase the debug level of apit
-  logging. It is equivalent to `loglocal('',{debug=9})
+- `loglvl` - This is used to increase the debug level of apit
+  logging. Each click change the button label to indicate the level
+  with a rollover to zero after 9.
 
 - `help` - This will overwrite the aeronautes-pit scatchpad page with
   copy of the help section from the start of the aeronautes-pit.lua file.
 
 - `1`, `2`,... - These dynamic function buttons provide one-click
   access to functions defined in the per module customization files in
-  Scratchpad\Extensions\lib\<module>.lua. The particular function names associated
-  with each button are display on the title bar of the scratchpad
-  window just to the right of the page name. Each function is prefaced
-  with the corresponding button number.
+  Scratchpad\Extensions\lib\<module>.lua. 
 
 ## apit API
     The Lua functions provided by apit are as follows:
@@ -333,9 +347,10 @@ supported by each.
 
     - loglocal('string', [number]) log message to the Logs\Scratchpad.log file
 
-    - switchPage(pagename) When no argument is passed, returns a page record of current page of
-      scratchpad. Otherwise pagename is the full path and filename of the scratchpad page you want
-      to load, <Saved Game>\DCS\Scratchpad\<name>.txt. Returns nil on failure.
+    - switchPage(pagename) When no argument is passed, returns a page
+      record of current page of scratchpad. Otherwise pagename is the
+      full path and filename of the scratchpad page you want to load,
+      <Saved Game>\DCS\Scratchpad\<name>.txt. Returns nil on failure.
 
     - setitval(number) sets the base time interval in seconds between
       cockpit inputs. If you find some of your inputs are getting lost
@@ -347,7 +362,7 @@ supported by each.
         setitval(.2)
         loglocal(itval)  -- to see value of itval in Scratchpad.log
 
-    - unittab[]()
+    - unittab[]
 
 ## Supported API
     Other APIs provided through apit:
