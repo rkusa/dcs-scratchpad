@@ -3,9 +3,10 @@
     start - start systems and engines, will need to manually set INS
     knob to IFA when alignment done
 
-    toopylon - steps thru 4 pylons and sets TOO mode, then sets QTY
-    all 4 pylons
+    night - setup night lighting
 
+    stores - steps thru 4 pylons and sets TOO mode, then sets QTY
+    all 4 pylons
 --]]
 
 -- F18 can't select WP by number so disable starting number(cur) and
@@ -16,7 +17,7 @@ wpseq({ cur = -1,
 
 local ft ={}
 ft['bingo'] = 2000              -- bingo value in pounds(Lbs)
-
+ft.order = {'start', 'night', 'stores'}
 
 --#################################
 -- stores v.1

@@ -1,8 +1,11 @@
 --[[ working functions:
     start - minimal start engine
+
     setup - configure systems in jet
+
     WIP-mfd - configures pages and modes. Modify screens{} table to configure values
-    DEPREC-fense - fence configures all systems other than jet start. Still works but
+
+    DEPREC-fence - fence configures all systems other than jet start. Still works but
     to be replaced with setup
 --]]
 
@@ -12,9 +15,8 @@ wpseq({menus = 'r4',
 })
 
 ft = {}
-ft['test'] = function()
-    loglocal(type(textarea))
-end
+ft.order = {'start', 'setup', 'WIP-mfd', 'DEPREC-fence'}
+
 --#################################
 -- start v0.1
 -- This will start engine and initiate a stored heading

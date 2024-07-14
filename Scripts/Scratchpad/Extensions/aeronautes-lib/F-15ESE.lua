@@ -1,7 +1,7 @@
 --[[ working functions:
     start - starts jet and engines
     mpd - configures pages and modes. Modify screens{} table to configure values
-    A/GLoad - programs the A/G Combat Weapon Load menu with munitions that are loaded on jet
+    A/Gload - programs the A/G Combat Weapon Load menu with munitions that are loaded on jet
 --]]
 
 -- module specific configuration
@@ -11,7 +11,7 @@ wpseq({cur=1,
 })
 
 ft ={}
-ft.run={'start'}
+ft.order={'start', 'mpd', 'A/Gload'}
 
 --#################################
 -- mpd v0.10
@@ -28,11 +28,11 @@ screens[devices.MPCD_FCENTER] = {
     {'TSD' ,'NAV'}
 }
 screens[devices.MPD_FRIGHT] = {
+    {'HSI','NAV'},
     {'SMRT WPNS','A/G'},
-    {'TPOD','NAV'},
-    {'HSI' ,'A/A'}
+    {'TPOD' ,'A/A'}
 }
----[[convert this line to block comment to avoid setting WSO MPCDs
+---[[change this to block comment to prevent setting WSO MPCDs
 screens[devices.MPCD_RLEFT] = {
     {'ADI' ,'NAV'},
     {'ARMT','A/G'},
@@ -65,12 +65,12 @@ ft['mpd'] = function ()
     end
 
     local menu = {}
-    menu.ADI = {1}; menu.ARMT = {2}; menu.HSI = {3}; menu.TF = {4}
-    menu.TSD = {5}; menu.SIT = {8}; menu.TPOD = {12}; menu.TEWS = {13}
-    menu['A/G RDR'] = {14}; menu['A/A RDR'] = {15}; menu.VTRS = {16}
-    menu.HUD = {17}; menu.ENG = {18}; menu.EVENT = {19}; menu.BIT = {20}
-    menu['WIND MODEL'] = {6,11,1,6}; menu['A/G DLVRY'] = {6,11,2,6}; menu.IFF = {6,11,3,6}
-    menu['DATA FRAME'] = {6,11,5,6}; menu.JTIDS = {6,11,13,6}; menu['SMRT WPNS'] = {11,14}
+    menu['ADI'] = {1}; menu['ARMT'] = {2}; menu['HSI'] = {3}; menu['TF'] = {4}
+    menu['TSD'] = {5}; menu['SIT'] = {8}; menu['TPOD'] = {12}; menu['TEWS'] = {13}
+    menu['A/G RDR'] = {14}; menu['A/A RDR'] = {15}; menu['VTRS'] = {16}
+    menu['HUD'] = {17}; menu['ENG'] = {18}; menu['EVENT'] = {19}; menu['BIT'] = {20}
+    menu['WIND MODEL'] = {6,11,1,6}; menu['A/G DLVRY'] = {6,11,2,6}; menu['IFF'] = {6,11,3,6}
+    menu['DATA FRAME'] = {6,11,5,6}; menu['JTIDS'] = {6,11,13,6}; menu['SMRT WPNS'] = {11,14}
     menu['HUD PROG'] = {6,11,17,6}; menu['MC DTM'] = {6,11,19,6}; menu['SNSR MGMT'] = {6,11,11,1,6}
     menu['HMD-P'] = {6,11,11,8,6}; menu['HMD-W'] = {6,11,11,9,6}; menu['SP ENTRY'] = {6,11,11,13,6}
     menu['WDL COMM'] = {6,11,11,14,6}; menu['VID 8'] = {6,11,11,16,6}
@@ -78,7 +78,7 @@ ft['mpd'] = function ()
     menu['VID LC'] = {6,11,11,19,6}; menu['VID 2'] = {6,11,11,20,6}
 
     local menu2 = {}
-    menu2['A/A'] = {7}; menu2['A/G'] = {7, 7}; menu2.NAV = {7,7,7}
+    menu2['A/A'] = {7}; menu2['A/G'] = {7, 7}; menu2['NAV'] = {7,7,7}
 
     local debug=nil
     for dev=devices.MPD_FLEFT, devices.MPCD_RRIGHT+1 do
@@ -94,7 +94,7 @@ ft['mpd'] = function ()
                 end
 
                 for i,j in pairs(menu[y[1]]) do
-                    if debug then loglocal('PAGE: '..y[1]..'='..y[2]..'j: '..j)
+                    if debug then loglocal('PAGE: '..y[1]..'='..y[2]..' j: '..j)
                     else ttt('Power Switch',{device=dev, action=button[j]}) end
                 end
 

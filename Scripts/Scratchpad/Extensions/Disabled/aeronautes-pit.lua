@@ -427,6 +427,9 @@ Hist = {
     add = function(self, msg)
         local date = os.date('*t')
         local dateStr = string.format("%i:%02i:%02i ", date.hour, date.min, date.sec)
+        if not msg then
+            msg = '""'
+        end
         self.buf = self.buf .. dateStr  .. msg .. '\n'
         self.linenum = self.linenum + 1
         return
@@ -471,7 +474,6 @@ local buttw = 50
 local butth = 30
 local panelbytitle = {}
 
-local noticestr = ''
 Spinr = {
     frames = {'/','|','\\','-'},
     idx = 1,
@@ -564,7 +566,7 @@ local LT = {           -- per module customization for convenience api
             end
         end,
     },
-    ["F-15ESE"] = {
+    ['F-15ESE'] = {
         ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing supported.]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
         ['wpentry'] = 'LATbLONcALTg',
@@ -601,7 +603,7 @@ local LT = {           -- per module customization for convenience api
             return result
         end,
     },
-    ["F-16C_50"] = {
+    ['F-16C_50'] = {
         ['notes'] = [[Waypoint input ]],
         ['coordsType'] = {format = 'DDM', lonDegreesWidth = 3},
         ['menus'] = 'r4',
@@ -634,7 +636,7 @@ local LT = {           -- per module customization for convenience api
             end
 	end,
     },
-    ["FA-18C_hornet"] = {
+    ['FA-18C_hornet'] = {
         ['notes'] = [[Waypoint input requires HSI DATA menu with precise. Default increments from the current waypoint. Increment or decrement controlled with wpseq({diff=})]],
         ['coordsType'] = {format = 'DDM', precision = 4},
         ['wpentry'] = 'faLAT LON caALT ',
@@ -655,6 +657,9 @@ local LT = {           -- per module customization for convenience api
             result = string.gsub(result, "[.]", " ")
             return result
         end,
+    },
+    ['forward_observer'] = {
+        ['notes'] = [[JTAC/operator slot]],
     },
     ['Hercules'] = {
         ['notes'] = [[Waypoint input sets the current point. No sequencing implented.]],
@@ -1340,15 +1345,15 @@ local function assignKP()
     local kpfun = ''
     local atr = lfs.attributes(kpfile)
     if atr and atr.mode == 'file' then
-        loglocal('aeronautespit: using kpfile '..kpfile)
+        loglocal('aeronautespit: using kpfile '..kpfile, 1)
         assert(loadfile(kpfile))()
-        loglocal('aeronautespit assignKP calling kpload() '..unittype)
+        loglocal('aeronautespit assignKP calling kpload() '..unittype, 1)
         kp = kpload(unittype)
-        loglocal('aeronautespit assignKP calling ltload() ')
+        loglocal('aeronautespit assignKP calling ltload() ', 1)
         table.insert(LT, ltload())
-        loglocal('aeronautespit: done kpfile '..type(kp)..'; '..type(kpfun))
+        loglocal('aeronautespit: done kpfile '..type(kp)..'; '..type(kpfun), 2)
     else
-        loglocal('aeronautespit using builtin kp')
+        loglocal('aeronautespit using builtin kp', 1)
         kpfun = getTypeKP
         kp = kpfun(unittype)
     end
@@ -1705,6 +1710,7 @@ function loadDTCBuffer(text)
            unittab = unittab,
            ttlist = ttlist,
            panel = panel,
+           unittype = unittype,
     }
     setmetatable(env, {__index = _G}) --needed to pickup all the
                                       --module macro definitions like
@@ -1722,6 +1728,7 @@ end                             -- end of loadDTCBuffer()
 function assignCustom()
     local infn = Apitlibdir ..unittype..'.lua'
     loglocal('aeronautespit: using customfile '..infn, 1)
+    
     for i,j in pairs(panel) do
         if string.match(j.title, '^%d+$') then
             j.button:setText(j.title)
@@ -1748,9 +1755,10 @@ function assignCustom()
     setmetatable(env, {__index = _G})     --needed to pickup all the
                                           --module macro definitions
                                           --like device/action
+
     local ok, res = apcall({fn=infn, env = env})
 
-    if ok and res then
+    if ok then
         unittab = res
         for i,j in pairs(buttfn) do
             buttfn[i] = nil
@@ -1762,15 +1770,31 @@ function assignCustom()
             return
         end
 
-        noticestr = ''
-        for i,j in pairs(unittab) do
-            if type(j) == 'function' then
-                idx = idx + 1
-                buttfn[idx] = j
-                panelbytitle[tostring(idx)].button:setText(i)
-                panelbytitle[tostring(idx)].button:setVisible(true)
+        if unittab.order then
+            loglocal('assignCustom() unittab.order: '..net.lua2json(unittab.order), 2)
+            local fname = ''
+            for i=1,#unittab.order do
+                fname = unittab.order[i]
+                if type(unittab[fname]) == 'function' then
+                    buttfn[i] = unittab[fname]
+                    panelbytitle[tostring(i)].button:setText(fname)
+                    panelbytitle[tostring(i)].button:setVisible(true)
+                else
+                    loglocal('assignCustom() order name not function: '..fname)
+                end
+            end
+        else
+            loglocal('assignCustom() no unittab.order detected, adding all functions '..unittype)
+            for i,j in pairs(unittab) do
+                if type(j) == 'function' then
+                    idx = idx + 1
+                    buttfn[idx] = j
+                    panelbytitle[tostring(idx)].button:setText(i)
+                    panelbytitle[tostring(idx)].button:setVisible(true)
+                end
             end
         end
+        
         loglocal('assignCustom #unittab: '..#unittab ..': '.. unittype)
         Spinr:rest()
 
@@ -1779,7 +1803,7 @@ function assignCustom()
             loadDTCBuffer(unittab['init'])
         end
     else
-        loglocal('assignCustom apcall fail, res: '..type(res))
+        loglocal('assignCustom apcall fail, ok: '..type(ok)..' res: '..type(res))
     end
 end                             -- end of assignCustom()
 
@@ -1830,7 +1854,7 @@ function uploadinit()
         return
     end
 
-    if not LT[unittype].dirname then
+    if not LT[unittype] or not LT[unittype].dirname then
         loglocal('aeronautespit uploadinit() LT[].dirname undefined for '..unittype)
         return
     end
@@ -2128,6 +2152,10 @@ function showCustom(TA)
     if switchPage(Scratchdir..Scratchpadfn) then
         local txt = ''
         local readtxt = ''
+        if not LT[unittype] then
+            loglocal('showCustom() no LT[unittype]')
+            return
+        end
         if LT[unittype].notes then
             txt = LT[unittype].notes
         end

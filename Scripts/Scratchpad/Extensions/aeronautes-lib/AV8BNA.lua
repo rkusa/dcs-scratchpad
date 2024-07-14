@@ -1,6 +1,6 @@
 --[[ working functions:
     start - starts jet
-    disablemap - turns off moving map
+    mapoff - turns off moving map
 --]]
 
 -- module specific configuration
@@ -9,10 +9,7 @@ wpseq({cur=1,
 })
 
 ft ={}
-ft.run={'start'}
-
-ft = {}
-ft['run'] = {'start'}
+ft.order={'start', 'mapoff'}
 
 ft['mapoff'] = function()
    ttn('MPCD Left Button 3')

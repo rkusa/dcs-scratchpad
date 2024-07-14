@@ -1,11 +1,37 @@
 --[[ working functions:
-    start - start engines; currently uses ground elec/air, so timing cant clash with other ground orders; engines
-    need to start in reverse numerical order, primarily engine 1 or 2 needs to be last to start
-    
+
+    start - start engines, currently uses ground elec/air, so timing
+    cant clash with other ground orders. Just make sure you start
+    engines before doing anything else like rearming or fueling. This
+    is not completely hands off so you'll need to click right mouse
+    button(RMB)click each of the Engine Start dials. You can start an
+    engine once the Bleed Air Pressure gauge reads 40.0. You will need
+    to hold RMB until the green light next to the engine start dial
+    illuminates. You may release once the light is on. Engines need to
+    start in reverse numerical order, primarily engine 1 or 2 needs to
+    be last to start. The start script will request air/power
+    disconnect once both engines 1 and 2 reach .
+
+    Alternatively you can start engines even faster if you also start
+    APU and enable Bleed Air Switch APU at the same time as ground
+    air. Just know this will allow 4 engines to be cranking if you
+    start an engine as soon as sufficient bleed pressure is
+    available. The onboard APU bleed air won't sustain 4 engines
+    cranking so just wait for 2 engines to be cranking (engine is
+    boxed in Engine Display on HDD 2), before starting the last. You
+    should be able to crank all engines within 1 minute of startup
+    using this method.
+
+    takeoff - set pilot CNI TOLD INDEX to takeoff data; markers
+    indicated in HUD
+
+    landing - set pilot CNI TOLD INDEX to landing data; markers
+    indicated in HUD
+
     night - set lighting for night flying
-    pivot - log to Scratchpad.log the required speed for current altitude to do pivot turn
-    TO -
-    LDG -
+
+    pivot - log to Scratchpad.log the required speed for current
+    altitude to do pivot turn
 --]]
 
 -- module specific configuration
@@ -14,6 +40,7 @@ wpseq({cur=1,
 })
 
 local ft = {}
+ft.order = {'start', 'takeoff', 'landing', 'night', 'pivot'}
 
 --#################################
 -- pivot v0.1

@@ -1,4 +1,4 @@
-local version=.10
+local version=.11
 local readme = [=[
 # aeronautes msgs
 
@@ -91,14 +91,29 @@ addButton(00, 00, 50, 30, 'chat', function(text)
               showbuf('chat')
 end)
 
-addButton(60, 00, 50, 30, 'radio', function(text)
+addButton(50, 00, 50, 30, 'radio', function(text)
               TA = text
               showbuf('radio')
 end)
 
-addButton(120, 00, 50, 30, 'trigger', function(text)
+addButton(100, 00, 50, 30, 'trigger', function(text)
               TA = text
               showbuf('trigger')
+end)
+
+addButton(150, 00, 50, 30, 'help', function(text)
+              TA = text
+              if switchPage(Scratchdir..Scratchpadfn) then
+                  TA:setText('')
+                  -- hardcoded 1MB file limit from scratchpad
+                  local buflen = string.len(readme)
+                  if buflen > (1024 * 1024) then
+                      loglocal('amsgs help buflen > 1MB: '..buflen)
+                  end
+                  local txt = 'version: '..version..'\n'..readme..'\nEOF'
+                  txt = string.sub(txt, buflen - (1024*1024))
+                  TA:setText(txt)
+              end
 end)
 
 
