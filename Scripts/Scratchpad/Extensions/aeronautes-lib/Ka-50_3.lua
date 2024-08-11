@@ -1,8 +1,11 @@
 --[[ working functions:
     start - starts heli
+
+    night - set night lighting
 --]]
 
 ft = {}
+ft.order = {'start', 'night'}
 
 wpseq({ cur = 1,
         diff = 1,
@@ -243,5 +246,32 @@ ttt('Autopilot Heading hold')
 
     end                         -- end if start
 end                             -- end start
+
+--#################################
+-- night v0.1
+-- 
+
+ft['night'] = function()
+
+ttn('Lighting cockpit panel switch')
+ttn('Lighting night vision cockpit switch')
+ttn('Lighting ADI and SAI switch')
+tt('HUD Modes Reticle/Night/Day', {value=-1})
+
+ttf('Tip Lights')
+ttf('Anticollision Light')
+
+tt('Lighting night vision cockpit brightness knob', {value=.3})
+tt('Lighting HSI and ADI brightness knob', {value=.3})
+tt('Lighting cockpit panel brightness knob', {value=.3})
+tt('ABRIS Brightness', {value=.2})
+tt('NAV Brightness',{value=.2})
+
+ttn('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_4}) --Navigation Lights 10%/30%/100%
+ttf('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_4})
+ttn('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_2}) --Formation Lights
+ttf('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_2})
+
+end                             -- end night
 
 return ft

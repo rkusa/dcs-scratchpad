@@ -2,6 +2,7 @@
     start - starts jet and engines
     mpd - configures pages and modes. Modify screens{} table to configure values
     A/Gload - programs the A/G Combat Weapon Load menu with munitions that are loaded on jet
+    night - night lighting
 --]]
 
 -- module specific configuration
@@ -11,7 +12,7 @@ wpseq({cur=1,
 })
 
 ft ={}
-ft.order={'start', 'mpd', 'A/Gload'}
+ft.order={'start', 'mpd', 'A/Gload', 'night', 'day'}
 
 --#################################
 -- mpd v0.10
@@ -25,7 +26,8 @@ screens[devices.MPD_FLEFT] = {
     {'A/A RDR','A/A'}
 }
 screens[devices.MPCD_FCENTER] = {
-    {'TSD' ,'NAV'}
+    {'TSD' ,'NAV'},
+    {'HSI','A/G'},
 }
 screens[devices.MPD_FRIGHT] = {
     {'HSI','NAV'},
@@ -276,7 +278,7 @@ function showpayload()
 end
 
 --#################################
--- A/G Load programming v0.10
+-- A/G Load programming v0.11
 -- This will look at the aircrafts currently loaded pylons and program
 -- the PACS A/G Load. Defaults to use front left mpd, can be changed as
 -- local dev or argument indev.
@@ -334,6 +336,7 @@ ft['A/Gload'] = function(indev)
     ttt('Power Switch', {device=dev})
     ttt('Power Switch', {device=dev, onvalue=-1})
     ttt('Push Button 2', {device=dev})
+    ttt('Push Button 11', {device=dev})
     ttt('Push Button 7', {device=dev})
 
     local station = {}
@@ -383,5 +386,38 @@ ft['A/Gload'] = function(indev)
     end
 end                             -- end of A/Gload
 
+--#################################
+-- Night v0.10
+-- 
+ft['night'] = function()
+    
+tt('Console Lights', {action=intlt_commands.console_lt_knob, value=.5})
+ttf('Day/Night Mode Selector')
+tt('UFC LCD Brightness', {device=devices.UFCCTRL_FRONT, value=.3})
+ttf('HUD DAY/AUTO/NIGHT Mode Selector')
+tt('HUD Brightness Control', {value=.3})
+ttn('Landing/Taxi Light Switch')
+ttn('Nav FLIR Switch')
+tt('HUD Contrast Control', {value=.83})
+tt('HUD Video Brightness Control', {value=.3})
+
+end                             -- end night
+
+--#################################
+-- Day v0.10
+-- Day lighting settings. Just the reverse of night.
+ft['day'] = function()
+    
+tt('Console Lights', {action=intlt_commands.console_lt_knob, value=0})
+ttn('Day/Night Mode Selector')
+tt('UFC LCD Brightness', {device=devices.UFCCTRL_FRONT, value=1})
+ttn('HUD DAY/AUTO/NIGHT Mode Selector')
+tt('HUD Brightness Control', {value=1})
+ttf('Landing/Taxi Light Switch')
+ttf('Nav FLIR Switch')
+tt('HUD Contrast Control', {value=0})
+tt('HUD Video Brightness Control', {value=0})
+
+end                             -- end day
 
 return ft

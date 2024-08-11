@@ -48,6 +48,7 @@ ft.order = {'start', 'takeoff', 'landing', 'night', 'pivot'}
 
 ft['pivot'] = function()
     local agl = Export.LoGetAltitudeAboveGroundLevel() * 3.28
+    net.recv_chat(math.sqrt(agl*11.3))
     loglocal('agl(ft): '..agl..', kts: '..math.sqrt(agl*11.3))
 end                             -- pivot
 

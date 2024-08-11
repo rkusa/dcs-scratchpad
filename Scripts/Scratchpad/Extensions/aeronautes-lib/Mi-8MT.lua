@@ -13,6 +13,7 @@ ft['start'] = function (action)
     if type(action) == 'table' then
 -- Beginning of start procedure
 
+        net.recv_chat('Starting Mi-8')
 ttn('Radio/ICS Switch',{action=device_commands.Button_4})
 
 ttn('Battery 1 Switch, ON/OFF')
@@ -26,6 +27,8 @@ ttt('CB Group 7 ON')
 ttt('CB Group 8 ON')
 ttt('CB Group 9 ON')
 ttn('Fire Detector Test Switch')
+
+net.recv_chat('Start APU')
 ttn('APU Start Mode Switch, START/COLD CRANKING/FALSE START')
 ttn('APU Start Button - Push to start APU')
 ttn('Left Shutoff Valve Switch Cover, OPEN/CLOSE')
@@ -38,6 +41,7 @@ ttn('Right Tank Pump Switch, ON/OFF')
 ttn('Left Tank Pump Switch, ON/OFF')
 ttn('Feed Tank Pump Switch, ON/OFF')
 ttf('Rotor Brake Handle, UP/DOWN')
+net.recv_chat('Start left engine')
 tt('Engine Selector Switch, LEFT/OFF/RIGHT', {value=-1})
 ttn('Engine Start Mode Switch, START/OFF/COLD CRANKING')
 ttf('Engine Start Button - Push to start engine')
@@ -88,6 +92,7 @@ push_stop_command(0,{device=devices.RADAR_ALTIMETER, action=device_commands.Butt
         ft['start']('postleng')
     elseif action == 'postleng' then
 
+        net.recv_chat('Start right engine')
 tt('Engine Selector Switch, LEFT/OFF/RIGHT', {value=1})
 ttf('Engine Start Button - Push to start engine')
 ttn('Engine Start Button - Push to start engine')
@@ -113,6 +118,7 @@ ttn('Right Engine Stop Lever')
         ft['start']('postreng')
     elseif action == 'postreng' then
 
+        net.recv_chat('Apu off')
 ttt('APU Stop Button - Push to stop APU')
 ttn('Generator 1 Switch, ON/OFF')
 ttn('Generator 2 Switch, ON/OFF')
@@ -122,6 +128,8 @@ ttn('Rectifier 3 Switch, ON/OFF')
 ttn('Autopilot Pitch/Roll ON Button/Lamp Intensity Knob. Rotate mouse wheel to set lamp intensity')
 
     end                         -- end of action
+
+    net.recv_chat('Start finished')
 end  -- end of start
 
 return ft

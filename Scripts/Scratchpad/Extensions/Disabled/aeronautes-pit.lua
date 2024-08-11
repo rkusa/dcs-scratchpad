@@ -566,6 +566,22 @@ local LT = {           -- per module customization for convenience api
             end
         end,
     },
+    ['CH-47Fbl1'] = {
+        ['notes'] = 'LatLon requires right CDU on IDX>PROC/PATT>ACP LIST>ACP page',
+        ['dirname'] = lfs.currentdir()..[[Mods\aircraft\CH-47F]],
+        ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
+        ['wpentry'] = '<LATLON!ALT#',
+        llconvert = function(result) -- preserve dots
+            result = string.gsub(result, "[°'\"]", "")
+            result = string.gsub(result, "([NEWS]) ", "%1")
+            return result
+        end,
+        prewp = function()      -- incrementing
+            if wps.enable then
+                press('?')
+            end
+        end
+    },
     ['F-15ESE'] = {
         ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing supported.]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
@@ -702,6 +718,9 @@ local LT = {           -- per module customization for convenience api
         ['coordsType'] = {format = 'DDM', precision = 2, lonDegreesWidth = 3},
         ['wpentry'] = '@~LAT_#~LON_$~ALT_)',
     },
+    ['forward_observer'] = {
+        ['notes'] = [[Place holder for JTAC slot]],
+    }
 } --end LT{}
 LT['Ka-50_3'] = LT['Ka-50']
 
@@ -871,6 +890,89 @@ local function assignKP()
                 ['#'] = {odu_commands.Button_3, 1, .25, devices.ODUCONTROL},
                 ['$'] = {odu_commands.Button_4, 1, .25, devices.ODUCONTROL},
                 ['%'] = {odu_commands.Button_5, 1, .25, devices.ODUCONTROL},
+            }
+        elseif unit == 'CH-47Fbl1' then
+            return {
+                ['0'] = {
+                    {device_commands.Button_39, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_39, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['1'] = {
+                    {device_commands.Button_30, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_30, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['2'] = {
+                    {device_commands.Button_31, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_31, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['3'] = {
+                    {device_commands.Button_32, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_32, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['4'] = {
+                    {device_commands.Button_33, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_33, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['5'] = {
+                    {device_commands.Button_34, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_34, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['6'] = {
+                    {device_commands.Button_35, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_35, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['7'] = {
+                    {device_commands.Button_36, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_36, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['8'] = {
+                    {device_commands.Button_37, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_37, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['9'] = {
+                    {device_commands.Button_38, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_38, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['N'] = {
+                    {device_commands.Button_56, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_56, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['E'] = {
+                    {device_commands.Button_47, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_47, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['W'] = {
+                    {device_commands.Button_65, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_65, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['S'] = {
+                    {device_commands.Button_61, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_61, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['.'] = {       -- dot
+                    {device_commands.Button_40, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_40, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['!'] = {       -- lsk L1
+                    {device_commands.Button_8, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_8, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['#'] = {       -- lsk L3
+                    {device_commands.Button_10, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_10, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['^'] = {       -- lsk L6
+                    {device_commands.Button_13, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_13, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['?'] = {       -- up arrow
+                    {device_commands.Button_26, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_26, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['<'] = {       -- clear
+                    {device_commands.Button_28, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_28, 0, diffiv, devices.CDU_RIGHT},
+                },
             }
         elseif unit == 'F-15ESE' then
             return {
@@ -1608,17 +1710,23 @@ function wpseq(param)
 end
 
 -- wp() interface for entering in a latlong for a particular aircraft
-function wp(LLA, data)
-    loglocal('wp: '..LLA, 3)
-    prewp(LLA)
+function wp(inp)
+    if type(inp) == 'string' then
+        loglocal('wp() inp: '..inp, 3)
+        prewp(inp)
 
-    local result = convertformatCoords(LLA)
-    result = midwp(result)
-    result = string.gsub(result, ".", press)
+        local result = convertformatCoords(inp)
+        result = midwp(result)
+        result = string.gsub(result, ".", press)
 
-    postwp()
+        postwp()
 
-    return result .. "\n"
+        return result .. "\n"
+    elseif type(inp) == 'table' then
+        loglocal('wp() inp table:'..net.lua2json(inp), 3)
+    else
+        loglocal('wp() unhandled arg type: '..type(inp))
+    end
 end
 
 function apcall(p)     -- common pcall() for loadDTCBuffer and assignCustom
@@ -1728,7 +1836,7 @@ end                             -- end of loadDTCBuffer()
 function assignCustom()
     local infn = Apitlibdir ..unittype..'.lua'
     loglocal('aeronautespit: using customfile '..infn, 1)
-    
+
     for i,j in pairs(panel) do
         if string.match(j.title, '^%d+$') then
             j.button:setText(j.title)
@@ -1798,6 +1906,12 @@ function assignCustom()
         loglocal('assignCustom #unittab: '..#unittab ..': '.. unittype)
         Spinr:rest()
 
+        if LT[unittype]['wpentry'] then
+            panelbytitle['LatLon'].button:setVisible(true)
+        else
+            panelbytitle['LatLon'].button:setVisible(false)
+        end
+        
         if unittab['init'] and type(unittab['init']) == 'string' then
             loglocal('assignCustom() running unit init', 4)
             loadDTCBuffer(unittab['init'])
@@ -1815,31 +1929,37 @@ function uploadinit()
     if newunittype == unittype then
         if not unittype then
             loglocal('uploadinit(): unittype already nil')
+            return false
         else
             loglocal('uploadinit(): unittype already same, '..unittype)
             assignCustom()
         end
-        return
+        return true
     end
 
     Spinr:rest()
     if unittype then
         loglocal('uploadinit() type '..unittype)
     else
-        loglocal('uploadinit nil')
+        loglocal('uploadinit() unittype nil')
     end
     if newunittype then
-        loglocal('newunittype '..newunittype)
+        loglocal('uploadinit() newunittype '..newunittype)
     else
-        loglocal('newunittype nil')
+        loglocal('uploadinit() newunittype nil')
     end
     unittype = newunittype
     if not unittype then
         loglocal('uploadinit() getPlayerUnitType nil, ')
-        return
+        return false
     end
 
-
+    if unittype == 'forward_observer' then
+        loglocal('uploadinit() exception for forward_observer')
+        assignCustom()
+        return
+    end
+    
     loglocal('cycle thru modules,')
     for i,j in pairs(LT) do
         if LT[i].dirname then
@@ -1851,12 +1971,12 @@ function uploadinit()
 
     if not unittype then
         loglocal('aeronautespit uploadinit() unittype nil')
-        return
+        return false
     end
 
     if not LT[unittype] or not LT[unittype].dirname then
         loglocal('aeronautespit uploadinit() LT[].dirname undefined for '..unittype)
-        return
+        return false
     end
     local dirname = LT[unittype].dirname
 
@@ -1864,7 +1984,7 @@ function uploadinit()
         atr = lfs.attributes(fn)
         if not atr then
             loglocal('aeronautespit uploadinit() checkfile attributes nil, '..fn)
-            return
+            return false
         end
         return true
     end
@@ -1926,20 +2046,6 @@ function uploadinit()
         loglocal('aeronautespit uploadinit() read file fail; ' .. infn)
         return(nil)
     end
-
-    --[[
-    local function getval(cmd)
-        loglocal('getval() '..cmd)
-        local tmp = assert(loadstring('return '..cmd))
-        if tmp then
-            loglocal('getval tmp: '..tmp)
-            return tmp
-        else
-            loglocal('getval() fail: '..cmd)
-            return nil
-        end
-    end
-    --]]
 
     local tt, dev, butn
     --TODO revise this temp code
@@ -2112,6 +2218,7 @@ function coordsType(unit)
     end
 
     loglocal('aeronautespit coordsType: not found in LT, '..unit)
+    return nil
 end
 
 function formatCoordConv(format, isLat, d, opts)
@@ -2132,20 +2239,27 @@ function LLtoAC(lat, lon, alt)
     return str
 end
 
-function getloc()
+function getloc(form)
     local Terrain = require('terrain')
     local pos = Export.LoGetCameraPosition().p
     local alt = Terrain.GetSurfaceHeightWithSeabed(pos.x, pos.z)
     local lat, lon = Terrain.convertMetersToLatLon(pos.x, pos.z)
-    --local mgrs = Terrain.GetMGRScoordinates(pos.x, pos.z)
-    local ac = DCS.getPlayerUnitType()
-    local types = coordsType(ac)
 
-    LLtoAC(formatCoordConv(types.format, true, lat, types),
-        formatCoordConv(types.format, false, lon, types),
-        string.format("%.0f", alt*3.28084))
-
-    return str
+    if form == 'raw' then
+        return lat, lon, alt
+    end
+    
+    local types = coordsType(unittype)
+    if types then
+        LLtoAC(formatCoordConv(types.format, true, lat, types),
+               formatCoordConv(types.format, false, lon, types),
+               string.format("%.0f", alt*3.28084))
+        return str
+    else
+        loglocal('getloc() coordsType() returned nil, unittype: '..unittype)
+        return nil
+    end
+    
 end
 
 function showCustom(TA)
@@ -2240,7 +2354,13 @@ function createbuttons()
 
     butts[5][5] = 'wp'
     butts[5][6] = function(TA)
-        TA:insertBelow("wp('" .. getloc() .. "')")
+        local loc = getloc()
+        loglocal('BAH loc: '..type(loc))
+        if loc then
+            TA:insertBelow("wp('" .. getloc() .. "')")
+        else
+            loglocal('butts wp unknown location format')
+        end
     end
     butts[6][5] = 'log'
     butts[6][6] = function(TA)
@@ -2317,8 +2437,9 @@ end                             -- end createbuttons
 
 createbuttons()
 
--- addFrameListener is used for scheduling and inputing of cockpit commands
-addFrameListener(function()
+-- onSimulationFrame is used for scheduling and inputing of cockpit commands
+local myhandler = {}
+function myhandler.onSimulationFrame()
         if domacro.flag == true then
             now = socket.gettime()
             if now < domacro.ctr then
@@ -2367,30 +2488,34 @@ addFrameListener(function()
             end
             loglocal('addFrameListener loop2: i: '..i, 6)
         end
-end)                            -- end of addFrameListener()
+end                             -- end of onSimulationFrame()
 domacro.listeneradded = true
 
--- addmissionLoadEndListener is to handle initializing when slotting into an aircraft
-addMissionLoadEndListener(function()
+local myid
+local simresumeadded = false
+function myhandler.onMissionLoadEnd()
         loglocal('missionLoadEndListener start', 3)
         if DCS.isMultiplayer() then
             loglocal('missionLoadEndListener MP', 3)
-            local myid = net.get_my_player_id()
-            local handler = {}
-            function handler.onPlayerChangeSlot(id)
-                if id == myid then
-                    uploadinit()
-                end
-            end
-            DCS.setUserCallbacks(handler)
+            myid = net.get_my_player_id()
         else
             loglocal('missionLoadEndListener SP', 3)
             if not uploadinit() then
-                local handler = {}
-                function handler.onSimulationResume()
-                    uploadinit()
+                if not simresumeadded then
+                    function myhandler.onSimulationResume()
+                        uploadinit()
+                    end
+                    DCS.setUserCallbacks(myhandler)
+                    simresumeadded = true
                 end
-                DCS.setUserCallbacks(handler)
             end
         end
-end)                            -- end of addmissionLoadEndListener()
+end                             -- end of onMissionLoadEnd
+
+function myhandler.onPlayerChangeSlot(id)
+    if id == myid then
+        uploadinit()
+    end
+end                             -- end of onPlayerChangeSlot
+
+DCS.setUserCallbacks(myhandler)
