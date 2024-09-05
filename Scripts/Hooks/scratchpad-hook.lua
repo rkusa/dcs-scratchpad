@@ -313,7 +313,9 @@ local function loadScratchpad()
 
         local text = self:getText()
         setSelection(#text)
-        self:insert("\n\n" .. newText .. "\n")
+        if #newText > 0 then
+            self:insert("\n\n" .. newText .. "\n")
+        end
     end
 
     function Text:deleteBackward()
@@ -565,26 +567,28 @@ local function loadScratchpad()
         local g = math.floor(d)
         local m = d * 60 - g * 60
 
+        local precision = 3
+        if opts.precision ~= nil then
+            precision = opts.precision
+        end
+        if opts.showNegative ~= nil then
+            g, h = showNegative(g, h)
+        end
+        local degreesWidth = 2
+        if opts.lonDegreesWidth ~= nil and not isLat then
+            degreesWidth = opts.lonDegreesWidth
+            if opts.showNegative ~= nil and g < 0 then
+                degreesWidth = degreesWidth + 1
+            end
+        end
+
         if format == "DMS" then -- Degree Minutes Seconds
             m = math.floor(m)
             local s = d * 3600 - g * 3600 - m * 60
             s = math.floor(s * 100) / 100
-            return string.format('%s %2d°%.2d\'%05.2f"', h, g, m, s)
+            return string.format('%s %0'..degreesWidth..'d°%.2d\'%0'..(precision+2)..'.'..precision..'f', h, g, m, s)
+
         elseif format == "DDM" then -- Degree Decimal Minutes
-            local precision = 3
-            if opts.precision ~= nil then
-                precision = opts.precision
-            end
-            if opts.showNegative ~= nil then
-                g, h = showNegative(g, h)
-            end
-            local degreesWidth = 2
-            if opts.lonDegreesWidth ~= nil and not isLat then
-                degreesWidth = opts.lonDegreesWidth
-                if opts.showNegative ~= nil and g < 0 then
-                    degreesWidth = degreesWidth + 1
-                end
-            end
             return string.format('%s %0'..degreesWidth..'d°%0'..(precision+3)..'.'..precision..'f\'', h, g, m)
         else -- Decimal Degrees
             return  string.format('%f', showNegative(d, h))
@@ -599,8 +603,10 @@ local function loadScratchpad()
         local ac = DCS.getPlayerUnitType()
         if ac == "FA-18C_hornet" then
             return {DMS = true, DDM = {precision = 4}, MGRS = true}
-        elseif string.sub(ac, 1, 5) == "A-10C" or ac == "AV-8B" then
+        elseif string.sub(ac, 1, 5) == "A-10C" then
             return {DDM = true, MGRS = true}
+        elseif ac == "AV8BNA" then
+            return {DMS = {precision = 0, lonDegreesWidth = 3}, MGRS = true}
         elseif string.sub(ac, 1, 4) == "F-14" then
             return {DDM = {precision = 1}}
         elseif ac == "F-15ESE" then
