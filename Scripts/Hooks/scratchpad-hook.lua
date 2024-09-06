@@ -338,6 +338,7 @@ local function loadScratchpad()
             local content = file:read("*all")
             file:close()
             textarea:setText(content)
+            currentPage = page.path
 
             -- update title
             window:setText(page.name)
@@ -409,6 +410,29 @@ local function loadScratchpad()
         -- restart at the end
         loadPage(pages[pagesCount])
         currentPage = pages[pagesCount].path
+    end
+
+    function switchPage(pname)
+        if pname == nil then
+            return currentPage
+        end
+
+        local found = nil
+        for _,page in pairs(pages) do
+            if page.path == pname then
+                found = page
+            end
+        end
+        if found then
+            if currentPage ~= pname then
+                savePage(currentPage, textarea:getText(), true)
+                loadPage(found)
+            end
+            return found
+        else
+            log('switchPage() could not find: '..pname)
+            return nil
+        end
     end
 
     local function loadConfiguration()
@@ -770,7 +794,7 @@ local function loadScratchpad()
     local function loadExtensions()
         log("Loading extensions ...")
 
-        local function loadExtension(path)
+        local function loadExtension(path, name)
             local f, err = loadfile(path)
             if not f then
                 log("Error reading file `"..path.."`: "..err)
@@ -779,7 +803,8 @@ local function loadScratchpad()
 
             -- prepare extension panel
             local children = {}
-            table.insert(extensions, {children = children})
+            local extid = name
+            extensions[extid] = {children = children}
 
             -- create extension env
             local extEnv = {
@@ -797,7 +822,17 @@ local function loadScratchpad()
                     table.insert(coordListeners, listener)
                 end,
                 formatCoord = formatCoord,
-                log = log
+                log = log,
+                getSelection = getSelection,
+                switchPage = switchPage,
+                extid = extid,
+                panel = extensions[extid].children,
+                isHidden = function()
+                    return isHidden
+                end,
+                getTextarea = function()
+                    return textarea
+                end,
             }
             setmetatable(extEnv, {__index = _G})
             setfenv(f, extEnv)
@@ -820,7 +855,7 @@ local function loadScratchpad()
                     log("Ignoring file " .. name .. ", because of its file size of more than 1MB")
                 else
                     log("found extension " .. path)
-                    loadExtension(path)
+                    loadExtension(path, name)
                 end
             end
         end
@@ -951,7 +986,7 @@ local function loadScratchpad()
             local panel = Panel.new()
             local panelWidth = 0
             local panelHeight = 0
-            for _, child in pairs(container.children) do
+            for idx, child in pairs(container.children) do
                 if child.x + child.w > panelWidth then
                     panelWidth = child.x + child.w
                 end
@@ -966,6 +1001,7 @@ local function loadScratchpad()
                 button:addMouseUpCallback(function(self)
                     child.onClick(Text.new())
                 end)
+                container.children[idx].button = button
                 panel:insertWidget(button)
             end
             panel:setBounds(0, 0, panelWidth, panelHeight)
