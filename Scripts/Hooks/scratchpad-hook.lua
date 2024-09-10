@@ -603,7 +603,7 @@ local function loadScratchpad()
             return {DDM = true, MGRS = true}
         elseif string.sub(ac, 1, 4) == "F-14" then
             return {DDM = {precision = 1}}
-        elseif ac == "F-15ESE" then
+        elseif ac == "F-15ESE" or ac == 'CH-47Fbl1' then
             return {DDM = {precision = 3, lonDegreesWidth = 3}, MGRS = true}
         elseif ac == "M-2000C" then
             return {DDM = {precision = 1, lonDegreesWidth = 3}}
@@ -617,6 +617,8 @@ local function loadScratchpad()
             return {DDM = {precision = 1}}
         elseif ac == "Hercules" then
             return {DDM = {precision = 3, lonDegreesWidth = 3}}
+        elseif ac == "OH58D" then
+            return {DDM = {precision = 2, lonDegreesWidth = 3}, MGRS = true}
         else
             return {DMS = true, DDM = true, MGRS = true}
         end
