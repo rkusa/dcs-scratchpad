@@ -10,7 +10,10 @@
 
 ft = {}
 ft['start'] = function (action)
-    if type(action) == 'table' then
+    local valid = {reng='reng', leng='leng', postreng='postreng', postleng='postleng'}
+    action = valid[action] or ''
+
+    if action == '' then
 -- Beginning of start procedure
 
         net.recv_chat('Starting Mi-8')

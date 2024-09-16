@@ -125,7 +125,10 @@ end --end of mpd()
 
 ft['firstspool'] = true
 ft['start'] = function (action)
-    if type(action) == 'table' then
+    local valid = {engspool='engspool', posteng='posteng'}
+    action = valid[action] or ''
+
+    if action == '' then
         ft['T1'] = DCS.getRealTime()
 
         -- Beginning of start procedure

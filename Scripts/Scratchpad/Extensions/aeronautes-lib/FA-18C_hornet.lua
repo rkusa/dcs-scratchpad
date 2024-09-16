@@ -170,7 +170,10 @@ end
 
 local ctr = 1
 ft['start'] = function (action)
-    if type(action) == 'table' then
+    local valid = {reng='reng', postreng='postreng',leng='leng', postleng='postleng',}
+    action = valid[action] or ''
+
+    if action == '' then
 -- Beginning of start procedure
 
 tt('Ejection Seat SAFE/ARMED Handle, SAFE/ARMED',{value=-1})

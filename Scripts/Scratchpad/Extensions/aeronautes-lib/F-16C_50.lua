@@ -24,7 +24,10 @@ ft.order = {'start', 'setup', 'WIP-mfd', 'DEPREC-fence'}
 -- knob to NAV
 
 ft['start'] = function(action)
-    if type(action) == 'table' then
+    local valid = {engspool='engspool', posteng='posteng'}
+    action = valid[action] or ''
+
+    if action == '' then
 
         -- Beginning of start procedure
 
