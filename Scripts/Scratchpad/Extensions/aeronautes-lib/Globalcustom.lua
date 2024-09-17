@@ -98,6 +98,7 @@ ft['presetwp'] = function(input)
     for _,i in pairs(_current_mission.mission.triggers.zones) do
         local zone = {}
         zone = {name = i.name, x = i.x, y = i.y, zoneid = i.zoneId}
+        loglocal('Zone read: '..net.lua2json(zone), 7)
         if i.properties and i.properties[1] and i.properties[1]['key'] then
             for _,j in pairs(i.properties) do
                 zone[j.key] = j.value
@@ -121,10 +122,12 @@ ft['presetwp'] = function(input)
     local objlist = {}
     loglocal('input: #'..input..'#', 4)
     for i,j in pairs(objs) do
+        loglocal('Obj.str #'..j.str..'# name: '..j.name, 6)
         if j.str == input then
             table.insert(objlist, j)
         end
     end
+    loglocal('objlist: '..net.lua2json(objlist), 6)
 
     if #objlist == 0 then
         umsg('Objective not found: #'..input..'# '..#objlist)
@@ -166,7 +169,6 @@ ft['presetwp'] = function(input)
             function intersect(P1, y2, P3, P4)
                 -- Line1
                 local x1 = P1.y; local y1 = P1.x
-                --local y2 = y2
 
                 -- Line2
                 local x3 = P3.y; local y3 = P3.x
@@ -174,7 +176,7 @@ ft['presetwp'] = function(input)
 
                 denom = ((y1 - y2)*(x3 - x4))
                 t = ((x1 - x3)*(y3 - y4)-(y1 - y3)*(x3 - x4)) / denom
-                u =                       -((y1-y2)*(x1 - x3)) / denom
+                u =                    -((y1 - y2)*(x1 - x3)) / denom
 
                 --            loglocal(P1.name..' P1: '..P1.x..','..P1.y..' my: '..y2..' v1: '..net.lua2json(P3)..' v2: '..net.lua2json(P4))
                 --            loglocal('poly: denom: '..denom..' t: '..t..' u: '..u)
@@ -206,6 +208,29 @@ ft['presetwp'] = function(input)
         end
         table.sort(objwp, function(a,b) return a.x < b.x end) -- sort wp from south increasing to north
 
+        function distance(a, b)
+            return math.sqrt((a.x - b.x)^2 + (a.y - b.y)^2)
+        end                     -- end distance
+--[[
+        local dtab = {}
+        for i=1, #objwp do
+            dtab[i] = {}
+        end
+
+        for i=1, #objwp do
+            for j=i+1, #objwp do
+                dtab[i][j] = distance(objwp[i], objwp[j])
+--                dtab[j][i] = distance(objwp[i], objwp[j])
+            end
+        end
+        for i=1, #dtab do
+            loglocal(i..': '..net.lua2json(dtab[i]))
+        end
+
+        if 0 then
+            return 1
+        end
+        --]]
         -- create and merge new presets with current presets file
         if not presets then
             local atr = lfs.attributes(presetfn)
@@ -228,7 +253,7 @@ ft['presetwp'] = function(input)
         local etatot = 900
         presets[rt] = {}
         local pretmp = {
-            alt = 2000,
+            alt = 0,
             type =  "Turning Point",
             ETA = etatot,
             ETA_locked = true,
@@ -246,6 +271,7 @@ ft['presetwp'] = function(input)
             presets[rt][wp].name = objwp[wp].str
             presets[rt][wp].x = objwp[wp].x
             presets[rt][wp].y = objwp[wp].y
+            presets[rt][wp].alt = Export.LoGetAltitude(objwp[wp].x, objwp[wp].y)
             if wp > 1 then        -- formula from Scripts\UI\RouteTool.lua
                 presets[rt][wp].ETA = etatot + math.sqrt((objwp[wp-1].x - objwp[wp].x)^2 + (objwp[wp-1].y - objwp[wp].y)^2) / 70 --250km/h
                 etatot = presets[rt][wp].ETA
