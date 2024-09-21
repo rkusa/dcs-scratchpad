@@ -1,6 +1,6 @@
-local version=.63
+local version=.64
 local readme = [=[
-# aeronautes-pit (Apit)
+# aeronautes-pit (Apit) https://github.com/aeronautes/dcs-scratchpad
 
 This is an extension to github.com/rkusa/scratchpad for DCS. At a high
 level it provides the ability to configure your aircraft, assist with
@@ -1823,6 +1823,9 @@ function loadDTCBuffer(text)
            unittype = unittype,
            getinput = getinput,
            getTextarea = getTextarea,
+           extid = extid,
+           Scratchdir = Scratchdir,
+           Scratchpadfn = Scratchpadfn,
     }
     setmetatable(env, {__index = _G}) --needed to pickup all the
                                       --module macro definitions like
@@ -1856,6 +1859,13 @@ function assignCustom()
                      ttt = ttt,
                      delay = delay,
                      loglocal = loglocal,
+                     switchPage = switchPage,
+                     extid = extid,
+                     Scratchdir = Scratchdir,
+                     Scratchpadfn = Scratchpadfn,
+                     Apitlibdir = Apitlibdir,
+                     Apitlibsubdir = Apitlibsubdir,
+                     getTextarea = getTextarea,
         }
         --needed to pickup all the module macro definitions like
                                               --device/action

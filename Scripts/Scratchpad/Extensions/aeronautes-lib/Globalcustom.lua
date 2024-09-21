@@ -1,5 +1,12 @@
---[[
-    presetwp - used on Grayflag servers given an objective name,
+--[[ working functions: presetwp, presetfix
+
+    ## presetfix - This function will set the correct altitude for the
+       waypoints of the currently loaded theater. It will only change
+       altitudes set at 2000m as that is the DCS default. This will
+       prevent the function from changing any altitudes the user has
+       changed manually using the altitude edit box.
+
+    ## presetwp - used on Grayflag servers given an objective name
     produces additions to route tool preset file. DCS only reads
     'Saved Game\DCS\Config\RouteToolPresets' after the mission loads
     when joining server. This means any update wont show up in game
@@ -18,14 +25,16 @@
     input objective name if you dont highlight anything. For presetwp
     that means you need a line with only the name of the objective,
     place the cursor anywhere on that line and click the
-    button. Otherwise, on Grayflag servers, if you make an F10 'update'
-    label and click on the aeronautes-msg extension's trigger button
-    you can highlight the objective names.
+    button. Otherwise, on Grayflag servers, if you make an F10
+    'update' label and click on the aeronautes-msg extension's trigger
+    button you can highlight the objective names.
+
+    ## globalfile - shows the contents of Globalcustom.lua.
 --]]
 
-
 local ft = {}
-ft.order = {'presetwp'}
+ft.order = {'presetwp', 'presetfix', 'globalfile'}
+local presetfn = lfs.writedir()..[[Config\RouteToolPresets\]].._current_mission.mission.theatre..'.lua'
 
 local function copytable(src)
     dst = {}
@@ -75,8 +84,56 @@ function trim(s)                -- https://lua-users.org/wiki/StringTrim
    return s:match'^%s*(.*%S)' or ''
 end
 
+local pfile
+function writepresets(presets)
+    pfile, err = io.open(presetfn, 'w+')
+    if err then
+        umsg('Error opening file, err: '..err)
+        return
+    end
+
+    function fout(str)
+        --        loglocal(str)
+        pfile:write(str)
+    end
+
+    -- order routes alphabetically in the theaters preset
+    -- file. Currently DCS does not honor this ordering in the
+    -- dropdown list
+    local presort = {}
+    for i,j in pairs(presets) do
+        table.insert(presort, i)
+    end
+    table.sort(presort)
+
+    fout('presets =\n{\n')
+    for i=1, #presort do
+        loglocal(i..' SORT: '..presort[i], 4)
+        local rtname = presort[i]
+        local rtnode = presets[rtname]
+        fout('    ["'..rtname..'"] =\n    {\n') -- route
+        for wpnum=1,#rtnode do
+            fout('        ['..wpnum..'] =\n        {\n') --wp
+            for key,value in pairs(rtnode[wpnum]) do
+                if type(value) == 'string' then
+                    fout('            ["'..key..'"] = "'..value..'",\n')
+                else
+                    fout('            ["'..key..'"] = '..tostring(value)..',\n')
+                end
+            end
+            fout('        }, -- end of ['..wpnum..']\n')
+        end
+        fout('    }, -- end of ["'..rtname..'"]\n')
+    end
+    fout('} -- end of presets')
+    pfile:flush()
+    pfile:close()
+
+    umsg('DCS only reads presets file on mission load. You must leave/rejoin server for new presets')
+end                         -- writepresets
+
 --#################################
--- presetwp v0.1
+-- presetwp v0.2
 -- creates presets for route tool using objectives and cap zones as
 -- implmented on Grayflag server missions. This means missions using
 -- zones with 'property' 'type' 'obj' or 'qrf' and zones with
@@ -90,10 +147,10 @@ ft['presetwp'] = function(input)
         return
     end
 
-    local presetfn = lfs.writedir()..[[Config\RouteToolPresets\]].._current_mission.mission.theatre..'.lua'
     local objs = {}
     local caps = {}
     local qrfsup = {}
+    local forcewplimit = 9
     
     for _,i in pairs(_current_mission.mission.triggers.zones) do
         local zone = {}
@@ -122,12 +179,12 @@ ft['presetwp'] = function(input)
     local objlist = {}
     loglocal('input: #'..input..'#', 4)
     for i,j in pairs(objs) do
-        loglocal('Obj.str #'..j.str..'# name: '..j.name, 6)
+        loglocal('Obj.str #'..j.str..'# name: '..j.name, 7)
         if j.str == input then
             table.insert(objlist, j)
         end
     end
-    loglocal('objlist: '..net.lua2json(objlist), 6)
+    loglocal('objlist: '..net.lua2json(objlist), 4)
 
     if #objlist == 0 then
         umsg('Objective not found: #'..input..'# '..#objlist)
@@ -138,9 +195,9 @@ ft['presetwp'] = function(input)
     end
     
     for i,obtgt in pairs(objlist) do
---        loglocal('OBJ: '..net.lua2json(obtgt))
+        loglocal('OBJ: '..net.lua2json(obtgt), 4)
         local bb = boundingbox(obtgt.verticies)
---        loglocal('BB: '..net.lua2json(bb))
+        loglocal('BB: '..net.lua2json(bb), 4)
 
         -- DCS x axis is vertical, y horizontal
         local minx = bsearch(caps, #caps, bb.minx, function(a,b) return a.x < b end)
@@ -150,7 +207,6 @@ ft['presetwp'] = function(input)
 
         for i=minx,maxx do
             table.insert(xrng, caps[i])
---            loglocal('Xrng(x): '..i..' ; '..net.lua2json(caps[i]))
         end
         table.sort(xrng, function(a,b) return a.y < b.y end)
         
@@ -167,20 +223,14 @@ ft['presetwp'] = function(input)
             local intcount = 0
 
             function intersect(P1, y2, P3, P4)
-                -- Line1
-                local x1 = P1.y; local y1 = P1.x
-
-                -- Line2
-                local x3 = P3.y; local y3 = P3.x
-                local x4 = P4.y; local y4 = P4.x
-
-                denom = ((y1 - y2)*(x3 - x4))
-                t = ((x1 - x3)*(y3 - y4)-(y1 - y3)*(x3 - x4)) / denom
-                u =                    -((y1 - y2)*(x1 - x3)) / denom
-
-                --            loglocal(P1.name..' P1: '..P1.x..','..P1.y..' my: '..y2..' v1: '..net.lua2json(P3)..' v2: '..net.lua2json(P4))
-                --            loglocal('poly: denom: '..denom..' t: '..t..' u: '..u)
-                if 0 <= t and t <= 1.0 and 0 <= u and u <= 1.0 then
+                if P1.x < math.min(P3.x, P4.x) or P1.x > math.max(P3.x, P4.x) then
+                    loglocal('point BB P1.x:'..P1.x..' P3.x:'..P3.x..' P4.x:'..P4.x, 6)
+                    return 0
+                end
+                t = ((P1.y-P3.y)*(P3.x-P4.x)-(P1.x-P3.x)*(P3.y-P4.y)) / ((P1.y-y2)*(P3.x-P4.x))
+                loglocal(P1.name..' P1: '..net.lua2json(P1)..' my: '..y2..' v1: '..net.lua2json(P3)..' v2: '..net.lua2json(P4), 6)
+                loglocal('poly test: t: '..t, 6)
+                if 0 <= t and t <=1.0 then
                     return 1
                 else
                     return 0
@@ -189,15 +239,15 @@ ft['presetwp'] = function(input)
 
             for j=1,3 do
                 intcount = intcount + intersect(xrng[i], bb.maxy, obtgt.verticies[j], obtgt.verticies[j+1])
---                loglocal(j..' INTERSECT: '..intcount)
+                loglocal(j..' INTERSECT: '..intcount, 7)
             end
             intcount = intcount + intersect(xrng[i], bb.maxy, obtgt.verticies[4], obtgt.verticies[1])
---            loglocal('4 INTERSECT: '..intcount)
+            loglocal('4 INTERSECT: '..intcount, 7)
 
             if math.mod(intcount, 2) == 0 then
-                loglocal('OUTSIDE POLY, passing '..net.lua2json(xrng[i]), 4)
+                loglocal(intcount..' OUTSIDE POLY, passing '..net.lua2json(xrng[i]), 4)
             else
-                loglocal('Inside poly inserting '..net.lua2json(xrng[i]), 4)
+                loglocal(intcount..' Inside poly inserting '..net.lua2json(xrng[i]), 4)
                 table.insert(objwp, xrng[i])
             end
         end                         -- end i=miny, maxy
@@ -206,41 +256,95 @@ ft['presetwp'] = function(input)
             umsg('Objective waypoints size zero, no presets designated, '..input..' ('..obtgt.name..')')
             return
         end
-        table.sort(objwp, function(a,b) return a.x < b.x end) -- sort wp from south increasing to north
 
-        function distance(a, b)
-            return math.sqrt((a.x - b.x)^2 + (a.y - b.y)^2)
-        end                     -- end distance
---[[
-        local dtab = {}
-        for i=1, #objwp do
-            dtab[i] = {}
+        local route = {}
+        for i=1,#objwp do
+            route[i] = i
         end
+        local minrt = {r = {}, d = math.huge}
 
-        for i=1, #objwp do
-            for j=i+1, #objwp do
-                dtab[i][j] = distance(objwp[i], objwp[j])
---                dtab[j][i] = distance(objwp[i], objwp[j])
+        if #objwp < forcewplimit then
+            -- brute force search min route if less then 9 waypoints
+            function hypot(a, b)
+                return math.sqrt((a.x - b.x)^2 + (a.y - b.y)^2)
+            end                     -- end hypot
+
+            local dtab = {}         -- distance b/w waypoints
+            for i=1, #objwp do
+                dtab[i] = {}
             end
-        end
-        for i=1, #dtab do
-            loglocal(i..': '..net.lua2json(dtab[i]))
-        end
 
-        if 0 then
-            return 1
-        end
-        --]]
+            for i=1, #objwp do
+                for j=1, #objwp do
+                    dtab[i][j] = hypot(objwp[i], objwp[j])
+                end
+            end
+            for i=1, #dtab do
+                loglocal('dtab: '..i..': '..net.lua2json(dtab[i]), 4)
+            end
+
+            function routedist(r)
+                local dist = 0
+                local tot = 1
+
+                for i=1, #r-1 do
+                    dist = dist + dtab[r[i]][r[i+1]]
+                    loglocal('routedist: '..r[i]..' dist_i-iplus1: '..dtab[r[i]][r[i+1]], 6)
+                end
+                loglocal(tot..' route: '..net.lua2json(r).. ' dist: '..dist, 6)
+                tot = tot + 1
+                return dist
+            end
+
+            function permgen(a, n)  -- https://www.lua.org/pil/9.3.html
+                if n == 0 then
+                    coroutine.yield(a)
+                else
+                    for i=1, n do
+                        a[n], a[i] = a[i], a[n]
+                        permgen(a, n-1)
+                        a[n], a[i] = a[i], a[n]
+                    end
+                end
+            end                     -- permgen
+
+            function perm(a)
+                loglocal('perm: '..net.lua2json(a), 6)
+                return coroutine.wrap(function() permgen(a, #a) end)
+            end
+
+            local selfdata = Export.LoGetSelfData()
+            local selfpos = {x = selfdata.Position.x, y = selfdata.Position.z}
+            loglocal('selfdata: '..net.lua2json(selfdata.Position), 4)
+
+            for p in perm(route) do
+                local rtd = routedist(p)
+                rtd = rtd + hypot(selfpos, objwp[p[1]])
+                --enabling the following log for wp>7 or more may take a long time
+                loglocal('presetwp check route: '..net.lua2json(p)..' dist: '..rtd, 8) 
+                if rtd < minrt.d then
+                    minrt.d = rtd
+                    minrt.r = copytable(p)
+                    loglocal('presetwp set min: '..net.lua2json(minrt), 6)
+                end
+            end
+        else
+            table.sort(objwp, function(a,b) return a.x < b.x end) -- sort wp from south increasing to north
+            minrt.r = route
+            umsg('presetwp: #wp >= '..forcewplimit..', route order South to North')
+        end                     -- #objwp < 9
+        loglocal('presetfix minrt: '..net.lua2json(minrt), 6)
+
         -- create and merge new presets with current presets file
-        if not presets then
-            local atr = lfs.attributes(presetfn)
-            if atr and atr.mode == 'file' then
-                dofile(presetfn)
-            end
-            if not presets then
-                presets = {}
-            end
+        --        if not presets then
+        local atr = lfs.attributes(presetfn)
+        if atr and atr.mode == 'file' then
+            dofile(presetfn)
         end
+        if not presets then
+            presets = {}
+        end
+        --       end
         local rt = DCS.getMissionName()..'-v'.._current_mission.mission.version..'-'
         if obtgt.lat then
             rt = rt..'Lat'..obtgt.lat..'-'
@@ -265,63 +369,102 @@ ft['presetwp'] = function(input)
             action = "Turning Point",
         }
 
-        for wp=1,#objwp do
---            loglocal('OH: '..wp..' ; '..net.lua2json(objwp[wp]))
-            presets[rt][wp] = copytable(pretmp)
-            presets[rt][wp].name = objwp[wp].str
-            presets[rt][wp].x = objwp[wp].x
-            presets[rt][wp].y = objwp[wp].y
-            presets[rt][wp].alt = Export.LoGetAltitude(objwp[wp].x, objwp[wp].y)
-            if wp > 1 then        -- formula from Scripts\UI\RouteTool.lua
-                presets[rt][wp].ETA = etatot + math.sqrt((objwp[wp-1].x - objwp[wp].x)^2 + (objwp[wp-1].y - objwp[wp].y)^2) / 70 --250km/h
-                etatot = presets[rt][wp].ETA
---                loglocal('ETA: '..presets[rt][wp].ETA)
+        for idx=1, #minrt.r do
+            local wp = minrt.r[idx]
+            loglocal('route wp: '..wp..' ; '..net.lua2json(objwp[wp]), 6)
+            presets[rt][idx] = copytable(pretmp)
+            presets[rt][idx].name = objwp[wp].str
+            presets[rt][idx].x = objwp[wp].x
+            presets[rt][idx].y = objwp[wp].y
+            presets[rt][idx].alt = Export.LoGetAltitude(objwp[wp].x, objwp[wp].y)
+            if idx > 1 then        -- formula from Scripts\UI\RouteTool.lua
+                local prevwp = minrt.r[idx-1]
+                presets[rt][idx].ETA = etatot + math.sqrt((objwp[prevwp].x - objwp[wp].x)^2 + (objwp[prevwp].y - objwp[wp].y)^2) / 70 --250km/h
+                etatot = presets[rt][idx].ETA
+                loglocal('ETA: '..presets[rt][idx].ETA, 6)
             end
         end                         -- end pairs(objwp)
         umsg(#objwp..' wps created for '..rt)
+        loglocal('presetwp: preset created '..net.lua2json(presets[rt]), 6)
     end -- obtgt in pairs(objlist)
     
     -- write new presets
-    local file, err = io.open(presetfn, 'w+')
-    if err then
-        umsg("Error writing file: " .. presetfn)
-        return
+    writepresets(presets)
+end                             -- end presetwp
+
+--#################################
+-- presetfix v0.1
+-- Currently routes created using DCS RouteTool will set all altitudes
+-- to 2000m. This script will update the preset file for the current
+-- theater to the actual ground height for any altitudes set at
+-- 2000. This means if you set your own value in the altitude edit
+-- box, presetfix will not alter it.
+ft['presetfix'] = function(input)
+    loglocal('presetfix call', 2)
+
+    local atr = lfs.attributes(presetfn)
+    if atr and atr.mode == 'file' then
+        dofile(presetfn)
     end
-    function fout(str)
-        --        loglocal(str)
-        file:write(str)
+    if not presets then
+        loglocal('presetfix file not found '..presetfn)
+        return 0
     end
 
-    local presort = {}
-    for i,j in pairs(presets) do
-        table.insert(presort, i)
-    end
-    table.sort(presort)
-    
-    fout('presets =\n{\n')
-    for i=1, #presort do
-        loglocal(i..' SORT: '..presort[i], 4)
-        local rtname = presort[i]
-        local rtnode = presets[rtname]
-        fout('    ["'..rtname..'"] =\n    {\n') -- route
-        for wpnum=1,#rtnode do
-            fout('        ['..wpnum..'] =\n        {\n') --wp
-            for key,value in pairs(rtnode[wpnum]) do
-                if type(value) == 'string' then
-                    fout('            ["'..key..'"] = "'..value..'",\n')
-                else
-                    fout('            ["'..key..'"] = '..tostring(value)..',\n')
-                end
+    for rtname,rtnode in pairs(presets) do
+        loglocal('presetfix rt: '..rtname, 6)
+        for wpnum, wp in pairs(rtnode) do
+            loglocal('presetfix current wp: '..wp.name..' alt: '..wp.alt, 6)
+            if wp.alt == 2000 then
+                wp.alt = Export.LoGetAltitude(wp.x, wp.y)
+                loglocal('presetfix New alt: '..wp.alt, 6)
             end
-            fout('        }, -- end of ['..wpnum..']\n')
         end
-        fout('    }, -- end of ["'..rtname..'"]\n')
     end
-    fout('} -- end of presets')
-    file:flush()
-    file:close()
+    writepresets(presets)
+end                         -- presetfix
 
-    umsg('DCS only reads presets file on mission load. You must leave/rejoin server for new presets')
-end                             -- end ft[a]
+--#################################
+-- globalfile v0.1
+-- show this file in scratchpad
+ft['globalfile'] = function(input)
+    loglocal('globalfile call', 2)
+    if switchPage(Scratchdir..Scratchpadfn) then
+        local txt = ''
+        local readtxt = ''
+        if not TA then
+            TA = getTextarea()
+        end
+
+        local infn = Apitlibdir..'Globalcustom.lua'
+        local infile, res
+        infile, res = io.open(infn,'r')
+        if not infile then
+            txt = txt .. '\nGlobalcustom.lua file not found in '..Apitlibsubdir
+            loglocal('aeronautespit Globalcustom.lua open file fail; non critical' .. res)
+            return
+        else
+            readtxt = infile:read('*all')
+            infile:close()
+            if not readtxt then
+                loglocal('aeronautespit Globalcustom.lua read error; ' .. infn)
+            else
+                txt = txt .. '-- COPY of '..Apitlibsubdir..'Globalcustom.lua\n'..readtxt
+            end
+        end
+
+        TA:setText('')
+        -- hardcoded 1MB file limit from scratchpad
+        local buflen = string.len(txt)
+        if buflen > (1024 * 1024) then
+            txt = string.sub(txt, 0, (1024*1024)-80) --limit 1 MB worth
+            txt = txt ..'<<< File too big for scratchpad. Displaying truncated to 1MB >>>'
+            loglocal('apit mod buflen > 1MB: '..buflen)
+        end
+
+        TA:setText(txt)
+    end
+end                             -- globalfile
+
 
 return ft
