@@ -4,7 +4,8 @@
        waypoints of the currently loaded theater. It will only change
        altitudes set at 2000m as that is the DCS default. This will
        prevent the function from changing any altitudes the user has
-       changed manually using the altitude edit box.
+       changed manually using the altitude edit box. This is not
+       needed for routes created with presetwp
 
     ## presetwp - used on Grayflag servers given an objective name
     produces additions to route tool preset file. DCS only reads
@@ -75,12 +76,16 @@ local function boundingbox(verts)
     return bbox
 end
 
+local function hypot(a, b)
+    return math.sqrt((a.x - b.x)^2 + (a.y - b.y)^2)
+end                     -- end hypot
+
 local function umsg(str)
     loglocal('Globalcustom: '..str)
     net.recv_chat(str)
 end
 
-function trim(s)                -- https://lua-users.org/wiki/StringTrim
+local function trim(s)                -- https://lua-users.org/wiki/StringTrim
    return s:match'^%s*(.*%S)' or ''
 end
 
@@ -133,7 +138,7 @@ function writepresets(presets)
 end                         -- writepresets
 
 --#################################
--- presetwp v0.2
+-- presetwp v0.3
 -- creates presets for route tool using objectives and cap zones as
 -- implmented on Grayflag server missions. This means missions using
 -- zones with 'property' 'type' 'obj' or 'qrf' and zones with
@@ -263,38 +268,48 @@ ft['presetwp'] = function(input)
         end
         local minrt = {r = {}, d = math.huge}
 
+        local dtab = {}         -- distance b/w waypoints
+        local dC = {}
+        for i=1, #objwp do
+            dtab[i] = {}
+            dC[i] = {}
+            for j=1, #objwp do
+                dtab[i][j] = hypot(objwp[i], objwp[j])
+--[[                if j ~= i then
+                    table.insert(dC[i],{v = j, cost = dtab[i][j]})
+                end
+            end
+            table.sort(dC[i], function(a,b) return a.cost < b.cost end)
+    loglocal('BUB: '..net.lua2json(dC[i]))
+--]]
+            end
+        end
+        for i=1, #dtab do
+            loglocal('dtab: '..i..': '..net.lua2json(dtab[i]), 4)
+        end
+        forcewplimit = 0--NC
+        local selfdata = Export.LoGetSelfData()
+        local selfpos = {x = selfdata.Position.x, y = selfdata.Position.z}
+        loglocal('selfdata: '..net.lua2json(selfdata.Position), 4)
+        local basedist = {}
+        for i=1, #route do
+            basedist[i] = hypot(selfpos, objwp[i])
+        end
+
+        function routedist(r)
+            local dist = 0
+            local tot = 1
+            for i=1, #r-1 do
+                dist = dist + dtab[r[i]][r[i+1]]
+                loglocal('routedist: '..r[i]..'->'..r[i+1]..': '..dtab[r[i]][r[i+1]], 6)
+            end
+            loglocal(tot..' route: '..net.lua2json(r).. ' dist: '..dist, 6)
+            tot = tot + 1
+            return dist
+        end
+
         if #objwp < forcewplimit then
             -- brute force search min route if less then 9 waypoints
-            function hypot(a, b)
-                return math.sqrt((a.x - b.x)^2 + (a.y - b.y)^2)
-            end                     -- end hypot
-
-            local dtab = {}         -- distance b/w waypoints
-            for i=1, #objwp do
-                dtab[i] = {}
-            end
-
-            for i=1, #objwp do
-                for j=1, #objwp do
-                    dtab[i][j] = hypot(objwp[i], objwp[j])
-                end
-            end
-            for i=1, #dtab do
-                loglocal('dtab: '..i..': '..net.lua2json(dtab[i]), 4)
-            end
-
-            function routedist(r)
-                local dist = 0
-                local tot = 1
-
-                for i=1, #r-1 do
-                    dist = dist + dtab[r[i]][r[i+1]]
-                    loglocal('routedist: '..r[i]..' dist_i-iplus1: '..dtab[r[i]][r[i+1]], 6)
-                end
-                loglocal(tot..' route: '..net.lua2json(r).. ' dist: '..dist, 6)
-                tot = tot + 1
-                return dist
-            end
 
             function permgen(a, n)  -- https://www.lua.org/pil/9.3.html
                 if n == 0 then
@@ -313,13 +328,11 @@ ft['presetwp'] = function(input)
                 return coroutine.wrap(function() permgen(a, #a) end)
             end
 
-            local selfdata = Export.LoGetSelfData()
-            local selfpos = {x = selfdata.Position.x, y = selfdata.Position.z}
-            loglocal('selfdata: '..net.lua2json(selfdata.Position), 4)
-
             for p in perm(route) do
-                local rtd = routedist(p)
-                rtd = rtd + hypot(selfpos, objwp[p[1]])
+                local rtd
+--                rtd = routedist(p) + basedist[p[1]] + basedist[p[#route]] -- for shortest roundtrip
+                rtd = routedist(p) + basedist[p[1]] -- for closest first zone
+
                 --enabling the following log for wp>7 or more may take a long time
                 loglocal('presetwp check route: '..net.lua2json(p)..' dist: '..rtd, 8) 
                 if rtd < minrt.d then
@@ -328,15 +341,105 @@ ft['presetwp'] = function(input)
                     loglocal('presetwp set min: '..net.lua2json(minrt), 6)
                 end
             end
-        else
-            table.sort(objwp, function(a,b) return a.x < b.x end) -- sort wp from south increasing to north
-            minrt.r = route
-            umsg('presetwp: #wp >= '..forcewplimit..', route order South to North')
+        else                    -- #wp > 8 do nearest neighbor
+--            table.sort(objwp, function(a,b) return a.x < b.x end) -- sort wp from south increasing to north
+--            minrt.r = route
+--            umsg('presetwp: #wp >= '..forcewplimit..', route order South to North')
+
+            function NN(route)  -- nearest neighbor
+                local Q = {}
+                for i=1, #route do
+                    Q[i] = {}
+                    for j=1, #route do
+                        if j ~= i then
+                            table.insert(Q[i],{v = j, cost = dtab[i][j]})
+                        end
+                    end
+                    table.sort(Q[i], function(a,b) return a.cost < b.cost end)
+                    loglocal('Q['..i..']: '..net.lua2json(Q[i]), 4)
+                end
+
+                local closestcap = 0
+                local dist = math.huge
+                for i=1, #basedist do
+                    if basedist[i] < dist then
+                        closestcap = i
+                        dist = basedist[i]
+--                        loglocal('closest: '..closestcap..' basedist: '..net.lua2json(basedist))
+                    end
+                end
+                loglocal('FIN closest: '..closestcap..' basedist: '..net.lua2json(basedist), 4)
+
+                local rt = {closestcap}
+                local tour = {d = math.huge, rt = {}}
+                for h=1, #route do
+                    rt = {h}
+                    dist = 0
+                    local Qn = copytable(Q)
+                    for i=1, #route-1 do
+                        for j=1, #Qn[rt[i]] do
+                            local shortest = Qn[rt[i]][j]
+  --                          loglocal('shortest: '..net.lua2json(shortest))
+                            if Qn[shortest.v] then
+                                rt[i+1] = shortest.v
+                                dist = dist + shortest.cost
+                                Qn[rt[i]] = nil
+                                break
+                            end
+                        end
+                    end
+                    loglocal(h..' Tour: '..dist..' rt: '..net.lua2json(rt),4)
+                    --dist = dist + dtab[rt[1]][rt[#rt]]
+                    --dist = dist + basedist[h]
+                    loglocal('Complete route: '..dist,4)
+                    if dist < tour.d then
+                        tour = {d = dist, rt = rt}
+                        loglocal('Found smaller: '..h..' + '..basedist[h]..' = '..dist+basedist[h], 4)
+                    end
+                end
+                return tour.d, tour.rt
+            end
+            minrt.d, minrt.r = NN(route)
+            loglocal('NN: '..net.lua2json(minrt),4)
+
+            function mst(route)      -- Prim's
+                local C = {}
+                local E = {}
+                local F = {}
+                local Q = {}
+                for i=1,#route do
+                    C[i] = math.huge
+                    E[i] = 0
+                    Q[i] = {}
+                    for j=1, #route do
+                        if j ~= i then
+                            table.insert(Q[i],{v = j, cost = dtab[i][j]})
+                        end
+                    end
+                    table.sort(Q[i], function(a,b) return a.cost < b.cost end)
+                    loglocal('Q['..i..']: '..net.lua2json(Q[i]))
+                end
+
+                local v = 1
+                local Fidx = 1
+--                while #Q > 0 do
+                    F[Fidx] = v
+                    local tmp = Q[v]
+                    table.remove(Q[v])
+                    for w=1, #tmp do
+                        if tmp[w].cost < C[v] then
+                            C[w] = tmp[w].cost
+                            E[w] = {v, w}
+                        end
+                    end
+  --              end
+                loglocal(net.lua2json({C, E, F, Q}))
+            end
+--            mst(route)
         end                     -- #objwp < 9
         loglocal('presetfix minrt: '..net.lua2json(minrt), 6)
 
         -- create and merge new presets with current presets file
-        --        if not presets then
         local atr = lfs.attributes(presetfn)
         if atr and atr.mode == 'file' then
             dofile(presetfn)
@@ -344,7 +447,7 @@ ft['presetwp'] = function(input)
         if not presets then
             presets = {}
         end
-        --       end
+
         local rt = DCS.getMissionName()..'-v'.._current_mission.mission.version..'-'
         if obtgt.lat then
             rt = rt..'Lat'..obtgt.lat..'-'
