@@ -1,8 +1,18 @@
-local version=.11
+local version=.12
 local readme = [=[
-# aeronautes msgs
+# aeronautes-msgs (amsgs) https://github.com/aeronautes/dcs-scratchpad
 
-This scratchpad extension saves each of the 3 types of DCS messages into their own buffers and displays them on command. The message low only be displayed if the name of the current scratchpad buffer is aeronautes-msgs.txt. Updates only occur on presses of the scratchpad UI buttons. You will need to scroll to the bottom of the buffer to see newest messages.
+This scratchpad extension saves each of the 3 types of DCS messages
+into their own buffers and displays them on command. The current
+scratchpad buffer will switch to aeronautes-msgs.txt and the messages
+will be displayed. Updates only occur on presses of the UI
+buttons. The buffer will be scrolled to the bottom. When new messages
+arrive the UI button will be updated with a * to indicate unread
+messages. The indicator is cleared when the particular buffer is
+displayed. The 'reset' button will clear all 3 types of message
+buffers and clear the scratchpad for amsgs. The messages will be
+cleared on mission load, so any messages from before joining
+mission/server will be lost.
 
 ]=]
 
@@ -12,6 +22,46 @@ local Scratchdir = lfs.writedir() .. [[Scratchpad\]]
 local Scratchpadfn = 'aeronautes-msgs.txt'
 local TA = nil
 local handler = {}
+local dbglvl = 1
+
+Loggr = {
+    enable = true,
+    linenum = 0,
+    buf = '',
+    add = function(self, msg)
+        local date = os.date('*t')
+        local dateStr = string.format("%i:%02i:%02i ", date.hour, date.min, date.sec)
+        if not msg then
+            msg = '""'
+        end
+        self.buf = self.buf .. dateStr  .. msg .. '\n'
+        self.linenum = self.linenum + 1
+        return
+    end,
+}
+
+local function loglocal(str, lvl)
+    if not lvl then
+        lvl = 0
+    else
+        if type(lvl) == 'table' then
+            if type(lvl.debug) == 'number' then
+                log('loglocal() setting lvl '..dbglvl..'; '..lvl.debug)
+                dbglvl = lvl.debug
+                return
+            end
+        elseif type(lvl) ~= 'number' then
+            log('loglocal() lvl not number; str: '..str)
+            return
+        end
+    end
+
+    if dbglvl > lvl then
+        --        log(debug.getinfo(1,'n').name ..' '..str)
+        log(str)
+        Loggr.add(Loggr, str)
+    end
+end
 
 function setupfiles()
     local fqfn = Scratchdir..Scratchpadfn
@@ -33,26 +83,37 @@ end                             -- end setupfiles
 setupfiles()
 
 local hist = {}
-hist.trigger = {enable = true, buf = '', idx = 0}
-hist.chat = {enable = true, buf = '', idx = 0}
-hist.radio = {enable = true, buf = '', idx = 0}
-hist.active = nil
+function hist.init()
+    hist.trigger = {enable = true, buf = '', idx = 0, button = nil}
+    hist.chat =    {enable = true, buf = '', idx = 0, button = nil}
+    hist.radio =   {enable = true, buf = '', idx = 0, button = nil}
+    hist.active = nil
+end
+hist.init()
+hist.currentbuf = nil
+
 
 local function bufradd(arg, msg)
     local date = os.date('*t')
     local dateStr = string.format('[%i:%02i:%02i] ', date.hour, date.min, date.sec)
     arg.idx = arg.idx + 1
     arg.buf = arg.buf .. dateStr .. msg .. '\n'
+    arg.panel.button:setText(string.upper(arg.panel.title))
 end
 
 local function showbuf(bufnm)
     if switchPage(Scratchdir..Scratchpadfn) then
-        TA:setText('')
-        -- hardcoded 1MB file limit from scratchpad
-        local buflen = string.len(hist[bufnm].buf)
-        local txt = string.sub(hist[bufnm].buf, buflen - (1024*1024))
-        TA:setText(bufnm..'\n'..txt)
-        TA:insertBottom('')
+        if bufnm and hist[bufnm] then
+            local h = hist[bufnm]
+            TA:setText('')
+            -- hardcoded 1MB file limit from scratchpad
+            local buflen = string.len(h.buf)
+            local txt = string.sub(h.buf, buflen - (1024*1024))
+            TA:setText(bufnm..'\n'..txt)
+            TA:insertBottom('')
+            hist.currentbuf = bufnm
+            h.panel.button:setText(string.lower(h.panel.title))
+        end
     end
 end
 
@@ -60,8 +121,6 @@ function handler.onChatMessage(message, from)
     local name = net.get_name(from)
     if name then
         message = name ..': '..message
-    else
-        message = 'nil name: '..message
     end
     
     bufradd(hist.chat, message)
@@ -75,6 +134,13 @@ function handler.onRadioMessage(message, duration)
     bufradd(hist.radio, message)
 end
 
+function handler.onMissionLoadEnd()
+    hist.init()
+    for i,j in pairs(panel) do
+        hist[j.title].panel = j
+    end
+end
+
 function checkarg(a)
     if type(a) then
         return net.lua2json(a)
@@ -84,7 +150,6 @@ function checkarg(a)
 end
 
 res = DCS.setUserCallbacks(handler)
-log('setcallback '..type(res))
 
 addButton(00, 00, 50, 30, 'chat', function(text)
               TA = text
@@ -116,6 +181,12 @@ addButton(150, 00, 50, 30, 'help', function(text)
               end
 end)
 
+addButton(200, 00, 50, 30, 'reset', function(text)
+              hist.init()
+              if switchPage() == Scratchdir..Scratchpadfn then
+                  TA:setText('')
+              end
+end)
 
 --####################################################
           function oldcode()
