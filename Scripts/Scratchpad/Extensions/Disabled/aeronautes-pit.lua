@@ -94,7 +94,8 @@ supported by each.
   to press. These have been adapted for specific aircraft as each one
   has it's own particular sequence of input. The API for this includes
   wp(), wpseq(), press() and UI buttons `LL` and `wp`.
-  * Waypoint input is currently supported for A-10C, AV8,
+
+  * Waypoint input is currently supported for A-10C, AV8, CH-47,
   F-15E, F-16C, FA-18C, Hercules, Ka-50/3, OH-58
 
 - 5. Customizations are higher level capabilities that utilize any
@@ -104,8 +105,10 @@ supported by each.
   can modify these yourself to make your own customizations for your
   aircraft. They can be utilized by clicking on the function buttons,
   `1`, `2`, ...
-  * Customizations are provided for A-10C, AV8, F-15E, F-16C, FA-18C,
-  Hercules, Ka-50/3, Mi-8, Mi-24.
+
+  * Customizations are provided for A-10C, AV8, CH-47, F-15E, F-16C,
+  FA-18C, Hercules, Ka-50_3, Mi-8, Mi-24, OH-58, Combined Arms and
+  Global(applies to all modules)
 
 ## Installed File - Functionality map
 
@@ -171,16 +174,18 @@ supported by each.
   entered into the aircrafts coordinate input system. In F10 map view
   this is the location at center of the screen. In any other view,
   cockpit or external, it is the 3d location of the camera
-  position. Some aircraft may have prerequisites before using
-  `LatLon`. For example, F-18 currently requires Precise coordinates
-  enabled. Per module notes should describe these requires and is
-  viewable by pressing the button labeled with the name of the module,
-  eg Hercules, F-16C_50. The default behavior upon click is for the
-  sequencer to increment the current waypoint and enter latlong. The
-  next click will carry out the same steps. You can modify this
-  behavior using the wpseq() function(see below). You can also disable
-  wpseq() to prevent any waypoint number change, leaving it up to you
-  to set the correct number.
+  position. This button will be visible only for modules that are
+  supported and hidden for those that are not. Some aircraft may have
+  prerequisites before using `LatLon`. For example, F-18 currently
+  requires Precise coordinates enabled. Per module notes should
+  describe these requires and is viewable by pressing the button
+  labeled with the name of the module, eg Hercules, F-16C_50. The
+  default behavior upon click is for the sequencer to increment the
+  current waypoint and enter latlong. The next click will carry out
+  the same steps. You can modify this behavior using the wpseq()
+  function(see below). You can also disable wpseq() to prevent any
+  waypoint number change, leaving it up to you to set the correct
+  number.
 
 - `Sel` - This will take the current text selection as Lua. If no text
   is selected, then the current line the cursor is on is
@@ -209,7 +214,6 @@ supported by each.
   building a mission plan that can be reused or passed along.
 
 - `mod` - scratchpad will switch to the page named aeronautes-pit and
-
   overwrites the page with a copy of the module customization
   file. This is useful to see the module specific aeronautes-pit
   documentation as well as the code for the customization. This is
@@ -221,14 +225,14 @@ supported by each.
 - `modload` - Convenience and customization code for the current
   aircraft are immediately reloaded and made available. This is useful
   if you are modifying or adding apit Customization files
-  (Extensions\aeronautes-lib), or if you've messed up some certain values from a
+  (Extensions\aeronautes-lib), or if you've messed up certain values from a
   scratchpad page and want to reset using Customization file values.
 
 - `log` - aeronautes-pit keeps a log of it's execution in a buffer.
   Clicking this button switches to the scratchpad page aeronautes-pit
   and overwrites it with the log.
 
-- `loglvl` - This is used to increase the debug level of apit
+- `loglvl` - This is used to change the debug level of apit
   logging. Each click change the button label to indicate the level
   with a rollover to zero after 9.
 
@@ -237,7 +241,13 @@ supported by each.
 
 - `1`, `2`,... - These dynamic function buttons provide one-click
   access to functions defined in the per module customization files in
-  Scratchpad\Extensions\aeronautes-lib\<module>.lua. 
+  Scratchpad\Extensions\aeronautes-lib\<module>.lua. The button titles
+  will match the name of the function. The number of buttons will vary
+  based on how many functions are defined in the associated Lua custom
+  file. The first row of buttons below 'modload' are indented and
+  specifically for the loaded module. The second row of buttons below
+  'modload' are for functions defined in Globalcustom.lua. These exist
+  no matter what module is loaded.
 
 ## apit API
     The Lua functions provided by apit are as follows:

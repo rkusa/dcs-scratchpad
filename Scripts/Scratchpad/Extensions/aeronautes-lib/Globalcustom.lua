@@ -156,6 +156,10 @@ ft['presetwp'] = function(input)
     local caps = {}
     local qrfsup = {}
     local forcewplimit = 9
+    local objstypes = {}
+    objstypes.obj = 1
+    objstypes.qrf = 1
+    objstypes.supply = 1
     
     for _,i in pairs(_current_mission.mission.triggers.zones) do
         local zone = {}
@@ -170,10 +174,10 @@ ft['presetwp'] = function(input)
             zone['verticies'] = copytable(i.verticies)
         end
 
-        if zone.type == 'obj' then
+        if objstypes[zone.type] then
             table.insert(objs, zone)
-        elseif zone.type == 'qrf' or zone.type == 'supply' then
-            table.insert(qrfsup, zone)
+--        elseif zone.type == 'qrf' or zone.type == 'supply' then
+--            table.insert(qrfsup, zone)
         elseif string.sub(zone.name, 1, 3) == 'CAP' then
             table.insert(caps, zone)
         end
@@ -198,7 +202,16 @@ ft['presetwp'] = function(input)
     if #objlist > 1 then
         umsg('Multiple objectives found: '..input..' ('..#objlist..')')
     end
-    
+
+    -- load current presets file
+    local atr = lfs.attributes(presetfn)
+    if atr and atr.mode == 'file' then
+        dofile(presetfn)
+    end
+    if not presets then
+        presets = {}
+    end
+
     for i,obtgt in pairs(objlist) do
         loglocal('OBJ: '..net.lua2json(obtgt), 4)
         local bb = boundingbox(obtgt.verticies)
@@ -280,14 +293,13 @@ ft['presetwp'] = function(input)
                 end
             end
             table.sort(dC[i], function(a,b) return a.cost < b.cost end)
-    loglocal('BUB: '..net.lua2json(dC[i]))
 --]]
             end
         end
         for i=1, #dtab do
             loglocal('dtab: '..i..': '..net.lua2json(dtab[i]), 4)
         end
-        forcewplimit = 0--NC
+        forcewplimit = 9
         local selfdata = Export.LoGetSelfData()
         local selfpos = {x = selfdata.Position.x, y = selfdata.Position.z}
         loglocal('selfdata: '..net.lua2json(selfdata.Position), 4)
@@ -342,9 +354,6 @@ ft['presetwp'] = function(input)
                 end
             end
         else                    -- #wp > 8 do nearest neighbor
---            table.sort(objwp, function(a,b) return a.x < b.x end) -- sort wp from south increasing to north
---            minrt.r = route
---            umsg('presetwp: #wp >= '..forcewplimit..', route order South to North')
 
             function NN(route)  -- nearest neighbor
                 local Q = {}
@@ -439,15 +448,6 @@ ft['presetwp'] = function(input)
         end                     -- #objwp < 9
         loglocal('presetfix minrt: '..net.lua2json(minrt), 6)
 
-        -- create and merge new presets with current presets file
-        local atr = lfs.attributes(presetfn)
-        if atr and atr.mode == 'file' then
-            dofile(presetfn)
-        end
-        if not presets then
-            presets = {}
-        end
-
         local rt = DCS.getMissionName()..'-v'.._current_mission.mission.version..'-'
         if obtgt.lat then
             rt = rt..'Lat'..obtgt.lat..'-'
@@ -458,7 +458,9 @@ ft['presetwp'] = function(input)
         end
         
         local etatot = 900
-        presets[rt] = {}
+        if not presets[rt] then
+            presets[rt]= {}
+        end
         local pretmp = {
             alt = 0,
             type =  "Turning Point",
@@ -488,9 +490,9 @@ ft['presetwp'] = function(input)
             end
         end                         -- end pairs(objwp)
         umsg(#objwp..' wps created for '..rt)
-        loglocal('presetwp: preset created '..net.lua2json(presets[rt]), 6)
+        loglocal('presetwp: preset created '..net.lua2json(presets[rt][1]), 6)
     end -- obtgt in pairs(objlist)
-    
+
     -- write new presets
     writepresets(presets)
 end                             -- end presetwp
