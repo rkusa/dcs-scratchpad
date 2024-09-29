@@ -1,5 +1,14 @@
 --[[ working functions:
 
+    Prerequisite:
+    https://github.com/aeronautes/Hercules-6.8.2-macrofix/archive/refs/heads/main.zip
+    You will need to install this macrofix to enable the Anubis Herc
+    mod to use the macro interface. Unzip it's contents into the
+    location of your Herc mod, ie: "Saved
+    Games\DCS\Mods\aircraft\Hercules ver 6.8.2" directory. Note "DCS"
+    directory might be slightly different on your system such as
+    DCS.openbeta.
+
     start - start engines, currently uses ground elec/air, so timing
     cant clash with other ground orders. Just make sure you start
     engines before doing anything else like rearming or fueling. This
@@ -30,8 +39,8 @@
 
     night - set lighting for night flying
 
-    pivot - log to Scratchpad.log the required speed for current
-    altitude to do pivot turn
+    pivot - display in game chat and log to Scratchpad.log the
+    required speed for current altitude to do pivot turn
 --]]
 
 -- module specific configuration

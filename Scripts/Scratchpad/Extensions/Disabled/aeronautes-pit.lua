@@ -1736,6 +1736,17 @@ function wp(inp)
         return result .. "\n"
     elseif type(inp) == 'table' then
         loglocal('wp() inp table:'..net.lua2json(inp), 3)
+        local pos = Export.LoLoCoordinatesToGeoCoordinates(inp.y, inp.x)
+
+        local types = coordsType(unittype)
+        if types then
+            wp(LLtoAC(formatCoordConv(types.format, true, pos.latitude, types),
+                   formatCoordConv(types.format, false, pos.longitude, types),
+                   string.format("%.0f", inp.alt*3.28084)))
+        else
+            loglocal('wp() coordsType() returned nil, unittype: '..unittype)
+            return nil
+        end
     else
         loglocal('wp() unhandled arg type: '..type(inp))
     end
@@ -1826,6 +1837,7 @@ function loadDTCBuffer(text)
            itval = itval,
            dbglvl = dbgvlvl,
            kp = kp,
+           LT = LT,
            loglocal = loglocal,
            unittab = unittab,
            ttlist = ttlist,
@@ -1868,6 +1880,7 @@ function assignCustom()
                      ttf = ttf,
                      ttt = ttt,
                      delay = delay,
+                     LT = LT,
                      loglocal = loglocal,
                      switchPage = switchPage,
                      extid = extid,

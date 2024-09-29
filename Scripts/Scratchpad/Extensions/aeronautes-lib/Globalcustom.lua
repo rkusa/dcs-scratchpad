@@ -8,33 +8,42 @@
        needed for routes created with presetwp
 
     ## presetwp - used on Grayflag servers given an objective name
-    produces additions to route tool preset file. DCS only reads
-    'Saved Game\DCS\Config\RouteToolPresets' after the mission loads
-    when joining server. This means any update wont show up in game
-    until the next server join. The script will merge it's additions
-    but you may choose to backup your presets if you value any of the
-    previous settings. Alternatively you can delete the file in the
-    RouteToolPresets directory to quickly initialize settings or use
-    the RouteTools F10 menu to delete individual routes. No gaurantees
-    are made with the use of this software.
-    
-    To use, highlight the name of the objective in scratchpad then
-    click the presetwp button. Information messages will be posted in
-    game chat window. Do as many objectives as you want then leave and
-    rejoin server and you should see the new presets in the drop down
-    list. This extension has the capability to pass the entire line as
-    input objective name if you dont highlight anything. For presetwp
-    that means you need a line with only the name of the objective,
-    place the cursor anywhere on that line and click the
-    button. Otherwise, on Grayflag servers, if you make an F10
-    'update' label and click on the aeronautes-msg extension's trigger
-    button you can highlight the objective names.
+       produces additions to route tool preset file. DCS only reads
+       'Saved Game\DCS\Config\RouteToolPresets' after the mission
+       loads when joining server. This means any update wont show up
+       in game until the next server join. The script will merge it's
+       additions but you may choose to backup your presets if you
+       value any of the previous settings. Alternatively you can
+       delete the file in the RouteToolPresets directory to quickly
+       initialize settings or use the RouteTools F10 menu to delete
+       individual routes. No gaurantees are made with the use of this
+       software.
 
+       To use, highlight the name of the objective in scratchpad then
+       click the presetwp button. Information messages will be posted
+       in game chat window. Do as many objectives as you want then
+       leave and rejoin server and you should see the new presets in
+       the drop down list. This extension has the capability to pass
+       the entire line as input objective name if you dont highlight
+       anything. For presetwp that means you need a line with only the
+       name of the objective, place the cursor anywhere on that line
+       and click the button. Otherwise, on Grayflag servers, if you
+       make an F10 'update' label and click on the aeronautes-msg
+       extension's trigger button you can highlight the objective
+       names.
+
+    ## RTlist - clears and displays in aeronautes-pit buffer the
+       available routes in the current RT presets file.
+
+    ## RTloadrt - takes RouteTool preset route name input from
+       scratchpad and enters that into the aircraft nav system if
+       available.
+    
     ## globalfile - shows the contents of Globalcustom.lua.
 --]]
 
 local ft = {}
-ft.order = {'presetwp', 'presetfix', 'globalfile'}
+ft.order = {'presetwp', 'presetfix', 'RTlist', 'RTloadrt', 'globalfile'}
 local presetfn = lfs.writedir()..[[Config\RouteToolPresets\]].._current_mission.mission.theatre..'.lua'
 
 local function copytable(src)
@@ -85,9 +94,47 @@ local function umsg(str)
     net.recv_chat(str)
 end
 
+local function showtext(txt)
+    if not txt then
+        loglocal('showtext: txt nil', 2)
+        return
+    end
+    if switchPage(Scratchdir..Scratchpadfn) then
+        if not TA then
+            TA = getTextarea()
+        end
+
+        TA:setText('')
+        -- hardcoded 1MB file limit from scratchpad
+        local buflen = string.len(txt)
+        if buflen > (1024 * 1024) then
+            txt = string.sub(txt, 0, (1024*1024)-80) --limit 1 MB worth
+            txt = txt ..'<<< File too big for scratchpad. Display truncated to 1MB >>>'
+            loglocal('apit mod buflen > 1MB: '..buflen)
+        end
+
+        TA:setText(txt)
+    end
+end                             -- end showtext
+
 local function trim(s)                -- https://lua-users.org/wiki/StringTrim
    return s:match'^%s*(.*%S)' or ''
 end
+
+function readpresets(input)
+
+    -- load current presets file
+    local atr = lfs.attributes(presetfn)
+    if atr and atr.mode == 'file' then
+        dofile(presetfn)
+    end
+    if not presets then
+        loglocal('readpresets: presets not assigned from '..presetfn)
+        return
+    end
+
+    return presets
+end                             -- end readpresets
 
 local pfile
 function writepresets(presets)
@@ -154,7 +201,7 @@ ft['presetwp'] = function(input)
 
     local objs = {}
     local caps = {}
-    local qrfsup = {}
+    local allqrfs = {}
     local forcewplimit = 9
     local objstypes = {}
     objstypes.obj = 1
@@ -176,14 +223,12 @@ ft['presetwp'] = function(input)
 
         if objstypes[zone.type] then
             table.insert(objs, zone)
---        elseif zone.type == 'qrf' or zone.type == 'supply' then
---            table.insert(qrfsup, zone)
         elseif string.sub(zone.name, 1, 3) == 'CAP' then
             table.insert(caps, zone)
         end
     end
     table.sort(caps, function(a,b) return a.x < b.x end)
-    loglocal('caps:'..#caps.. ' objs: '..#objs.. ' qrfsup: '..#qrfsup, 4)
+    loglocal('caps:'..#caps.. ' objs: '..#objs, 2)
 
     local objlist = {}
     loglocal('input: #'..input..'#', 4)
@@ -217,58 +262,97 @@ ft['presetwp'] = function(input)
         local bb = boundingbox(obtgt.verticies)
         loglocal('BB: '..net.lua2json(bb), 4)
 
-        -- DCS x axis is vertical, y horizontal
-        local minx = bsearch(caps, #caps, bb.minx, function(a,b) return a.x < b end)
-        local maxx = bsearch(caps, #caps, bb.maxx, function(a,b) return a.x < b end)
-        loglocal('RESX: '..minx .. ' , '..maxx, 4)
-        local xrng = {}
+        -- findwp requires wplist be sort by x
+        function findwp(obj, wplist)
+            -- DCS x axis is vertical, y horizontal
+            local minx = bsearch(wplist, #wplist, bb.minx, function(a,b) return a.x < b end)
+            local maxx = bsearch(wplist, #wplist, bb.maxx, function(a,b) return a.x < b end)
+            loglocal('RESX: '..minx .. ' , '..maxx, 4)
+            local xrng = {}
 
-        for i=minx,maxx do
-            table.insert(xrng, caps[i])
-        end
-        table.sort(xrng, function(a,b) return a.y < b.y end)
-        
-        local miny = bsearch(xrng, #xrng, bb.miny, function(a,b) return a.y < b end)
-        local maxy = bsearch(xrng, #xrng, bb.maxy, function(a,b) return a.y < b end)
-        loglocal('RESY: '..miny .. ' , '..maxy, 4)
-        for i=miny, maxy do
-            loglocal(i..' BBOXED result: '..net.lua2json(xrng[i]), 4)
-        end
+            for i=minx,maxx do
+                table.insert(xrng, wplist[i])
+            end
+            table.sort(xrng, function(a,b) return a.y < b.y end)
 
-        -- caps in obj test
-        local objwp = {}
-        for i=miny, maxy do
-            local intcount = 0
+            local miny = bsearch(xrng, #xrng, bb.miny, function(a,b) return a.y < b end)
+            local maxy = bsearch(xrng, #xrng, bb.maxy, function(a,b) return a.y < b end)
+            loglocal('RESY: '..miny .. ' , '..maxy, 4)
+            for i=miny, maxy do
+                loglocal(i..' BBOXED result: '..net.lua2json(xrng[i]), 4)
+            end
 
-            function intersect(P1, y2, P3, P4)
-                if P1.x < math.min(P3.x, P4.x) or P1.x > math.max(P3.x, P4.x) then
-                    loglocal('point BB P1.x:'..P1.x..' P3.x:'..P3.x..' P4.x:'..P4.x, 6)
-                    return 0
+            -- wplist in obj test
+            local objwp = {}
+            for i=miny, maxy do
+                local intcount = 0
+
+                function intersect(P1, y2, P3, P4)
+                    if P1.x < math.min(P3.x, P4.x) or P1.x > math.max(P3.x, P4.x) then
+                        loglocal('point BB P1.x:'..P1.x..' P3.x:'..P3.x..' P4.x:'..P4.x, 6)
+                        return 0
+                    end
+                    t = ((P1.y-P3.y)*(P3.x-P4.x)-(P1.x-P3.x)*(P3.y-P4.y)) / ((P1.y-y2)*(P3.x-P4.x))
+                    loglocal(P1.name..' P1: '..net.lua2json(P1)..' my: '..y2..' v1: '..net.lua2json(P3)..' v2: '..net.lua2json(P4), 6)
+                    loglocal('poly test: t: '..t, 6)
+                    if 0 <= t and t <=1.0 then
+                        return 1
+                    else
+                        return 0
+                    end
                 end
-                t = ((P1.y-P3.y)*(P3.x-P4.x)-(P1.x-P3.x)*(P3.y-P4.y)) / ((P1.y-y2)*(P3.x-P4.x))
-                loglocal(P1.name..' P1: '..net.lua2json(P1)..' my: '..y2..' v1: '..net.lua2json(P3)..' v2: '..net.lua2json(P4), 6)
-                loglocal('poly test: t: '..t, 6)
-                if 0 <= t and t <=1.0 then
-                    return 1
+
+                for j=1,3 do
+                    intcount = intcount + intersect(xrng[i], bb.maxy, obj.verticies[j], obj.verticies[j+1])
+                    loglocal(j..' INTERSECT: '..intcount, 7)
+                end
+                intcount = intcount + intersect(xrng[i], bb.maxy, obj.verticies[4], obj.verticies[1])
+                loglocal('4 INTERSECT: '..intcount, 7)
+
+                if math.mod(intcount, 2) == 0 then
+                    loglocal(intcount..' OUTSIDE POLY, passing '..net.lua2json(xrng[i]), 4)
                 else
-                    return 0
+                    loglocal(intcount..' Inside poly inserting '..net.lua2json(xrng[i]), 4)
+                    table.insert(objwp, xrng[i])
+                end
+            end                         -- end i=miny, maxy
+            return objwp
+        end                             -- end findwp
+
+        function getstatics()
+            local qrfs = {}
+            local qrfcats = {Warehouses = 1, Fortifications = 1}
+
+            for _,i in pairs(_current_mission.mission.coalition.red.country) do
+                loglocal('Country: '..i.name, 4)
+                if i.static and i.static.group then
+                    for _,j in pairs(i.static.group) do
+                        if qrfcats[j.units[1].category] then
+                            loglocal('getstatics name: '..j.name.. ' cat: '..(j.units[1].category)..' type: '..(j.units[1].type), 6)
+                            table.insert(qrfs, {name = j.name, x = j.x, y = j.y, type=j.units[1].type})
+                        end
+                    end
                 end
             end
+            table.sort(qrfs, function(a,b) return a.x < b.x end)
+            loglocal('QRFS: '..#qrfs, 4)
+            return qrfs
+        end
 
-            for j=1,3 do
-                intcount = intcount + intersect(xrng[i], bb.maxy, obtgt.verticies[j], obtgt.verticies[j+1])
-                loglocal(j..' INTERSECT: '..intcount, 7)
+        local objwp = {}
+        if obtgt.type == 'obj' then
+            objwp = findwp(obtgt, caps)
+        else
+            if #allqrfs == 0 then
+                allqrfs = getstatics()
+                if #allqrfs == 0 then
+                    umsg('presetwp unable to find statics for QRF, failing')
+                    loglocal('presetwp getstatics returned 0')
+                    return
+                end
             end
-            intcount = intcount + intersect(xrng[i], bb.maxy, obtgt.verticies[4], obtgt.verticies[1])
-            loglocal('4 INTERSECT: '..intcount, 7)
-
-            if math.mod(intcount, 2) == 0 then
-                loglocal(intcount..' OUTSIDE POLY, passing '..net.lua2json(xrng[i]), 4)
-            else
-                loglocal(intcount..' Inside poly inserting '..net.lua2json(xrng[i]), 4)
-                table.insert(objwp, xrng[i])
-            end
-        end                         -- end i=miny, maxy
+            objwp = findwp(obtgt, allqrfs)
+        end
 
         if #objwp == 0 then
             umsg('Objective waypoints size zero, no presets designated, '..input..' ('..obtgt.name..')')
@@ -300,7 +384,7 @@ ft['presetwp'] = function(input)
             loglocal('dtab: '..i..': '..net.lua2json(dtab[i]), 4)
         end
         forcewplimit = 9
-        local selfdata = Export.LoGetSelfData()
+        local selfdata = Export.LoGetSelfData() or {Position = {x = 0, z = 0}}
         local selfpos = {x = selfdata.Position.x, y = selfdata.Position.z}
         loglocal('selfdata: '..net.lua2json(selfdata.Position), 4)
         local basedist = {}
@@ -313,7 +397,7 @@ ft['presetwp'] = function(input)
             local tot = 1
             for i=1, #r-1 do
                 dist = dist + dtab[r[i]][r[i+1]]
-                loglocal('routedist: '..r[i]..'->'..r[i+1]..': '..dtab[r[i]][r[i+1]], 6)
+                --Too much log loglocal('routedist: '..r[i]..'->'..r[i+1]..': '..dtab[r[i]][r[i+1]], 6)
             end
             loglocal(tot..' route: '..net.lua2json(r).. ' dist: '..dist, 6)
             tot = tot + 1
@@ -506,19 +590,18 @@ end                             -- end presetwp
 -- box, presetfix will not alter it.
 ft['presetfix'] = function(input)
     loglocal('presetfix call', 2)
-
-    local atr = lfs.attributes(presetfn)
-    if atr and atr.mode == 'file' then
-        dofile(presetfn)
-    end
+    readpresets()
     if not presets then
-        loglocal('presetfix file not found '..presetfn)
+        loglocal('presetfix: presets not assigned'..presetfn)
         return 0
     end
 
     for rtname,rtnode in pairs(presets) do
         loglocal('presetfix rt: '..rtname, 6)
         for wpnum, wp in pairs(rtnode) do
+            if not wp.name then
+                wp.name = ''
+            end
             loglocal('presetfix current wp: '..wp.name..' alt: '..wp.alt, 6)
             if wp.alt == 2000 then
                 wp.alt = Export.LoGetAltitude(wp.x, wp.y)
@@ -528,6 +611,50 @@ ft['presetfix'] = function(input)
     end
     writepresets(presets)
 end                         -- presetfix
+
+--#################################
+-- RTlist v0.1
+-- list the available routes in the theaters RouteTool presets,
+-- overwriting the apit buffer
+ft['RTlist'] = function(input)
+    input = trim(input)
+    loglocal('RTlist call: #'..input..'#', 2)
+
+    local txt = ''
+    local rtlist = {}
+
+    readpresets()
+    for i,_ in pairs(presets) do
+        table.insert(rtlist, i)
+    end
+    table.sort(rtlist)
+    for i=1, #rtlist do
+        txt = txt ..rtlist[i]..'\n'
+    end
+
+    showtext(txt)
+end                             -- RTlist
+
+--#################################
+-- RTloadrt v0.1
+-- load the selected route into the jet/heli if possible
+ft['RTloadrt'] = function(input)
+    input = trim(input)
+    loglocal('RTloadrt call: #'..input..'#', 2)
+
+    if not presets[input] then
+        umsg('RTloadrt route not found, '..input)
+        return
+    end
+
+    local rt = presets[input]
+    local lat, lon
+    for i=1, #rt do
+        loglocal('RTloadrt: i: '..i..' latlong '..
+                 net.lua2json(Export.LoLoCoordinatesToGeoCoordinates(rt[i].x, rt[i].z)), 4)
+        wp(rt[i])
+    end
+end                             -- RTlist
 
 --#################################
 -- globalfile v0.1
