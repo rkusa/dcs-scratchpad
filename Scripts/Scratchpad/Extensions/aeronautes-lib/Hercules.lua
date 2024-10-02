@@ -1,5 +1,14 @@
 --[[ working functions:
 
+    Prerequisite:
+    https://github.com/aeronautes/Hercules-6.8.2-macrofix/archive/refs/heads/main.zip
+    You will need to install this macrofix to enable the Anubis Herc
+    mod to use the macro interface. Unzip it's contents into the
+    location of your Herc mod, ie: "Saved
+    Games\DCS\Mods\aircraft\Hercules ver 6.8.2" directory. Note "DCS"
+    directory might be slightly different on your system such as
+    DCS.openbeta.
+
     start - start engines, currently uses ground elec/air, so timing
     cant clash with other ground orders. Just make sure you start
     engines before doing anything else like rearming or fueling. This
@@ -30,8 +39,8 @@
 
     night - set lighting for night flying
 
-    pivot - log to Scratchpad.log the required speed for current
-    altitude to do pivot turn
+    pivot - display in game chat and log to Scratchpad.log the
+    required speed for current altitude to do pivot turn
 --]]
 
 -- module specific configuration
@@ -40,26 +49,7 @@ wpseq({cur=1,
 })
 
 local ft = {}
-ft.order = {'test','start', 'takeoff', 'landing', 'night', 'pivot'}
-
-ft['test'] = function()
-    local objs = {}
-    for _,j in pairs(_current_mission.mission.triggers.zones) do
-        if j.type == 2 then
-            local ob = {}
-            ob = {['name'] = j.name, ['x'] = j.x, ['y'] = j.y}
-            for _,l in pairs(j.properties) do
-                ob[l.key] = l.value
-            end
-            table.insert(objs, ob)
-        end
-    end
-
-    table.sort(objs, function(a,b) return a.x < b.x end)
-    for _,j in pairs(objs) do
-        loglocal(net.lua2json(j))
-    end
-end
+ft.order = {'start', 'takeoff', 'landing', 'night', 'pivot'}
 
 --#################################
 -- pivot v0.1
@@ -120,7 +110,10 @@ end                             -- end night
 -- need to start in reverse numerical order, primarily engine 1 or 2 needs to be last to start
 
 ft['start'] = function(action)
-    if type(action) == 'table' then
+    local valid = {engspool='engspool', posteng='posteng'}
+    action = valid[action] or ''
+
+    if action == '' then
 
         -- Beginning of start procedure
 

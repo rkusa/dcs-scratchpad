@@ -1,6 +1,6 @@
-local version=.63
+local version=.64
 local readme = [=[
-# aeronautes-pit (Apit)
+# aeronautes-pit (Apit) https://github.com/aeronautes/dcs-scratchpad
 
 This is an extension to github.com/rkusa/scratchpad for DCS. At a high
 level it provides the ability to configure your aircraft, assist with
@@ -94,7 +94,8 @@ supported by each.
   to press. These have been adapted for specific aircraft as each one
   has it's own particular sequence of input. The API for this includes
   wp(), wpseq(), press() and UI buttons `LL` and `wp`.
-  * Waypoint input is currently supported for A-10C, AV8,
+
+  * Waypoint input is currently supported for A-10C, AV8, CH-47,
   F-15E, F-16C, FA-18C, Hercules, Ka-50/3, OH-58
 
 - 5. Customizations are higher level capabilities that utilize any
@@ -104,8 +105,10 @@ supported by each.
   can modify these yourself to make your own customizations for your
   aircraft. They can be utilized by clicking on the function buttons,
   `1`, `2`, ...
-  * Customizations are provided for A-10C, AV8, F-15E, F-16C, FA-18C,
-  Hercules, Ka-50/3, Mi-8, Mi-24.
+
+  * Customizations are provided for A-10C, AV8, CH-47, F-15E, F-16C,
+  FA-18C, Hercules, Ka-50_3, Mi-8, Mi-24, OH-58, Combined Arms and
+  Global(applies to all modules)
 
 ## Installed File - Functionality map
 
@@ -171,16 +174,18 @@ supported by each.
   entered into the aircrafts coordinate input system. In F10 map view
   this is the location at center of the screen. In any other view,
   cockpit or external, it is the 3d location of the camera
-  position. Some aircraft may have prerequisites before using
-  `LatLon`. For example, F-18 currently requires Precise coordinates
-  enabled. Per module notes should describe these requires and is
-  viewable by pressing the button labeled with the name of the module,
-  eg Hercules, F-16C_50. The default behavior upon click is for the
-  sequencer to increment the current waypoint and enter latlong. The
-  next click will carry out the same steps. You can modify this
-  behavior using the wpseq() function(see below). You can also disable
-  wpseq() to prevent any waypoint number change, leaving it up to you
-  to set the correct number.
+  position. This button will be visible only for modules that are
+  supported and hidden for those that are not. Some aircraft may have
+  prerequisites before using `LatLon`. For example, F-18 currently
+  requires Precise coordinates enabled. Per module notes should
+  describe these requires and is viewable by pressing the button
+  labeled with the name of the module, eg Hercules, F-16C_50. The
+  default behavior upon click is for the sequencer to increment the
+  current waypoint and enter latlong. The next click will carry out
+  the same steps. You can modify this behavior using the wpseq()
+  function(see below). You can also disable wpseq() to prevent any
+  waypoint number change, leaving it up to you to set the correct
+  number.
 
 - `Sel` - This will take the current text selection as Lua. If no text
   is selected, then the current line the cursor is on is
@@ -209,7 +214,6 @@ supported by each.
   building a mission plan that can be reused or passed along.
 
 - `mod` - scratchpad will switch to the page named aeronautes-pit and
-
   overwrites the page with a copy of the module customization
   file. This is useful to see the module specific aeronautes-pit
   documentation as well as the code for the customization. This is
@@ -221,14 +225,14 @@ supported by each.
 - `modload` - Convenience and customization code for the current
   aircraft are immediately reloaded and made available. This is useful
   if you are modifying or adding apit Customization files
-  (Extensions\aeronautes-lib), or if you've messed up some certain values from a
+  (Extensions\aeronautes-lib), or if you've messed up certain values from a
   scratchpad page and want to reset using Customization file values.
 
 - `log` - aeronautes-pit keeps a log of it's execution in a buffer.
   Clicking this button switches to the scratchpad page aeronautes-pit
   and overwrites it with the log.
 
-- `loglvl` - This is used to increase the debug level of apit
+- `loglvl` - This is used to change the debug level of apit
   logging. Each click change the button label to indicate the level
   with a rollover to zero after 9.
 
@@ -237,7 +241,13 @@ supported by each.
 
 - `1`, `2`,... - These dynamic function buttons provide one-click
   access to functions defined in the per module customization files in
-  Scratchpad\Extensions\aeronautes-lib\<module>.lua. 
+  Scratchpad\Extensions\aeronautes-lib\<module>.lua. The button titles
+  will match the name of the function. The number of buttons will vary
+  based on how many functions are defined in the associated Lua custom
+  file. The first row of buttons below 'modload' are indented and
+  specifically for the loaded module. The second row of buttons below
+  'modload' are for functions defined in Globalcustom.lua. These exist
+  no matter what module is loaded.
 
 ## apit API
     The Lua functions provided by apit are as follows:
@@ -469,10 +479,12 @@ local ttlist = {}               -- tool tips from clicabledata.lua
 -- butt vars below control the apit UI buttons created in scratchpad
 local butts = {}
 local buttfn = {} -- indirection funcs to bind to onClick by vary with assignCustom()
-local buttfnamt = 10            -- number of assignable custom function buttons
+local buttfnlimit = 10 -- limit on each of global and module button funcs
+local buttfnamt = 20            -- number of assignable custom function buttons
 local buttw = 50
 local butth = 30
 local panelbytitle = {}
+local Globalcustomfile = Apitlibdir..'Globalcustom.lua'
 
 Spinr = {
     frames = {'/','|','\\','-'},
@@ -1724,6 +1736,17 @@ function wp(inp)
         return result .. "\n"
     elseif type(inp) == 'table' then
         loglocal('wp() inp table:'..net.lua2json(inp), 3)
+        local pos = Export.LoLoCoordinatesToGeoCoordinates(inp.y, inp.x)
+
+        local types = coordsType(unittype)
+        if types then
+            wp(LLtoAC(formatCoordConv(types.format, true, pos.latitude, types),
+                   formatCoordConv(types.format, false, pos.longitude, types),
+                   string.format("%.0f", inp.alt*3.28084)))
+        else
+            loglocal('wp() coordsType() returned nil, unittype: '..unittype)
+            return nil
+        end
     else
         loglocal('wp() unhandled arg type: '..type(inp))
     end
@@ -1814,11 +1837,17 @@ function loadDTCBuffer(text)
            itval = itval,
            dbglvl = dbgvlvl,
            kp = kp,
+           LT = LT,
            loglocal = loglocal,
            unittab = unittab,
            ttlist = ttlist,
            panel = panel,
            unittype = unittype,
+           getinput = getinput,
+           getTextarea = getTextarea,
+           extid = extid,
+           Scratchdir = Scratchdir,
+           Scratchpadfn = Scratchpadfn,
     }
     setmetatable(env, {__index = _G}) --needed to pickup all the
                                       --module macro definitions like
@@ -1834,10 +1863,88 @@ function loadDTCBuffer(text)
 end                             -- end of loadDTCBuffer()
 
 function assignCustom()
-    local infn = Apitlibdir ..unittype..'.lua'
-    loglocal('aeronautespit: using customfile '..infn, 1)
 
-    for i,j in pairs(panel) do
+    function doCustom(infn)
+        loglocal('aeronautespit: using customfile '..infn, 1)
+
+        local ok, res
+        local funclist = {}
+        local env = {push_stop_command = push_stop_command,
+                     push_start_command = push_stop_command,
+                     prewp = prew,
+                     wp = wp,
+                     wpseq = wpseq,
+                     press = press,
+                     tt = tt,
+                     ttn = ttn,
+                     ttf = ttf,
+                     ttt = ttt,
+                     delay = delay,
+                     LT = LT,
+                     loglocal = loglocal,
+                     switchPage = switchPage,
+                     extid = extid,
+                     Scratchdir = Scratchdir,
+                     Scratchpadfn = Scratchpadfn,
+                     Apitlibdir = Apitlibdir,
+                     Apitlibsubdir = Apitlibsubdir,
+                     getTextarea = getTextarea,
+        }
+        --needed to pickup all the module macro definitions like
+                                              --device/action
+        setmetatable(env, {__index = _G})
+
+        ok, res =  apcall({fn=infn, env = env})
+
+        if ok then
+            if not res then
+                loglocal('doCustom() res nil ')
+                return
+            end
+
+            local fnadded = 0
+            if res.order then
+                local fname = ''
+                for i=1,#res.order do
+                    if fnadded >= buttfnlimit then
+                        loglocal('assignCustom() ordered func limit reached('..buttfnlimit..'), no more funcs added; file: '..infn)
+                        break
+                    end
+                    fname = res.order[i]
+                    if type(res[fname]) == 'function' then
+                        fnadded = fnadded + 1
+                        funclist[fnadded] = {name = fname, fn = res[fname]}
+                    else
+                        loglocal('doCustom() order name not function: '..fname..', file: '..infn)
+                    end
+                end             -- end for #res.order
+            else
+                for fname,_ in pairs(res) do
+                    if fnadded >= buttfnlimit then
+                        loglocal('assignCustom() ordered func limit reached('..buttfnlimit..'), no more funcs added; file: '..infn)
+                        break
+                    end
+                    if type(res[fname]) == 'function' then
+                        fnadded = fnadded + 1
+                        funclist[fnadded] = {name = fname, fn = res[fname]}
+                    end
+                end
+            end                 -- end if res.order
+
+            if res['init'] and type(res['init']) == 'string' then -- run custom init
+                loglocal('assignCustom() running unit init', 4)
+                loadDTCBuffer(res['init'])
+            end
+
+            return ok, res, funclist
+        end                     -- end ok
+    end                         -- end doCustom()
+
+    for i,j in pairs(buttfn) do -- re/initialize indirection funcs
+        buttfn[i] = nil
+    end
+
+    for i,j in pairs(panel) do  -- initialize panelbytitle
         if string.match(j.title, '^%d+$') then
             j.button:setText(j.title)
             j.button:setVisible(false)
@@ -1847,77 +1954,41 @@ function assignCustom()
         end
     end
 
-    local env = {push_stop_command = push_stop_command,
-               push_start_command = push_stop_command,
-               prewp = prew,
-               wp = wp,
-               wpseq = wpseq,
-               press = press,
-               tt = tt,
-               ttn = ttn,
-               ttf = ttf,
-               ttt = ttt,
-               delay = delay,
-               loglocal = loglocal,
-    }
-    setmetatable(env, {__index = _G})     --needed to pickup all the
-                                          --module macro definitions
-                                          --like device/action
+    local ok, res, funs
 
-    local ok, res = apcall({fn=infn, env = env})
+    local infn = Apitlibdir ..unittype..'.lua'
+    ok, res, funs  = doCustom(infn)
 
     if ok then
-        unittab = res
-        for i,j in pairs(buttfn) do
-            buttfn[i] = nil
+        for i=1,#funs do -- add module custom funcs to buttons 1-10
+            buttfn[i] = funs[i].fn
+            panelbytitle[tostring(i)].button:setText(funs[i].name)
+            panelbytitle[tostring(i)].button:setVisible(true)
         end
-        local idx = 0
+    else
+        loglocal('assignCustom() not ok infn: '..infn)
+    end                         -- end ok
 
-        if not unittab then
-            loglocal('assignCustom() res/unittab nil ')
-            return
+    infn = Globalcustomfile
+    ok, res, funs  = doCustom(infn)
+    if ok then
+        local j
+        for i=1,#funs do -- add module custom funcs to buttons 11-20
+            j = i + 10
+            buttfn[j] = funs[i].fn
+            panelbytitle[tostring(j)].button:setText(funs[i].name)
+            panelbytitle[tostring(j)].button:setVisible(true)
         end
+    else
+        loglocal('assignCustom() not ok infn: '..infn)
+    end                         -- end ok
 
-        if unittab.order then
-            loglocal('assignCustom() unittab.order: '..net.lua2json(unittab.order), 2)
-            local fname = ''
-            for i=1,#unittab.order do
-                fname = unittab.order[i]
-                if type(unittab[fname]) == 'function' then
-                    buttfn[i] = unittab[fname]
-                    panelbytitle[tostring(i)].button:setText(fname)
-                    panelbytitle[tostring(i)].button:setVisible(true)
-                else
-                    loglocal('assignCustom() order name not function: '..fname)
-                end
-            end
-        else
-            loglocal('assignCustom() no unittab.order detected, adding all functions '..unittype)
-            for i,j in pairs(unittab) do
-                if type(j) == 'function' then
-                    idx = idx + 1
-                    buttfn[idx] = j
-                    panelbytitle[tostring(idx)].button:setText(i)
-                    panelbytitle[tostring(idx)].button:setVisible(true)
-                end
-            end
-        end
-        
-        loglocal('assignCustom #unittab: '..#unittab ..': '.. unittype)
-        Spinr:rest()
-
-        if LT[unittype]['wpentry'] then
+    if panelbytitle['LatLon'] then -- toggle LatLon button based on aircraft capability
+        if unittype and LT[unittype] and LT[unittype]['wpentry'] then
             panelbytitle['LatLon'].button:setVisible(true)
         else
             panelbytitle['LatLon'].button:setVisible(false)
         end
-        
-        if unittab['init'] and type(unittab['init']) == 'string' then
-            loglocal('assignCustom() running unit init', 4)
-            loadDTCBuffer(unittab['init'])
-        end
-    else
-        loglocal('assignCustom apcall fail, ok: '..type(ok)..' res: '..type(res))
     end
 end                             -- end of assignCustom()
 
@@ -2124,10 +2195,12 @@ function getCurrentLineOffsets(text, cur)
 
     for i = cur, 0, -1 do
         if text:byte(i) == nl then
+            linestart = linestart + 1
             break
         end
         linestart = linestart - 1
-        if linestart == 0 then
+        if linestart <= 0 then
+            linestart = 1
             break
         end
     end
@@ -2142,20 +2215,26 @@ function getCurrentLineOffsets(text, cur)
     return linestart, lineend
 end                             -- end of getCurrentLineOffsets()
 
+local function getinput()
+    local text = getTextarea():getText()
+    local startp, endp, start, eos = getSelection()
+
+    loglocal('getinput() sp: '..startp..' ep: '..endp..' start: '..start..' eos: '..eos, 4)
+    if start == eos then    -- if nothing is highlighted use the current line of cursor
+        start, eos = getCurrentLineOffsets(text, eos)
+    else
+        start = start + 1
+    end
+
+    local sel = string.sub(text, start, eos)
+    loglocal('getinput() Sel len: '..string.len(sel)..' start: '..start..' end: '..eos..': #'..sel..'#', 4)
+
+    return sel
+end
+
 local function handleSelection(TA)
-        local text = TA:getText()
-        local startp, endp, start, eos = getSelection()
-
-        loglocal('handleSelection() sp: '..startp..' ep: '..endp..' start: '..start..' eos: '..eos)
-        if start == eos then    -- if nothing is highlighted use the current line of cursor
-            start, eos = getCurrentLineOffsets(text, eos)
-        end
-
-        sel = string.sub(text, start, eos)
-
-        loglocal('Sel len: '..string.len(sel)..' start: '..start..' end: '..eos..': #'..sel..'#')
-
-        local jtest = sel
+    local sel = getinput(TA)
+    local jtest = sel
         jtest = string.gsub(jtest, "[']", '')
         jtest = string.gsub(jtest, '°', ' ')
         local lat, lon = string.match(jtest, '(%u %d%d +%d%d%.%d+), (%u %d+ +%d%d%.%d+)')
@@ -2307,7 +2386,7 @@ function showCustom(TA)
 end                             -- end showCustom()
 
 function createbuttons()
-    local numbutts = 10
+    local numbutts = 10         -- number of static buttons, LatLon - modload
     local rowh = 0
 
     local buttx = 0
@@ -2411,14 +2490,33 @@ function createbuttons()
         loglocal('aeronautespit: reload click '..#LT)
         assignKP()
         assignCustom()
+        assignCustom(Globalcustomfile)
     end
 
     --start row of "dynamic" buttons after static buttons above
-    rowh = rowh + butth
-    buttw = buttw + 20
-    for i=1,buttfnamt do
+    -- module related dynamic functions
+    rowh = rowh + butth         -- increment row
+    buttw = buttw + 20          -- slightly wider to handle longer button titles
+    for i=1,10 do               -- indent row by 10
         butts[numbutts+i] = {((i-1)*buttw)+10, rowh, buttw, butth, tostring(i)}
-        butts[numbutts+i][6] = function(text) if buttfn[i] then buttfn[i](text); domacro.flag = true end end
+        butts[numbutts+i][6] = function(T)
+            if buttfn[i] then
+                buttfn[i](getinput())
+                domacro.flag = true
+            end
+        end
+    end
+
+    --universal functions not module related
+    rowh = rowh + butth         -- increment row
+    for i=11,buttfnamt do
+        butts[numbutts+i] = {((i-11)*buttw), rowh, buttw, butth, tostring(i)}
+        butts[numbutts+i][6] = function(T)
+            if buttfn[i] then
+                buttfn[i](getinput())
+                domacro.flag = true
+            end
+        end
         --[[ attempt at runtime generation of indirection func table for dynamic function buttons
             local str = 'function a'..i..'(text) if buttfn['..i..'] then buttfn['..i..'](text) end end'
             local fn
@@ -2433,6 +2531,7 @@ function createbuttons()
     for i,j in pairs(butts) do      -- create all buttons
         addButton(j[1], j[2], j[3], j[4], j[5], j[6])
     end
+
 end                             -- end createbuttons
 
 createbuttons()

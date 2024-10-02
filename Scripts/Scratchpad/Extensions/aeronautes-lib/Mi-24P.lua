@@ -13,7 +13,10 @@ ft = {}
 [04:26:01] posteng time: 54.3704036
 --]]
 ft['start'] = function(arg)
-    if type(arg) == 'table' then
+    local valid = {reng='reng', leng='leng', posteng='posteng'}
+    arg = valid[arg] or ''
+
+    if arg == '' then
         ft['T1'] = DCS.getRealTime()
     
 ttf('Pilot Door Safety Lock, OPEN/CLOSE')

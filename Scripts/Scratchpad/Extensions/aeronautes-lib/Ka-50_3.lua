@@ -19,8 +19,11 @@ wpseq({ cur = 1,
 
 --]]
 ft['start'] = function(arg)
+    local valid = {reng='reng', leng='leng', posteng='posteng', apudown='apudown'}
+    arg = valid[arg] or ''
+
     local dbl = 0
-    if type(arg) == 'table' then
+    if arg == '' then
         ft['T1'] = DCS.getRealTime()
 
 --front panel next to abris
