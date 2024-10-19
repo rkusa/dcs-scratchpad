@@ -735,6 +735,7 @@ local LT = {           -- per module customization for convenience api
     }
 } --end LT{}
 LT['Ka-50_3'] = LT['Ka-50']
+LT['A-10C_2'] = LT['A-10C']
 
 local function assignKP()
     loglocal('assignKP begin')
@@ -744,7 +745,7 @@ local function assignKP()
 --########## SNIP BEGIN for <Apitlibsubdir>\kp.lua
 --function kpload(unit)
         local diffiv = 0
-        if unit == 'A-10C' then
+        if unit == 'A-10C' or unit == 'A-10C_2' then
             return {
                 ['1'] = {
                     {device_commands.Button_15, 1, diffiv, devices.CDU},
@@ -1736,7 +1737,7 @@ function wp(inp)
         return result .. "\n"
     elseif type(inp) == 'table' then
         loglocal('wp() inp table:'..net.lua2json(inp), 3)
-        local pos = Export.LoLoCoordinatesToGeoCoordinates(inp.y, inp.x)
+        local pos = Export.LoLoCoordinatesToGeoCoordinates(inp.x, inp.y)
 
         local types = coordsType(unittype)
         if types then
