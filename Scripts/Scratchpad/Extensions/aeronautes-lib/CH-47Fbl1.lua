@@ -3,7 +3,20 @@
 --]]
 
 ft = {}
-ft.order = {'night', 'drop', 'load'}
+ft.order = {'setup', 'night'}
+
+--#################################
+-- Setup v0.1
+-- settings used after a start or autostart
+ft['setup'] = function()
+
+press([[!#~]])                  -- power RWR/CMWS
+
+    --ASE panel; arm and bypass
+ttn('',{device=devices.AN_ALE47, action=device_commands.Button_5})
+ttn('',{device=devices.AN_ALE47, action=device_commands.Button_7})
+
+end                         -- end setup
 
 --#################################
 -- Night v0.1
@@ -20,29 +33,4 @@ tt('',{device=devices.CANTED_CONSOLE, action=device_commands.Button_41, value=.2
 
 end                             -- end night
 
---#################################
--- drop v0.1
-ft['drop'] = function()
-Export.LoSetCommand(179)--comm
-Export.LoSetCommand(975)--f10
-Export.LoSetCommand(966)--f1
-Export.LoSetCommand(971)--f6
-Export.LoSetCommand(968)--f3
-
-end                             -- end drop
-
---#################################
--- load v0.1
-ft['load'] = function()
-Export.LoSetCommand(179)--comm
-Export.LoSetCommand(975)--f10
-Export.LoSetCommand(966)--f1
-Export.LoSetCommand(971)--f6
-Export.LoSetCommand(966)--f1
-end                             -- end load
-
 return ft
-
---[[ other code bits
-
---]]

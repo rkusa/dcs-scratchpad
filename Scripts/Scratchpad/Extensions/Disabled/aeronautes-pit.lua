@@ -544,7 +544,8 @@ local wps = copytable(wpsdefaults) --waypoint sequence used by wp(); also initia
 -- LT is the per module table for various configuration and wp specialization values/funcs
 local LT = {           -- per module customization for convenience api
     ['A-10C'] = {
-        ['notes'] = [[Waypoint input requires WAYPT menu, L/L mode. Default to LSK 7 to increment wp number]],
+        ['notes'] = [[Waypoint input requires WAYPT menu, L/L mode. Default to LSK 7 to
+increment wp number]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
         ['wpentry'] = 'LAT#LON$ALT@',
         prewp = function()
@@ -569,7 +570,8 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ['AV8BNA'] = {
-        ['notes'] = [[Waypoint input requires DATA page. Adds new wp to the list.(wp #77)]],
+        ['notes'] = [[Waypoint input requires DATA page. Adds new wp to the list.(wp
+#77)]],
         ['coordsType'] = {format = 'DMS', precision = 0, lonDegreesWidth = 3},
         ['wpentry'] = 'LATeLONe#ALTe',
         prewp = function()      -- currently only supporting incrementing or editing current wp
@@ -595,7 +597,8 @@ local LT = {           -- per module customization for convenience api
         end
     },
     ['F-15ESE'] = {
-        ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing supported.]],
+        ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing
+supported.]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
         ['wpentry'] = 'LATbLONcALTg',
         prewp = function()
@@ -665,7 +668,9 @@ local LT = {           -- per module customization for convenience api
 	end,
     },
     ['FA-18C_hornet'] = {
-        ['notes'] = [[Waypoint input requires HSI DATA menu with precise. Default increments from the current waypoint. Increment or decrement controlled with wpseq({diff=})]],
+        ['notes'] = [[Waypoint input requires HSI DATA menu with precise. Default
+increments from the current waypoint. Increment or decrement
+controlled with wpseq({diff=})]],
         ['coordsType'] = {format = 'DDM', precision = 4},
         ['wpentry'] = 'faLAT LON caALT ',
         -- f18 can't select wpt by number, only cycle with arrows
@@ -703,7 +708,8 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ['Ka-50'] = {
-        ['notes'] = [[Waypoint input starts at target 1 and increments. The WP type can be changed with wpseq({route=})]],
+        ['notes'] = [[Waypoint input starts at target 1 and increments. The WP type can be
+changed with wpseq({route=})]],
         ['coordsType'] = {format = 'DDM', precision = 1, lonDegreesWidth = 3},
         ['wpentry'] = 'LATeLONe',
         prewp = function(input)
@@ -726,7 +732,8 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ['OH58D'] = {
-        ['notes'] = [[Waypoint input requires the New WP page and LatLon mode. Store MFD button automatically increments current wp number.]],
+        ['notes'] = [[Waypoint input requires the New WP page and LatLon mode. Store MFD
+button automatically increments current wp number.]],
         ['coordsType'] = {format = 'DDM', precision = 2, lonDegreesWidth = 3},
         ['wpentry'] = '@~LAT_#~LON_$~ALT_)',
     },

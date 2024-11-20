@@ -2,9 +2,7 @@
 --]]
 
 -- module specific configuration
-wpseq({cur=3,
-       diff = 1,
-})
+wpseq({cur=3, diff = 1, })
 
 ft ={}
 

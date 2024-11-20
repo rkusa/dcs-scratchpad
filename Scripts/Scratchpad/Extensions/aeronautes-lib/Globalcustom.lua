@@ -40,6 +40,10 @@
        available.
     
     ## globalfile - shows the contents of Globalcustom.lua.
+
+    ## GFdrop - CTLD menu item for crate drop on Grayflag server
+
+    ## GFload - CTLD menu item for crate load on Grayflag server
 --]]
 
 local ft = {}
@@ -663,6 +667,43 @@ ft['RTloadrt'] = function(input)
         wp(rt[i])
     end
 end                             -- RTlist
+
+local CTLDunit = {}
+CTLDunit = {
+    ['CH-47Fbl1']=1,
+    ['Mi-24P']=1,
+    ['Mi-8MT']=1,
+    ['UH-1H']=1,
+}
+
+if CTLDunit[unittype] then
+--#################################
+-- drop v0.1
+-- CTLD menu for crate drop specific to Grayflag. May work on
+-- other servers
+    ft['GFdrop'] = function()
+        Export.LoSetCommand(179)--comm
+        Export.LoSetCommand(975)--f10
+        Export.LoSetCommand(966)--f1
+        Export.LoSetCommand(971)--f6
+        Export.LoSetCommand(968)--f3
+    end                             -- end drop
+    table.insert(ft.order, 'GFdrop')
+
+--#################################
+-- load v0.1
+-- CTLD menu for crate load specific to Grayflag. May work on
+-- other servers
+    ft['GFload'] = function()
+        Export.LoSetCommand(179)--comm
+        Export.LoSetCommand(975)--f10
+        Export.LoSetCommand(966)--f1
+        Export.LoSetCommand(971)--f6
+        Export.LoSetCommand(966)--f1
+    end                             -- end load
+    table.insert(ft.order, 'GFload')
+
+end                             -- end if heli
 
 --#################################
 -- globalfile v0.1

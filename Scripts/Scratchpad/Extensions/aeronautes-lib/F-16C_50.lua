@@ -9,10 +9,7 @@
     to be replaced with setup
 --]]
 
-wpseq({menus = 'r4',
-       cur = -1,
-       diff = 1,
-})
+wpseq({menus = 'r4', cur = -1, diff = 1, })
 
 ft = {}
 ft.order = {'start', 'setup', 'WIP-mfd', 'DEPREC-fence'}
