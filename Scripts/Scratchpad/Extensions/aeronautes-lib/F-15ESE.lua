@@ -116,7 +116,7 @@ ft['mpd'] = function ()
 end --end of mpd()
 
 --#################################
--- start v0.6
+-- start v0.7
 -- You will need to set INS knob to NAV when OK on HUD, after engine
 -- has started.
 
@@ -166,7 +166,7 @@ ttn('RWR ON/OFF Switch')
 ttn('EWWS ON/OFF Switch')
 tt('CMD Operational Mode OFF/STBY/MAN/SEMI/AUTO',{value=.6})
 tt('TGP Power Switch OFF/STBY/ON',{value=1})
-tt('TGP Laser Switch SAFE/ARM')
+-- tt('TGP Laser Switch SAFE/ARM')
 tt('RWR/ICS Mode Switch COMBAT/TRNG')
 tt('ECM PODS Mode Switch XMIT/STBY')
 tt('ICS Operational Mode Switch STBY/AUTO/MAN')
