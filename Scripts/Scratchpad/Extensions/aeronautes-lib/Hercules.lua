@@ -9,27 +9,27 @@
     directory might be slightly different on your system such as
     DCS.openbeta.
 
-    start - start engines, currently uses ground elec/air, so timing
-    cant clash with other ground orders. Just make sure you start
-    engines before doing anything else like rearming or fueling. This
-    is not completely hands off so you'll need to click right mouse
-    button(RMB)click each of the Engine Start dials. You can start an
-    engine once the Bleed Air Pressure gauge reads 40.0. You will need
-    to hold RMB until the green light next to the engine start dial
+    start - Recommend you do this before any other action also right
+    click mouse APU switch to RUN position.
+
+    Currently uses ground elec/air and APU, so timing cant clash with
+    other ground orders. Just make sure you start engines before doing
+    anything else like rearming or fueling. This is not completely
+    hands off so you'll need to click right mouse button(RMB)click
+    each of the Engine Start dials. You can start an engine once the
+    Bleed Air Pressure gauge reads 40.0. You will need to hold RMB
+    until the green light next to the engine start dial
     illuminates. You may release once the light is on. Engines need to
     start in reverse numerical order, primarily engine 1 or 2 needs to
     be last to start. The start script will request air/power
-    disconnect once both engines 1 and 2 reach .
+    disconnect once both engines 1 and 2 reach 5 rpm. 
 
-    Alternatively you can start engines even faster if you also start
-    APU and enable Bleed Air Switch APU at the same time as ground
-    air. Just know this will allow 4 engines to be cranking if you
-    start an engine as soon as sufficient bleed pressure is
-    available. The onboard APU bleed air won't sustain 4 engines
-    cranking so just wait for 2 engines to be cranking (engine is
-    boxed in Engine Display on HDD 2), before starting the last. You
-    should be able to crank all engines within 1 minute of startup
-    using this method.
+    Just know this will allow 4 engines to be cranking if you start an
+    engine as soon as sufficient bleed pressure is available. The
+    onboard APU bleed air won't sustain 4 engines cranking so just
+    wait for 2 engines to be cranking (engine is boxed in Engine
+    Display on HDD 2), before starting the last. You should be able to
+    crank all engines within 1 minute of startup using this method.
 
     takeoff - set pilot CNI TOLD INDEX to takeoff data; markers
     indicated in HUD; 
@@ -44,9 +44,7 @@
 --]]
 
 -- module specific configuration
-wpseq({cur=1,
-       diff = 1,
-})
+wpseq({cur=1, diff = 1, })
 
 local ft = {}
 ft.order = {'start', 'takeoff', 'landing', 'night', 'pivot'}
@@ -105,7 +103,7 @@ tt('Ramp Loading Light',{value=-1})
 end                             -- end night
 
 --#################################
--- start v0.10
+-- start v0.11
 -- currently uses ground elec/air, so timing cant clash with other ground orders; engines
 -- need to start in reverse numerical order, primarily engine 1 or 2 needs to be last to start
 
@@ -129,11 +127,7 @@ Export.LoSetCommand(969)--f4 air
 Export.LoSetCommand(966)--f1
 
 ttn('Battery')
-
---[[
-ttn('APU Stop/Run/Start') --timed
-ttt('Bleed Air Switch APU')
---]]
+ttn('APU Stop/Run/Start')       -- should click APU Run before starting
 
 tt('Aux Hydraulic pump',{value=-1})
 ttn('Flightdeck Window Open/Close',{action=devaction.Flightdeck_Windows_Toggle})
@@ -184,6 +178,7 @@ ft['start']('engspool')
     elseif action == 'engspool' then
         rpm = Export.LoGetEngineInfo().RPM
         loglocal('engspool rpm: '..rpm.left..' : '..rpm.right)
+        ttt('Bleed Air Switch APU')
 
         if not (rpm.left > 5 and rpm.right > 5) then
             loglocal('engspool 1 true '..DCS.getRealTime(), 4)

@@ -6,10 +6,7 @@
 --]]
 
 -- module specific configuration
-wpseq({cur=1,
-       diff = 1,
-       route = '.B'
-})
+wpseq({cur=1, diff = 1, route = '.B'})
 
 ft ={}
 ft.order={'start', 'mpd', 'A/Gload', 'night', 'day'}
@@ -119,7 +116,7 @@ ft['mpd'] = function ()
 end --end of mpd()
 
 --#################################
--- start v0.6
+-- start v0.7
 -- You will need to set INS knob to NAV when OK on HUD, after engine
 -- has started.
 
@@ -169,7 +166,7 @@ ttn('RWR ON/OFF Switch')
 ttn('EWWS ON/OFF Switch')
 tt('CMD Operational Mode OFF/STBY/MAN/SEMI/AUTO',{value=.6})
 tt('TGP Power Switch OFF/STBY/ON',{value=1})
-tt('TGP Laser Switch SAFE/ARM')
+-- tt('TGP Laser Switch SAFE/ARM')
 tt('RWR/ICS Mode Switch COMBAT/TRNG')
 tt('ECM PODS Mode Switch XMIT/STBY')
 tt('ICS Operational Mode Switch STBY/AUTO/MAN')
@@ -203,6 +200,8 @@ ttn('UFC LCD Brightness',{device=devices.UFCCTRL_REAR})
 ttt('Left UHF Preset Channel Selector', {device=devices.UFCCTRL_FRONT}) --check these 2
 ttn('Right UHF Preset Channel Selector', {device=devices.UFCCTRL_FRONT})
 ttn('HUD Brightness Control')
+tt('UHF Radio 1 Volume', {value=1})
+tt('UHF Radio 2 Volume', {value=1})
 
 tt('Terrain Follow Radar Switch',{value=.5})
 ttn('Radar Altitude Switch')
@@ -250,7 +249,17 @@ ttt('Right Throttle Finger Lift') --idle at 21%
                     if rpm.left < 21 then
                         press('',{delay=1,fn=ft['start'],arg='engspool'})
                     else
-                        Export.LoSetCommand(2005, -1)
+                        if rpm.left < 50 then
+                            if ft['firstspool'] then
+                                Export.LoSetCommand(2005, -1)
+                                ft['firstspool'] = false
+                            else
+                                Export.LoSetCommand(2005, 1)
+                            end
+                            press('',{delay=1,fn=ft['start'],arg='engspool'})
+                        else
+                            press('',{delay=1,fn=ft['start'],arg='posteng'})
+                        end
                     end
                 end
             end

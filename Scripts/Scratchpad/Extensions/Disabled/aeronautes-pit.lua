@@ -544,7 +544,8 @@ local wps = copytable(wpsdefaults) --waypoint sequence used by wp(); also initia
 -- LT is the per module table for various configuration and wp specialization values/funcs
 local LT = {           -- per module customization for convenience api
     ['A-10C'] = {
-        ['notes'] = [[Waypoint input requires WAYPT menu, L/L mode. Default to LSK 7 to increment wp number]],
+        ['notes'] = [[Waypoint input requires WAYPT menu, L/L mode. Default to LSK 7 to
+increment wp number]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
         ['wpentry'] = 'LAT#LON$ALT@',
         prewp = function()
@@ -569,7 +570,8 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ['AV8BNA'] = {
-        ['notes'] = [[Waypoint input requires DATA page. Adds new wp to the list.(wp #77)]],
+        ['notes'] = [[Waypoint input requires DATA page. Adds new wp to the list.(wp
+#77)]],
         ['coordsType'] = {format = 'DMS', precision = 0, lonDegreesWidth = 3},
         ['wpentry'] = 'LATeLONe#ALTe',
         prewp = function()      -- currently only supporting incrementing or editing current wp
@@ -595,7 +597,8 @@ local LT = {           -- per module customization for convenience api
         end
     },
     ['F-15ESE'] = {
-        ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing supported.]],
+        ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing
+supported.]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
         ['wpentry'] = 'LATbLONcALTg',
         prewp = function()
@@ -665,7 +668,9 @@ local LT = {           -- per module customization for convenience api
 	end,
     },
     ['FA-18C_hornet'] = {
-        ['notes'] = [[Waypoint input requires HSI DATA menu with precise. Default increments from the current waypoint. Increment or decrement controlled with wpseq({diff=})]],
+        ['notes'] = [[Waypoint input requires HSI DATA menu with precise. Default
+increments from the current waypoint. Increment or decrement
+controlled with wpseq({diff=})]],
         ['coordsType'] = {format = 'DDM', precision = 4},
         ['wpentry'] = 'faLAT LON caALT ',
         -- f18 can't select wpt by number, only cycle with arrows
@@ -703,7 +708,8 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ['Ka-50'] = {
-        ['notes'] = [[Waypoint input starts at target 1 and increments. The WP type can be changed with wpseq({route=})]],
+        ['notes'] = [[Waypoint input starts at target 1 and increments. The WP type can be
+changed with wpseq({route=})]],
         ['coordsType'] = {format = 'DDM', precision = 1, lonDegreesWidth = 3},
         ['wpentry'] = 'LATeLONe',
         prewp = function(input)
@@ -726,7 +732,8 @@ local LT = {           -- per module customization for convenience api
         end,
     },
     ['OH58D'] = {
-        ['notes'] = [[Waypoint input requires the New WP page and LatLon mode. Store MFD button automatically increments current wp number.]],
+        ['notes'] = [[Waypoint input requires the New WP page and LatLon mode. Store MFD
+button automatically increments current wp number.]],
         ['coordsType'] = {format = 'DDM', precision = 2, lonDegreesWidth = 3},
         ['wpentry'] = '@~LAT_#~LON_$~ALT_)',
     },
@@ -735,6 +742,7 @@ local LT = {           -- per module customization for convenience api
     }
 } --end LT{}
 LT['Ka-50_3'] = LT['Ka-50']
+LT['A-10C_2'] = LT['A-10C']
 
 local function assignKP()
     loglocal('assignKP begin')
@@ -744,7 +752,7 @@ local function assignKP()
 --########## SNIP BEGIN for <Apitlibsubdir>\kp.lua
 --function kpload(unit)
         local diffiv = 0
-        if unit == 'A-10C' then
+        if unit == 'A-10C' or unit == 'A-10C_2' then
             return {
                 ['1'] = {
                     {device_commands.Button_15, 1, diffiv, devices.CDU},
@@ -906,84 +914,121 @@ local function assignKP()
         elseif unit == 'CH-47Fbl1' then
             return {
                 ['0'] = {
-                    {device_commands.Button_39, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_39, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['1'] = {
-                    {device_commands.Button_30, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_30, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['2'] = {
-                    {device_commands.Button_31, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_31, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['3'] = {
-                    {device_commands.Button_32, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_32, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['4'] = {
-                    {device_commands.Button_33, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_33, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['5'] = {
-                    {device_commands.Button_34, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_34, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['6'] = {
-                    {device_commands.Button_35, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_35, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['7'] = {
-                    {device_commands.Button_36, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_36, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['8'] = {
-                    {device_commands.Button_37, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_37, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['9'] = {
-                    {device_commands.Button_38, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_38, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['N'] = {
-                    {device_commands.Button_56, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_56, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['E'] = {
-                    {device_commands.Button_47, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_47, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['W'] = {
-                    {device_commands.Button_65, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_65, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['S'] = {
-                    {device_commands.Button_61, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_61, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['.'] = {       -- dot
-                    {device_commands.Button_40, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_40, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['!'] = {       -- lsk L1
-                    {device_commands.Button_8, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_8, 0, diffiv, devices.CDU_RIGHT},
-                },
-                ['#'] = {       -- lsk L3
                     {device_commands.Button_10, 1, diffiv, devices.CDU_RIGHT},
                     {device_commands.Button_10, 0, diffiv, devices.CDU_RIGHT},
                 },
-                ['^'] = {       -- lsk L6
+                ['1'] = {
+                    {device_commands.Button_11, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_11, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['2'] = {
+                    {device_commands.Button_12, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_12, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['3'] = {
                     {device_commands.Button_13, 1, diffiv, devices.CDU_RIGHT},
                     {device_commands.Button_13, 0, diffiv, devices.CDU_RIGHT},
                 },
+                ['4'] = {
+                    {device_commands.Button_14, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_14, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['5'] = {
+                    {device_commands.Button_15, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_15, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['6'] = {
+                    {device_commands.Button_16, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_16, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['7'] = {
+                    {device_commands.Button_17, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_17, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['8'] = {
+                    {device_commands.Button_18, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_18, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['9'] = {
+                    {device_commands.Button_19, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_19, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['N'] = {
+                    {device_commands.Button_36, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_36, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['E'] = {
+                    {device_commands.Button_27, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_27, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['W'] = {
+                    {device_commands.Button_45, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_45, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['S'] = {
+                    {device_commands.Button_41, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_41, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['.'] = {       -- dot
+                    {device_commands.Button_20, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_20, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['!'] = {       -- lsk L1
+                    {device_commands.Button_50, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_50, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['@'] = {       -- lsk L2
+                    {device_commands.Button_51, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_51, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['#'] = {       -- lsk L3
+                    {device_commands.Button_52, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_52, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['$'] = {       -- lsk L4
+                    {device_commands.Button_53, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_53, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['%'] = {       -- lsk L5
+                    {device_commands.Button_54, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_54, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['^'] = {       -- lsk L6
+                    {device_commands.Button_55, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_55, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['&'] = {       -- lsk R1
+                    {device_commands.Button_56, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_56, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['*'] = {       -- lsk R2
+                    {device_commands.Button_57, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_57, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['('] = {       -- lsk R3
+                    {device_commands.Button_58, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_58, 0, diffiv, devices.CDU_RIGHT},
+                },
+                [')'] = {       -- lsk R4
+                    {device_commands.Button_59, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_59, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['`'] = {       -- lsk R5
+                    {device_commands.Button_60, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_60, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['~'] = {       -- lsk R6
+                    {device_commands.Button_61, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_61, 0, diffiv, devices.CDU_RIGHT},
+                },
+
                 ['?'] = {       -- up arrow
-                    {device_commands.Button_26, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_26, 0, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_6, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_6, 0, diffiv, devices.CDU_RIGHT},
                 },
                 ['<'] = {       -- clear
-                    {device_commands.Button_28, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_28, 0, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_8, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_8, 0, diffiv, devices.CDU_RIGHT},
                 },
             }
         elseif unit == 'F-15ESE' then
@@ -1736,7 +1781,7 @@ function wp(inp)
         return result .. "\n"
     elseif type(inp) == 'table' then
         loglocal('wp() inp table:'..net.lua2json(inp), 3)
-        local pos = Export.LoLoCoordinatesToGeoCoordinates(inp.y, inp.x)
+        local pos = Export.LoLoCoordinatesToGeoCoordinates(inp.x, inp.y)
 
         local types = coordsType(unittype)
         if types then
@@ -1881,6 +1926,7 @@ function assignCustom()
                      ttt = ttt,
                      delay = delay,
                      LT = LT,
+                     unittype = unittype,
                      loglocal = loglocal,
                      switchPage = switchPage,
                      extid = extid,
@@ -1915,7 +1961,7 @@ function assignCustom()
                         fnadded = fnadded + 1
                         funclist[fnadded] = {name = fname, fn = res[fname]}
                     else
-                        loglocal('doCustom() order name not function: '..fname..', file: '..infn)
+                        loglocal('doCustom() order name not function: '..tostring(fname)..', file: '..tostring(infn))
                     end
                 end             -- end for #res.order
             else
