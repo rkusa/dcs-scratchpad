@@ -2000,7 +2000,7 @@ function wp(inp)
         return result .. "\n"
     elseif type(inp) == 'table' then
         loglocal('wp() inp table:'..net.lua2json(inp), 3)
-        local pos
+        local pos = {}
         if inp.x and inp.y then --support preset table
             pos = Export.LoLoCoordinatesToGeoCoordinates(inp.x, inp.y)
         elseif inp.lat and inp.lon then --support module neutral lat/lon
