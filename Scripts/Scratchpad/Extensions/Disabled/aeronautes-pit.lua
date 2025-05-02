@@ -1,4 +1,4 @@
-local version=.64
+local version=.65
 local readme = [=[
 # aeronautes-pit (Apit) https://github.com/aeronautes/dcs-scratchpad
 
@@ -536,12 +536,32 @@ local wpsdefaults = {
     enable = true,        --disable STR number assignment
     diff = 1,             --next value of STR number relative to cur
     cur = -1,             --STR number to switch to before entering LL
+    default = 1,          --Value to set when clicking WP initialize button
     route = '',           --optional route can be any character from kp[]
     menus = '',  --optional menu keys to press() before any data entry
-}
-local wps = copytable(wpsdefaults) --waypoint sequence used by wp(); also initialized in uploadinit()
+    update = function(val)
+        if val then
+            wps.cur = val
+        else
+            wps.cur = wps.cur + wps.diff
+        end
+    end,
 
--- LT is the per module table for various configuration and wp specialization values/funcs
+    button = function(self)
+        loglocal('wps button1 '..self.cur)
+        if panelbytitle and panelbytitle['WP'] then
+            panelbytitle['WP'].button:setText(self.cur)
+            loglocal('wps button2 '..self.cur)
+        end
+    end,
+}
+
+-- waypoint sequence used by wp(); also initialized in uploadinit()
+local wps = copytable(wpsdefaults)
+
+-- LT is the per module table for various configuration and wp
+-- specialization values/funcs
+
 local LT = {           -- per module customization for convenience api
     ['A-10C'] = {
         ['notes'] = [[Waypoint input requires WAYPT menu, L/L mode. Default to LSK 7 to
@@ -555,13 +575,20 @@ increment wp number]],
                 end
             end
         end,
-        postwp = function()
-            if wps.enable and wps.cur ~= -1 then
-                wps.cur = wps.cur + wps.diff
-                if wps.cur < 1 then wps.cur = 2050 end -- rollover doesnt take modulus into account
-                if wps.cur > 2050 then wps.cur = 1 end
-                return
+        updatewp = function(num)
+	    if wps.enable and wps.cur ~= -1 then
+                if num and type(num) == 'number' then
+                    wps.cur = num
+                else
+                    wps.cur = wps.cur + wps.diff
+                end
+                if wps.cur < 1 then wps.cur = 2050
+                elseif wps.cur > 2050 then wps.cur = 1 end
             end
+            wps:button()
+        end,
+        postwp = function()
+            wps.update()
         end,
         llconvert = function(result)
             result = string.gsub(result, '[°\'" .]', '')
@@ -574,7 +601,8 @@ increment wp number]],
 #77)]],
         ['coordsType'] = {format = 'DMS', precision = 0, lonDegreesWidth = 3},
         ['wpentry'] = 'LATeLONe#ALTe',
-        prewp = function()      -- currently only supporting incrementing or editing current wp
+        prewp = function()
+            -- currently only supporting incrementing or editing current wp
             if wps.enable then
                 press('P77e@')
             end
@@ -590,11 +618,30 @@ increment wp number]],
             result = string.gsub(result, "([NEWS]) ", "%1")
             return result
         end,
-        prewp = function()      -- incrementing
-            if wps.enable then
-                press('?')
+        prewp = function()
+            if wps.cur > 0 then
+                press(tostring(wps.cur)..'!') -- LSK L1 selects ACP#
+            else
+                press('?')      -- increment
             end
-        end
+        end,
+        updatewp = function(num)
+	    if wps.enable and wps.cur ~= -1 then
+                if num and type(num) == 'number' then
+                    wps.cur = num
+                else
+                    wps.cur = wps.cur + wps.diff
+                end
+            end
+            wps:button()
+        end,
+        postwp = function()
+            -- convert WP# to alphabet character
+            if wps.cur > 0 then
+                press('/'..string.char(string.byte('A')+wps.cur-1)..'@')
+            end
+            wps.update()
+        end,
     },
     ['F-15ESE'] = {
         ['notes'] = [[Waypoint input requires UFC be in point data submenu. WP sequncing
@@ -620,13 +667,20 @@ supported.]],
             end
             return
         end,
-        postwp = function()
-            if wps.enable and wps.cur ~= -1 then
-                wps.cur = wps.cur + wps.diff
-                if wps.cur < 1 then wps.cur = 99 end
-                if wps.cur > 99 then wps.cur = 1 end
-                return
+        updatewp = function(num)
+	    if wps.enable and wps.cur ~= -1 then
+                if num and type(num) == 'number' then
+                    wps.cur = num
+                else
+                    wps.cur = wps.cur + wps.diff
+                end
+                if wps.cur < 1 then wps.cur = 99
+                elseif wps.cur > 99 then wps.cur = 1 end
             end
+            wps:button()
+        end,
+        postwp = function()
+            wps.update()
         end,
         llconvert = function(result)
             result = string.gsub(result, "[°'\".]", "")
@@ -657,20 +711,30 @@ supported.]],
 		end
 	    end
 	end,
+        updatewp = function(num)
+	    if wps.enable and wps.cur ~= -1 then
+                if num and type(num) == 'number' then
+                    wps.cur = num
+                else
+                    wps.cur = wps.cur + wps.diff
+                end
+                if wps.cur < 1 then
+                    wps.cur = 699
+                elseif wps.cur > 699 then
+                    wps.cur = 1
+                end
+            end
+            wps:button()
+        end,
         postwp = function()
             press('dd')
-	    if wps.enable and wps.cur ~= -1 then
-                wps.cur = wps.cur + wps.diff
-                if wps.cur < 1 then wps.cur = 699 end
-                if wps.cur > 699 then wps.cur = 1 end
-                return
-            end
+            wps.update()
 	end,
     },
     ['FA-18C_hornet'] = {
-        ['notes'] = [[Waypoint input requires HSI DATA menu with precise. Default
-increments from the current waypoint. Increment or decrement
-controlled with wpseq({diff=})]],
+        ['notes'] = [[Waypoint input requires HSI DATA menu with
+precise on center AMPCD. Default increments from the current
+waypoint. Increment or decrement controlled with wpseq({diff=})]],
         ['coordsType'] = {format = 'DDM', precision = 4},
         ['wpentry'] = 'faLAT LON caALT ',
         -- f18 can't select wpt by number, only cycle with arrows
@@ -683,8 +747,11 @@ controlled with wpseq({diff=})]],
                 end
             end
         end,
-        postwp = function() return end,
-        llconvert =function(result)
+        updatewp = function(num)
+            wps:button()
+        end,
+        postwp = updatewp,
+        llconvert = function(result)
             result = string.gsub(result, "[°'\"]", "")
             result = string.gsub(result, "([NEWS]) ", "%1")
             result = string.gsub(result, "[.]", " ")
@@ -697,8 +764,33 @@ controlled with wpseq({diff=})]],
     ['Hercules'] = {
         ['notes'] = [[Waypoint input sets the current point. No sequencing implented.]],
         ['coordsType'] = {format = 'DDM', precision = 3, lonDegreesWidth = 3},
-        ['wpentry'] = 'LATeLONfgh', -- inc/dec to activate in AFCS
-        prewp = function() press('w') end,
+        ['wpentry'] = 'LATeLONf',
+        prewp = function(input)
+            press('w')          -- nav ctrl
+            if wps.enable and wps.cur > -1 then
+                loglocal('BBB: '.. tostring(wps.cur)..'a')
+                press(tostring(wps.cur)..'a')
+            end
+        end,
+        updatewp = function(num)
+	    if wps.enable and wps.cur ~= -1 then
+                if num and type(num) == 'number' then
+                    wps.cur = num
+                else
+                    wps.cur = wps.cur + wps.diff
+                end
+                if wps.cur < 1 then
+                    wps.cur = 49
+                elseif wps.cur > 49 then
+                    wps.cur = 1
+                end
+            end
+            wps:button()
+        end,
+        postwp = function()
+            press('gh')         -- inc/dec to activate in AFCS
+            wps.update()
+        end,
         postload = function()   -- remap for community herc cockpit lua interface
             for i,j in pairs(ttlist) do
                 ttlist[i].device=devices.Radios_control
@@ -722,13 +814,24 @@ changed with wpseq({route=})]],
                 end
             end
         end,
+        updatewp = function(num)
+	    if wps.enable and wps.cur ~= -1 then
+                if num and type(num) == 'number' then
+                    wps.cur = num
+                else
+                    wps.cur = wps.cur + wps.diff
+                end
+                if wps.cur < 1 then
+                    wps.cur = 9
+                elseif wps.cur > 9 then
+                    wps.cur = 1
+                end
+            end
+            wps:button()
+        end,
         postwp = function()
             press('o')
-            if wps.enable and wps.cur ~= -1 then -- increment even if prewp() gets specified wp('n')
-                wps.cur = wps.cur + wps.diff
-                if wps.cur < 1 then wps.cur = 9 end
-                if wps.cur > 9 then wps.cur = 1 end
-            end
+            wps.update()
         end,
     },
     ['OH58D'] = {
@@ -739,6 +842,17 @@ button automatically increments current wp number.]],
     },
     ['forward_observer'] = {
         ['notes'] = [[Place holder for JTAC slot]],
+        ['coordsType'] = {format = 'DDM', lonDegreesWidth = 3},
+        prewp = function(input) --run before WP entered
+        end,
+        updatewp = function(num) --updates wp number(wps.cur), indirect postwp()
+            wps:button()
+        end,
+        postwp = function()     --run after WP is entered,
+            wps.update()
+        end,
+        postload = function()   --run after module is loaded(slotted)
+        end,
     }
 } --end LT{}
 LT['Ka-50_3'] = LT['Ka-50']
@@ -953,21 +1067,109 @@ local function assignKP()
                     {device_commands.Button_19, 1, diffiv, devices.CDU_RIGHT},
                     {device_commands.Button_19, 0, diffiv, devices.CDU_RIGHT},
                 },
-                ['N'] = {
-                    {device_commands.Button_36, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_36, 0, diffiv, devices.CDU_RIGHT},
+                ['A'] = {
+                    {device_commands.Button_23, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_23, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['B'] = {
+                    {device_commands.Button_24, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_24, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['C'] = {
+                    {device_commands.Button_25, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_25, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['D'] = {
+                    {device_commands.Button_26, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_26, 0, diffiv, devices.CDU_RIGHT},
                 },
                 ['E'] = {
                     {device_commands.Button_27, 1, diffiv, devices.CDU_RIGHT},
                     {device_commands.Button_27, 0, diffiv, devices.CDU_RIGHT},
                 },
-                ['W'] = {
-                    {device_commands.Button_45, 1, diffiv, devices.CDU_RIGHT},
-                    {device_commands.Button_45, 0, diffiv, devices.CDU_RIGHT},
+                ['F'] = {
+                    {device_commands.Button_28, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_28, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['G'] = {
+                    {device_commands.Button_29, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_29, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['H'] = {
+                    {device_commands.Button_30, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_30, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['I'] = {
+                    {device_commands.Button_31, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_31, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['J'] = {
+                    {device_commands.Button_32, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_32, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['K'] = {
+                    {device_commands.Button_33, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_33, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['L'] = {
+                    {device_commands.Button_34, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_34, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['M'] = {
+                    {device_commands.Button_35, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_35, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['N'] = {
+                    {device_commands.Button_36, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_36, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['O'] = {
+                    {device_commands.Button_37, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_37, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['P'] = {
+                    {device_commands.Button_38, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_38, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['Q'] = {
+                    {device_commands.Button_39, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_39, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['R'] = {
+                    {device_commands.Button_40, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_40, 0, diffiv, devices.CDU_RIGHT},
                 },
                 ['S'] = {
                     {device_commands.Button_41, 1, diffiv, devices.CDU_RIGHT},
                     {device_commands.Button_41, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['T'] = {
+                    {device_commands.Button_42, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_42, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['U'] = {
+                    {device_commands.Button_43, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_43, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['V'] = {
+                    {device_commands.Button_44, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_44, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['W'] = {
+                    {device_commands.Button_45, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_45, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['X'] = {
+                    {device_commands.Button_46, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_46, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['Y'] = {
+                    {device_commands.Button_47, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_47, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['Z'] = {
+                    {device_commands.Button_48, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_48, 0, diffiv, devices.CDU_RIGHT},
                 },
                 ['.'] = {       -- dot
                     {device_commands.Button_20, 1, diffiv, devices.CDU_RIGHT},
@@ -1029,6 +1231,10 @@ local function assignKP()
                 ['<'] = {       -- clear
                     {device_commands.Button_8, 1, diffiv, devices.CDU_RIGHT},
                     {device_commands.Button_8, 0, diffiv, devices.CDU_RIGHT},
+                },
+                ['/'] = {       -- forward slash
+                    {device_commands.Button_21, 1, diffiv, devices.CDU_RIGHT},
+                    {device_commands.Button_21, 0, diffiv, devices.CDU_RIGHT},
                 },
             }
         elseif unit == 'F-15ESE' then
@@ -1203,7 +1409,7 @@ local function assignKP()
                     {UFC_commands.KbdSw6, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw6, 0, diffiv, devices.UFC},},
                 ['7'] = {
-                    {UFC_commands.KbdSw7, 1, 0.20, devices.UFC},
+                    {UFC_commands.KbdSw7, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw7, 0, diffiv, devices.UFC},},
                 ['8'] = {
                     {UFC_commands.KbdSw8, 1, diffiv, devices.UFC},
@@ -1215,8 +1421,8 @@ local function assignKP()
                     {UFC_commands.KbdSw2, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw2, 0, diffiv, devices.UFC},},
                 ['E'] = {
-                    {UFC_commands.KbdSw6, 1, 1, devices.UFC},
-                    {UFC_commands.KbdSw6, 0, 1, devices.UFC},},
+                    {UFC_commands.KbdSw6, 1, diffiv, devices.UFC},
+                    {UFC_commands.KbdSw6, 0, diffiv, devices.UFC},},
                 ['W'] = {
                     {UFC_commands.KbdSw4, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw4, 0, diffiv, devices.UFC},},
@@ -1224,7 +1430,7 @@ local function assignKP()
                     {UFC_commands.KbdSw8, 1, diffiv, devices.UFC},
                     {UFC_commands.KbdSw8, 0, diffiv, devices.UFC},},
                 [' '] = {
-                    {UFC_commands.KbdSwENT, 1, 0.5, devices.UFC},
+                    {UFC_commands.KbdSwENT, 1, 0.25, devices.UFC},
                     {UFC_commands.KbdSwENT, 0, 0.25, devices.UFC},},
                 a = {
                     {UFC_commands.OptSw1, 1, 0.25, devices.UFC},
@@ -1492,6 +1698,9 @@ local function assignKP()
                     {device_commands.Button_17, 1, diffiv, devices.RMFD},
                     {device_commands.Button_17, 0, diffiv, devices.RMFD}},
             }
+        elseif unit == 'forward_observer' then
+            return {
+            }
 --########## SNIP END for kp.lua
         else
             loglocal('assignKP unknown unit: '..unit)
@@ -1747,23 +1956,33 @@ end
 
 -- wpseq() interface for setting the next steerpoint number
 function wpseq(param)
-    loglocal('wpseq: '..net.lua2json(param), 3)
-    for i, j in pairs(param) do
-        if type(wps[i]) ~= nil then
-            if type(wps[i]) == type(param[i]) then
-                loglocal('wpseq set: '..i, 5)
-                wps[i] = param[i]
+    if param ~= nil then
+
+        loglocal('wpseq: '..net.lua2json(param), 3)
+        for i, j in pairs(param) do
+            if type(wps[i]) ~= nil then
+                if type(wps[i]) == type(param[i]) then
+                    loglocal('wpseq set: '..i, 5)
+                    wps[i] = param[i]
+                else
+                    loglocal('wpseq type mismatch: '..i..'-'..type(wps[i])..'-'..type(param[i]))
+                end
             else
-                loglocal('wpseq type mismatch: '..i..'-'..type(wps[i])..'-'..type(param[i]))
+                loglocal('wpseq wps key not found: '..i)
             end
-        else
-            loglocal('wpseq wps key not found: '..i)
+        end
+        if wps.initialize then
+            wps = copytable(wpsdefaults)
         end
     end
-    if wps.initialize then
-        wps = copytable(wpsdefaults)
+
+    wps:button()
+    if wps ~= nil then
+        loglocal('wpseq end: '..net.lua2json(wps), 5)
+        return wps
+    else
+        loglocal('wpseq() wps is nil')
     end
-    loglocal('wpseq end: '..net.lua2json(wps))
 end
 
 -- wp() interface for entering in a latlong for a particular aircraft
@@ -1781,15 +2000,31 @@ function wp(inp)
         return result .. "\n"
     elseif type(inp) == 'table' then
         loglocal('wp() inp table:'..net.lua2json(inp), 3)
-        local pos = Export.LoLoCoordinatesToGeoCoordinates(inp.x, inp.y)
-
+        local pos
+        if inp.x and inp.y then --support preset table
+            pos = Export.LoLoCoordinatesToGeoCoordinates(inp.x, inp.y)
+        elseif inp.lat and inp.lon then --support module neutral lat/lon
+            pos.latitude = inp.lat
+            pos.longitude = inp.lon
+        else
+            loglocal('Error wp() inp table missing x/y; lat/lon: '
+                     ..net.lua2json(inp))
+            return
+        end
+        if inp.alt then
+            pos.alt = inp.alt
+        else
+            pos.alt = 0
+            loglocal('wp() inp.alt nil')
+        end
+        loglocal('wp() pos table:'..net.lua2json(pos), 3)
         local types = coordsType(unittype)
         if types then
             wp(LLtoAC(formatCoordConv(types.format, true, pos.latitude, types),
                    formatCoordConv(types.format, false, pos.longitude, types),
-                   string.format("%.0f", inp.alt*3.28084)))
+                   string.format("%.0f", pos.alt*3.28084)))
         else
-            loglocal('wp() coordsType() returned nil, unittype: '..unittype)
+            loglocal('Error wp() coordsType returned nil, unittype: '..unittype)
             return nil
         end
     else
@@ -1916,7 +2151,7 @@ function assignCustom()
         local funclist = {}
         local env = {push_stop_command = push_stop_command,
                      push_start_command = push_stop_command,
-                     prewp = prew,
+                     prewp = prewp,
                      wp = wp,
                      wpseq = wpseq,
                      press = press,
@@ -1935,6 +2170,7 @@ function assignCustom()
                      Apitlibdir = Apitlibdir,
                      Apitlibsubdir = Apitlibsubdir,
                      getTextarea = getTextarea,
+                     panel = panel,
         }
         --needed to pickup all the module macro definitions like
                                               --device/action
@@ -2224,6 +2460,14 @@ function uploadinit()
     if panelbytitle['mod'] then
         panelbytitle['mod'].button:setText(string.sub(unittype,1, 8))
     end
+
+    if LT[unittype].updatewp then
+        wps.update = LT[unittype].updatewp
+        wps:button()
+    else
+        wps.update = wpsdefaults.update
+    end
+
     if not isHidden() then
         if switchPage() == Scratchdir..Scratchpadfn then
             showCustom(getTextarea())
@@ -2432,18 +2676,20 @@ function showCustom(TA)
 end                             -- end showCustom()
 
 function createbuttons()
-    local numbutts = 10         -- number of static buttons, LatLon - modload
+    local numbutts = 13  -- number of static buttons, LatLon - modload
+    local numrow1 = 7
+    local numrow2 = 4
     local rowh = 0
 
     local buttx = 0
-    for i=1, 4 do             -- first row are macro execution related
+    for i=1, numrow1 do       -- first row are macro execution related
         butts[i] = {buttx, rowh, buttw, butth}
         buttx = buttx + buttw
     end
 
     rowh = rowh + butth
     buttx = 0
-    for i=5, 8 do -- second row modify Scratchpadfn buffer or other function
+    for i=numrow1+1, numrow1+numrow2 do -- second row modify buffer contents
         butts[i] = {buttx, rowh, buttw, butth}
         buttx = buttx + buttw
     end
@@ -2451,7 +2697,7 @@ function createbuttons()
     rowh = rowh + butth
     buttx = 0
     buttw = buttw + 20
-    for i=9, 10 do              -- third row
+    for i=numrow1+numrow2+1, numbutts do -- third row
         butts[i] = {buttx, rowh, buttw, butth}
         buttx = buttx + buttw
     end
@@ -2477,18 +2723,47 @@ function createbuttons()
     butts[4][5] = 'Cancel'
     butts[4][6] = cancelmacro
 
-    butts[5][5] = 'wp'
-    butts[5][6] = function(TA)
+    butts[5][5] = 'WP+'
+    butts[5][6] = function()
+        if wps.cur then
+            wps.update(wps.cur + wps.diff)
+        end
+    end
+
+    butts[6][5] = 'WP'
+    butts[6][6] = function()
+        wps.update(wps.default)
+    end
+
+    butts[7][5] = 'WP-'
+    butts[7][6] = function()
+        if wps.cur then
+            wps.update(wps.cur - wps.diff)
+        end
+    end
+
+    -- second row of buttons
+    butts[8][5] = 'wp'
+    butts[8][6] = function(TA)
         local loc = getloc()
-        loglocal('BAH loc: '..type(loc))
         if loc then
-            TA:insertBelow("wp('" .. getloc() .. "')")
+            local wpver=1.0
+            local lat, lon, alt = getloc('raw')
+            local str = 'wp('..
+                '{alt=' ..tostring(alt)..
+                ',name=""' ..
+                ',lat=' ..tostring(lat)..
+                ',lon=' ..tostring(lon)..
+                ',ver=' ..tostring(wpver)..
+                '})'
+            TA:insertBelow(str)
         else
             loglocal('butts wp unknown location format')
         end
     end
-    butts[6][5] = 'log'
-    butts[6][6] = function(TA)
+
+    butts[9][5] = 'log'
+    butts[9][6] = function(TA)
         if switchPage(Scratchdir..Scratchpadfn) then
             TA:setText('')
             -- hardcoded 1MB file limit from scratchpad
@@ -2503,8 +2778,8 @@ function createbuttons()
         end
     end
 
-    butts[7][5] = 'loglvl'
-    butts[7][6] = function()
+    butts[10][5] = 'loglvl'
+    butts[10][6] = function()
         dbglvl = dbglvl + 1
         if dbglvl > 9 then
             dbglvl = 0
@@ -2513,8 +2788,8 @@ function createbuttons()
         panelbytitle['loglvl'].button:setText('log:'..tostring(dbglvl))
     end
 
-    butts[8][5] = 'help'
-    butts[8][6] = function(TA)
+    butts[11][5] = 'help'
+    butts[11][6] = function(TA)
         if switchPage(Scratchdir..Scratchpadfn) then
             TA:setText('')
             -- hardcoded 1MB file limit from scratchpad
@@ -2528,11 +2803,11 @@ function createbuttons()
         end
     end
 
-    butts[9][5] = 'mod'
-    butts[9][6] = showCustom
+    butts[12][5] = 'mod'
+    butts[12][6] = showCustom
 
-    butts[10][5] = 'modload'
-    butts[10][6] = function()
+    butts[13][5] = 'modload'
+    butts[13][6] = function()
         loglocal('aeronautespit: reload click '..#LT)
         assignKP()
         assignCustom()

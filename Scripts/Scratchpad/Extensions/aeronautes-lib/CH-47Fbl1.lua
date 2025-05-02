@@ -1,6 +1,10 @@
 --[[ working functions:
-    night
+    setup - cockpit setup suitable for after autostart
+    night - reduce MFD brightness
 --]]
+
+-- module specific configuration
+wpseq({cur=1, diff = 1})
 
 ft = {}
 ft.order = {'setup', 'night'}
@@ -9,6 +13,9 @@ ft.order = {'setup', 'night'}
 -- Setup v0.1
 -- settings used after a start or autostart
 ft['setup'] = function()
+
+--Right CDU IDX
+ttn('',{device=devices.CDU_RIGHT, action=device_commands.Button_64})
 
 press([[!#~]])                  -- power RWR/CMWS
 
@@ -22,7 +29,10 @@ end                         -- end setup
 -- Night v0.1
 ft['night'] = function()
 
-local mfds = {devices.MFD_COPILOT_OUTBOARD, devices.MFD_COPILOT_INBOARD, devices.MFD_CENTER, devices.MFD_PILOT_INBOARD, devices.MFD_PILOT_OUTBOARD}
+-- dim mfds
+local mfds = {devices.MFD_COPILOT_OUTBOARD, devices.MFD_COPILOT_INBOARD,
+              devices.MFD_CENTER, devices.MFD_PILOT_INBOARD,
+              devices.MFD_PILOT_OUTBOARD}
 for _,dev in pairs(mfds) do
 tt('',{device=dev, action=device_commands.Button_33, value=1})
 tt('',{device=dev, action=device_commands.Button_33, value=.5})

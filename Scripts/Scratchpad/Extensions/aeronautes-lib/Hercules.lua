@@ -10,26 +10,20 @@
     DCS.openbeta.
 
     start - Recommend you do this before any other action also right
-    click mouse APU switch to RUN position.
+    click mouse APU switch to RUN position before starting.
 
     Currently uses ground elec/air and APU, so timing cant clash with
     other ground orders. Just make sure you start engines before doing
     anything else like rearming or fueling. This is not completely
     hands off so you'll need to click right mouse button(RMB)click
     each of the Engine Start dials. You can start an engine once the
-    Bleed Air Pressure gauge reads 40.0. You will need to hold RMB
-    until the green light next to the engine start dial
-    illuminates. You may release once the light is on. Engines need to
-    start in reverse numerical order, primarily engine 1 or 2 needs to
-    be last to start. The start script will request air/power
-    disconnect once both engines 1 and 2 reach 5 rpm. 
-
-    Just know this will allow 4 engines to be cranking if you start an
-    engine as soon as sufficient bleed pressure is available. The
-    onboard APU bleed air won't sustain 4 engines cranking so just
-    wait for 2 engines to be cranking (engine is boxed in Engine
-    Display on HDD 2), before starting the last. You should be able to
-    crank all engines within 1 minute of startup using this method.
+    Bleed Air Pressure gauge reads 40. You will need to hold RMB until
+    the green light next to the engine start dial illuminates. You may
+    release once the light is on. It's safe to have 3 green engine
+    start lights at the same time. The start script will request
+    air/power disconnect once both engines 1 and 2 reach 5 rpm. The
+    onboard APU bleed air won't sustain 4 engines cranking (green
+    lights) simultaneously
 
     takeoff - set pilot CNI TOLD INDEX to takeoff data; markers
     indicated in HUD; 
@@ -37,29 +31,22 @@
     landing - set pilot CNI TOLD INDEX to landing data; markers
     indicated in HUD; TOLD Index flap setting at 100%
 
-    night - set lighting for night flying
+    night - set internal/external lighting for night flying
 
-    pivot - display in game chat and log to Scratchpad.log the
-    required speed for current altitude to do pivot turn
+    pylon - display in game chat and log to Scratchpad.log the
+    required speed for current altitude to do a pylon turn
+
+    cannon - increment Select Cannon Station switch to toggle
+    different guns
 --]]
 
 -- module specific configuration
 wpseq({cur=1, diff = 1, })
 
 local ft = {}
-ft.order = {'start', 'takeoff', 'landing', 'night', 'pivot'}
+ft.order = {'start', 'takeoff', 'landing', 'night', 'pylon', 'cannon'}
 
---#################################
--- pivot v0.1
--- log to Scratchpad.log the required speed for current altitude to do pivot turn
-
-ft['pivot'] = function()
-    local agl = Export.LoGetAltitudeAboveGroundLevel() * 3.28
-    net.recv_chat(math.sqrt(agl*11.3))
-    loglocal('agl(ft): '..agl..', kts: '..math.sqrt(agl*11.3))
-end                             -- pivot
-
---[[
+--[[ attempts at clicking engine start twice
     ICommandMenuItem1 966
     ICommandMenuItemPrev 1886
     iCommandToggleCommandMenu 179
@@ -68,6 +55,26 @@ end                             -- pivot
     iCommandCockpitClickModeOnOff 363
 
 --]]
+
+--#################################
+-- pylon v0.1
+-- display in game chat and log to Scratchpad.log the
+-- required speed for current altitude to do a pylon turn
+
+ft['pylon'] = function()
+    local agl = Export.LoGetAltitudeAboveGroundLevel() * 3.28
+    net.recv_chat(math.sqrt(agl*11.3))
+    loglocal('agl(ft): '..agl..', kts: '..math.sqrt(agl*11.3))
+end                             -- pylon
+
+--#################################
+-- cannon v0.1
+-- cannon - increment Select Cannon Station switch to toggle
+-- different guns
+
+ft['cannon'] = function()
+    tt('Select Cannon Station',{value=.2})
+end                             -- cannon
 
 --#################################
 -- night v0.1

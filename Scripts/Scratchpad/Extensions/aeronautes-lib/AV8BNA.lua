@@ -1,5 +1,5 @@
 --[[ working functions:
-    start - starts jet
+    start - starts jet; requires final Master Caution
     mapoff - turns off moving map
 --]]
 
@@ -16,6 +16,7 @@ ft['mapoff'] = function()
    ttn('MPCD Left Button 12')
 end
 
+ft['firstspool'] = true
 ft['start'] = function(action)
     local valid = {engspool='engspool', posteng='posteng'}
     action = valid[action] or ''
@@ -23,12 +24,12 @@ ft['start'] = function(action)
     if action == '' then
 
         -- Beginning of start procedure
-
+        net.recv_chat('AV8 start, throttle off')
 ttn('Canopy Handle')
 ttn('Oxygen Switch',{})
 tt('Battery Switch')
 tt('Throttle Cutoff Lever')
---throttle off
+Export.LoSetCommand(2004,1)     --throttle off
 
 --set by axis tt('Nozzle Control Lever', {value=.10})
 tt('Fuel Shutoff Lever')
@@ -39,8 +40,6 @@ tt('MPCD Left Off/Brightness Control')
 tt('MPCD Right Off/Brightness Control')
 ttt('MPCD Right Button 11')
 tt('Engine Start Switch')
---throttle to idle
---delay(20)
 
     ft['start']('engspool')
     elseif action == 'engspool' then
@@ -51,8 +50,17 @@ tt('Engine Start Switch')
             loglocal('engspool 1 true '..DCS.getRealTime(), 4)
             press('',{delay=1,fn=ft['start'],arg='engspool'})
         else
-            Export.LoSetCommand(2004,-1)
-            ft['start']('posteng')
+            if rpm.left < 10 then
+                if ft['firstspool'] then
+                    Export.LoSetCommand(2004,-1) --full
+                    ft['firstspool'] = false
+                else
+                    Export.LoSetCommand(2004, 1) --idle
+                end
+                press('',{delay=1,fn=ft['start'],arg='engspool'})
+            else
+                ft['start']('posteng')
+            end
         end
     elseif action == 'posteng' then
 
@@ -61,8 +69,6 @@ tt('Flaps Power Switch',{value=.5})
 tt('RWR Power/Volume Button',{value=.5})
 tt('Decoy Dispenser Control',{value=.4})
 tt('Jammer Control',{value=.2})
-
-tt('Master Caution')
 
 ttt('MPCD Left Button 2')
 tt('Display Brightness Control',{value=.9})
@@ -78,11 +84,9 @@ tt('DMT Toggle On/Off')
 
 --INS align
 tt('INS Mode Knob',{value=.4})
-
     end                             -- posteng
 
-ft.disablemap()
-
+tt('Master Caution')
 end                             -- end of start
 
 return ft

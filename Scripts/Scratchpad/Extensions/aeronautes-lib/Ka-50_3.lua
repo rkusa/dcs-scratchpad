@@ -5,9 +5,33 @@
 --]]
 
 ft = {}
-ft.order = {'start', 'night'}
+ft.order = {'start', 'setup', 'night'}
 
 wpseq({ cur = 1, diff = 1, route = 't', })
+
+--#################################
+-- setup v0.1
+-- cockpit config after autostart
+--[[
+
+--]]
+ft['setup'] = function(arg)
+
+--Navigation Lights 10%/30%/100%; disable
+ttn('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_4})
+ttf('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_4})
+--Formation Lights; disble
+ttn('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_2})
+ttf('', {device=devices.NAVLIGHT_SYSTEM, action=device_commands.Button_2})
+
+ttf('Tip Lights')
+ttf('Anticollision Light')
+ttn('Manual/Auto weapon system control switch')
+ttn('Master Arm')
+tt('Dangerous RALT set rotary',{value=-1})
+
+end                             -- end setup
+
 
 --#################################
 -- start v0.1
@@ -238,6 +262,7 @@ tt('NAV Master modes',{value=.3})
 ttt('Autopilot Pitch hold')
 ttt('Autopilot Bank hold')
 ttt('Autopilot Heading hold')
+ft['setup']()
 
         loglocal('total time: '..DCS.getRealTime() - ft['T1'])
         loglocal('leng time: '..ft['T2'] - ft['T1'])

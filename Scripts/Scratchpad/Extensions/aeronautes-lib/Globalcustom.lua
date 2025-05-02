@@ -41,13 +41,16 @@
     
     ## globalfile - shows the contents of Globalcustom.lua.
 
+    ## ammo - display the ammo count for any mounted weapons
+
     ## GFdrop - CTLD menu item for crate drop on Grayflag server
 
     ## GFload - CTLD menu item for crate load on Grayflag server
 --]]
 
 local ft = {}
-ft.order = {'presetwp', 'presetfix', 'RTlist', 'RTloadrt', 'globalfile'}
+ft.order = {'presetwp', 'presetfix', 'RTlist', 'RTloadrt', 'ammo', 'globalfile'}
+
 local presetfn = lfs.writedir()..[[Config\RouteToolPresets\]].._current_mission.mission.theatre..'.lua'
 
 local function copytable(src)
@@ -704,6 +707,31 @@ if CTLDunit[unittype] then
     table.insert(ft.order, 'GFload')
 
 end                             -- end if heli
+
+--#################################
+-- ammo v0.1
+-- prints the CLSID and count for any payload with a wstype
+
+ft['ammo'] = function()
+
+    local pl = Export.LoGetPayloadInfo().Stations
+    if not pl then
+        loglocal('ft[ammo] LoGetPayloadInfo returned nil')
+        return
+    end
+
+    for i,j in pairs(pl) do
+        if j.wstype then
+            if j.CLSID and j.count then
+                local info = j.CLSID..': '..j.count
+                net.recv_chat(info)
+                loglocal(info)
+            else
+                loglocal('ft[ammo] err: no CLSID/count for wstype: '..j.wstype)
+            end
+        end
+    end
+end                             -- ammo
 
 --#################################
 -- globalfile v0.1

@@ -3,13 +3,14 @@
     mpd - configures pages and modes. Modify screens{} table to configure values
     A/Gload - programs the A/G Combat Weapon Load menu with munitions that are loaded on jet
     night - night lighting
+    route - cycle through routes A-C for wp entry
 --]]
 
 -- module specific configuration
 wpseq({cur=1, diff = 1, route = '.B'})
 
 ft ={}
-ft.order={'start', 'mpd', 'A/Gload', 'night', 'day'}
+ft.order={'start', 'mpd', 'A/Gload', 'night', 'day', 'route'}
 
 --#################################
 -- mpd v0.10
@@ -432,5 +433,28 @@ tt('HUD Contrast Control', {value=0})
 tt('HUD Video Brightness Control', {value=0})
 
 end                             -- end day
+
+--#################################
+-- route v0.10
+-- cycle through routes A-C for wp entry
+ft['route'] = function()
+    local w = wpseq()
+
+    for i=14, 23 do
+        local j = panel[i]
+        local btext = string.sub(j['button']:getText(), 1, 5)
+        if btext == 'route' then
+            local nextrt = string.byte(string.sub(w.route, 2)) + 1
+            if nextrt > 67 then
+                nextrt = 65
+            end
+            w.route = '.'..string.char(nextrt)
+            j['button']:setText('route'..w.route)
+            wpseq(w)
+            return
+        end
+    end
+    loglocal('F-15E route() button not found')
+end                             -- end route
 
 return ft

@@ -58,13 +58,60 @@ end                             -- end of HH
 --#################################
 -- HH v0.0
 -- heading hold
+ft['HHflag'] = false
 fn='HH'
 ft[fn] = function()
     local sd = Export.LoGetSelfData()
-    local hdg = 90
+    local hdg = math.deg(sd.Heading)
 
-    net.recv_chat('Hdg: '..math.deg(sd.Heading), 0)
-    loglocal(fn..' Hdg: '..math.deg(sd.Heading) ..' Lat: '..sd.LatLongAlt.Lat..' Long: '..sd.LatLongAlt.Long)
+    if ft['HHflag'] == false then
+        ft['HHflag'] = true
+        ft['HHhdg'] = hdg
+        net.recv_chat('hold this: '..ft['HHhdg'])
+    end
+
+    if ft['HHhdg'] then
+        local hdgwindow = 1
+        net.recv_chat('hold: '..ft['HHhdg'])
+        net.recv_chat('Hdg: '..hdg, 0)
+
+        function pid(target, actual)
+            local Kp = 1.0
+            local err = target - actual
+
+            return Kp * err
+        end
+
+        function turn(dir)
+            if dir == 1 then    -- turn left
+                Export.LoSetCommand(197)
+            elseif dir == 2 then -- turn right
+                Export.LoSetCommand(195)
+            end
+        end
+
+        local PV = pid(ft['HHhdg'], hdg)
+        if PV < 0 then
+            net.recv_chat('turn left')
+            turn(1)
+        elseif PV > 0 then
+            net.recv_chat('turn right')
+            turn(2)
+        end
+    end
+
+    --        net.recv_chat(' Hdg: '..math.deg(sd.Heading) ..' Lat: '..sd.LatLongAlt.Lat..' Long: '..sd.LatLongAlt.Long)
+--    end
+
+end
+
+--#################################
+-- HH v0.0
+-- heading hold
+fn='HHCancel'
+ft[fn] = function()
+    ft['HHflag'] = false
+    ft['HHhdg'] = nil
 end
 
 return ft
