@@ -1,6 +1,8 @@
 --[[ working functions:
     start - starts jet; requires final Master Caution
-    mapoff - turns off moving map
+    setup - cockpit settings post autostart
+    maptoggle - toggles moving map on EHSD
+    night - cockpit lighting for night
 --]]
 
 -- module specific configuration
@@ -9,13 +11,25 @@ wpseq({cur=1,
 })
 
 ft ={}
-ft.order={'start', 'mapoff'}
+ft.order={'start', 'setup', 'maptoggle', 'night'}
 
-ft['mapoff'] = function()
-   ttn('MPCD Left Button 3')
-   ttn('MPCD Left Button 12')
+--#################################
+-- maptoggle v0.1
+-- toggles moving map on EHSD
+ft['maptoggle'] = function()
+
+--tt('MPCD Left Off/Brightness Control',{value=0.5, action=mpcd_l_commands.Knob_OFF_BRT, device=devices.MPCD_LEFT})
+ttn('MPCD Left Button 18')
+ttn('MPCD Left Button 2')
+ttn('MPCD Left Button 3')
+ttn('MPCD Left Button 12')
+ttn('MPCD Left Button 3')
+
 end
 
+--#################################
+-- start v0.2
+-- start the jet; Master Caution will engage after this finishes
 ft['firstspool'] = true
 ft['start'] = function(action)
     local valid = {engspool='engspool', posteng='posteng'}
@@ -79,7 +93,6 @@ tt('STO Stop Lever',{value=.65})
 tt('Comm 1 Volume Control', {value=.7})
 tt('Comm 2 Volume Control', {value=.7})
 tt('Master Arm Switch')
---tt('AG Master Mode Selector')
 tt('DMT Toggle On/Off')
 
 --INS align
@@ -88,5 +101,29 @@ tt('INS Mode Knob',{value=.4})
 
 tt('Master Caution')
 end                             -- end of start
+
+--#################################
+-- setup v0.1
+-- cockpit setup that can be used after startup or module autostart
+ft['setup'] = function(input)
+
+ttn('FLIR Power Switch')
+
+end                         -- end setup
+
+--#################################
+-- night v0.1
+-- turn on cockpit lights and NW light
+ft['night'] = function(input)
+
+tt('EDP Brightness Control', {value=.3})
+ttn('MPCD Left Display NIGHT Mode')
+ttn('MPCD Right Display NIGHT Mode')
+tt('Instruments Lights',{value=.3})
+tt('Console Lights',{value=.3})
+tt('Annunciator Lights',{value=.3})
+ttn('External Auxiliary Lights Switch')
+
+end                             -- end night
 
 return ft

@@ -35,9 +35,11 @@
     ## RTlist - clears and displays in aeronautes-pit buffer the
        available routes in the current RT presets file.
 
-    ## RTloadrt - takes RouteTool preset route name input from
+    ## RTload - takes RouteTool preset route name input from
        scratchpad and enters that into the aircraft nav system if
        available.
+
+    ## RTshow - shows the selected route in the scratchpad buffer.
     
     ## globalfile - shows the contents of Globalcustom.lua.
 
@@ -49,7 +51,7 @@
 --]]
 
 local ft = {}
-ft.order = {'presetwp', 'presetfix', 'RTlist', 'RTloadrt', 'ammo', 'globalfile'}
+ft.order = {'presetwp', 'presetfix', 'RTlist', 'RTload', 'RTshow', 'ammo', 'globalfile'}
 
 local presetfn = lfs.writedir()..[[Config\RouteToolPresets\]].._current_mission.mission.theatre..'.lua'
 
@@ -651,25 +653,67 @@ ft['RTlist'] = function(input)
 end                             -- RTlist
 
 --#################################
--- RTloadrt v0.1
+-- RTload v0.1
 -- load the selected route into the jet/heli if possible
-ft['RTloadrt'] = function(input)
+ft['RTload'] = function(input)
     input = trim(input)
-    loglocal('RTloadrt call: #'..input..'#', 2)
+    loglocal('RTload call: #'..input..'#', 2)
 
     if not presets[input] then
-        umsg('RTloadrt route not found, '..input)
+        umsg('RTload route not found, '..input)
         return
     end
 
     local rt = presets[input]
-    local lat, lon
     for i=1, #rt do
-        loglocal('RTloadrt: i: '..i..' latlong '..
+        loglocal('RTload: i: '..i..' latlong '..
                  net.lua2json(Export.LoLoCoordinatesToGeoCoordinates(rt[i].x, rt[i].z)), 4)
         wp(rt[i])
     end
 end                             -- RTlist
+
+local function showbuf(str)
+    if switchPage(Scratchdir..Scratchpadfn) then
+        if str then
+            TA:setText('')
+            -- hardcoded 1MB file limit from scratchpad
+            local buflen = string.len(str)
+            local txt = string.sub(str, buflen - (1024*1024))
+            TA:setText(txt)
+            TA:insertBottom('')
+        end
+    end
+end             -- end showbuf
+
+--#################################
+-- RTshow v0.1
+-- show the selected route in buffer
+ft['RTshow'] = function(input)
+    input = trim(input)
+    loglocal('RTshow call: #'..input..'#', 2)
+
+    if not presets[input] then
+        umsg('RTshow route not found, '..input)
+        return
+    end
+
+    local rt = presets[input]
+    local txt = '["'..input..'"] =\n{\n'
+    for i=1, #rt do
+        txt = txt .. '    ['..i..'] =\n    {\n'
+    for key,value in pairs(rt[i]) do
+        if type(value) == 'string' then
+        txt = txt .. '        ["'..key..'"] = "'..value..'",\n'
+        else
+        txt = txt .. '        ["'..key..'"] = '..tostring(value)..',\n'
+        end
+    end
+    txt = txt .. '    }, -- end of ['..i..']\n'
+    end
+
+    txt = txt .. '}, -- end of ['..input..']\n'
+    showbuf(txt)
+end                             -- RTshow
 
 local CTLDunit = {}
 CTLDunit = {
@@ -774,6 +818,5 @@ ft['globalfile'] = function(input)
         TA:setText(txt)
     end
 end                             -- globalfile
-
 
 return ft

@@ -7,7 +7,7 @@
 --]]
 
 -- module specific configuration
-wpseq({cur=1, diff = 1, route = '.B'})
+wpseq({cur=1, diff = 1, route = '.B', menus = 'mlj'})
 
 ft ={}
 ft.order={'start', 'mpd', 'A/Gload', 'night', 'day', 'route'}
@@ -433,6 +433,20 @@ tt('HUD Contrast Control', {value=0})
 tt('HUD Video Brightness Control', {value=0})
 
 end                             -- end day
+
+function updateroute()
+    local w = wpseq()
+
+    for i=14, 23 do
+        local j = panel[i]
+        local btext = string.sub(j['button']:getText(), 1, 5)
+        if btext == 'route' then
+            j['button']:setText('route.'..w.route)
+            return
+        end
+    end
+end     -- end updateroute
+updateroute()
 
 --#################################
 -- route v0.10

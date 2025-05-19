@@ -60,6 +60,7 @@ ft.order = {'start', 'takeoff', 'landing', 'night', 'pylon', 'cannon'}
 -- pylon v0.1
 -- display in game chat and log to Scratchpad.log the
 -- required speed for current altitude to do a pylon turn
+-- H = v^2 / 11.3, v is knots; H = v^2 * 15, v is mph
 
 ft['pylon'] = function()
     local agl = Export.LoGetAltitudeAboveGroundLevel() * 3.28
