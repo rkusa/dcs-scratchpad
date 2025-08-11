@@ -11,9 +11,7 @@
 
 -- F18 can't select WP by number so disable starting number(cur) and
 -- default to incrementing to next WP
-wpseq({ cur = -1,
-        diff = 1,
-})
+wpseq({ cur = -1, diff = 1,})
 
 local ft ={}
 ft['bingo'] = 2000              -- bingo value in pounds(Lbs)
